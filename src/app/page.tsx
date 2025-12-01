@@ -1,9 +1,20 @@
-export default function Page() {
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+export default function TestPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="p-10 bg-blue-600 text-white text-4xl font-bold rounded-xl">
-        Tailwind 4 funcionando! 🎉
-      </div>
+    <div className="p-10 max-w-md mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Teste de Componentes</CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <Input placeholder="Digite algo..." />
+          <Button>Enviar</Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
