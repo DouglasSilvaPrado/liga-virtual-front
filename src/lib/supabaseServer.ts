@@ -1,4 +1,4 @@
-// /lib/supabaseServer.ts
+// src/lib/supabaseServer.ts
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
@@ -13,10 +13,13 @@ export async function createServerSupabase() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
+
+        setAll() {},
+      },
+
+      global: {
+        headers: {
+          "x-tenant-id": cookieStore.get("x-tenant-id")?.value ?? "",
         },
       },
     },
