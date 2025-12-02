@@ -1,10 +1,10 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function TestPage() {
   return (
-    <div className="p-10 max-w-md mx-auto">
+    <div className="mx-auto max-w-md p-10">
       <Card>
         <CardHeader>
           <CardTitle>Teste de Componentes</CardTitle>
