@@ -18,7 +18,6 @@ export async function createServerSupabase(): Promise<ServerSupabase> {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        // Next.js 14: setAll é necessário mas server-only não salva cookies
         setAll: () => {},
       },
       global: {
