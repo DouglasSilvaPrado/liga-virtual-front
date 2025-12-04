@@ -16,4 +16,10 @@ export interface MemberProfile {
   email: string;
   full_name: string;
   avatar_url: string;
+  platform: string;
+  country: string;
+  birth_date: string;
+  whatsapp: string;
+  state: string;
+  city: string;
 }
