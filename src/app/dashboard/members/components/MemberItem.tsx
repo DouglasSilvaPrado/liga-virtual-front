@@ -1,4 +1,3 @@
-// components/MembersList/MemberItem.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,10 +8,10 @@ import { MemberProfile } from '@/@types/memberProfile';
 import { Pencil } from "lucide-react";
 import EditMemberModal from './EditMemberModal';
 
-export default function MemberItem({ member }: { member: MemberProfile }) {
+export default function MemberItem({ member, currentUserRole }: { member: MemberProfile, currentUserRole: string  }) {
   const [open, setOpen] = useState(false);
 
-  const isOwner = member.role === "owner";
+   const isOwner = currentUserRole === "owner"; 
 
   return (
     <>

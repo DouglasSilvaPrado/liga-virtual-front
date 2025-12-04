@@ -109,17 +109,34 @@ export default function EditMemberModal({
           </div>
 
           {isOwner ? (
-            <div>
-              <Label>Role</Label>
-              <Input value={form.role} onChange={(e) => updateField("role", e.target.value)} />
-            </div>
-          ) : (
-            <div>
-              <Label>Role</Label>
-              <Input disabled value={form.role} />
-              <p className="text-xs text-gray-500">Somente o Owner pode editar o papel.</p>
-            </div>
-          )}
+              <div>
+                <Label>Role</Label>
+                <select
+                  className="w-full border rounded-md p-2"
+                  value={form.role}
+                  onChange={(e) => updateField("role", e.target.value)}
+                >
+                  <option value="owner">Owner</option>
+                  <option value="admin">Admin</option>
+                  <option value="member">Member</option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <Label>Role</Label>
+                <select
+                  className="w-full border rounded-md p-2 bg-gray-100"
+                  value={form.role}
+                  disabled
+                >
+                  <option value="owner">Owner</option>
+                  <option value="admin">Admin</option>
+                  <option value="member">Member</option>
+                </select>
+                <p className="text-xs text-gray-500">Somente o Owner pode editar o papel.</p>
+              </div>
+            )}
+
 
           <Button onClick={onSave} disabled={loading}>
             {loading ? "Salvando..." : "Salvar alterações"}
