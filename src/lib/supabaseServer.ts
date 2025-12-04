@@ -1,27 +1,33 @@
 // src/lib/supabaseServer.ts
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { SupabaseClient } from '@supabase/supabase-js';
 
-export async function createServerSupabase() {
+interface ServerSupabase {
+  supabase: SupabaseClient;
+  tenantId: string;
+}
+
+export async function createServerSupabase(): Promise<ServerSupabase> {
   const cookieStore = await cookies();
+  const tenantId = cookieStore.get('x-tenant-id')?.value ?? '';
 
-  return createServerClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-
-        setAll() {},
+        getAll: () => cookieStore.getAll(),
+        // Next.js 14: setAll é necessário mas server-only não salva cookies
+        setAll: () => {},
       },
-
       global: {
         headers: {
-          "x-tenant-id": cookieStore.get("x-tenant-id")?.value ?? "",
+          'x-tenant-id': tenantId,
         },
       },
     },
   );
+
+  return { supabase, tenantId };
 }

@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
 export async function POST(req: Request) {
-  // resposta base (será ajustada pelo Supabase)
   const res = NextResponse.json({ ok: true });
 
   const supabase = createServerClient(
@@ -11,14 +10,14 @@ export async function POST(req: Request) {
     {
       cookies: {
         getAll() {
-          const cookieHeader = req.headers.get("cookie") ?? "";
+          const cookieHeader = req.headers.get('cookie') ?? '';
           return cookieHeader
-            .split(";")
+            .split(';')
             .map((c) => c.trim())
             .filter(Boolean)
             .map((c) => {
-              const [name, ...rest] = c.split("=");
-              return { name, value: rest.join("=") };
+              const [name, ...rest] = c.split('=');
+              return { name, value: rest.join('=') };
             });
         },
         setAll(cookies) {

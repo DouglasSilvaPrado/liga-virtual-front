@@ -33,6 +33,11 @@ export default function LoginPage() {
 
       if (!tenant) return setError("Tenant não encontrado.");
 
+      await fetch("/api/auth/set-tenant", {
+        method: "POST",
+        body: JSON.stringify({ tenantId: tenant.id })
+      });
+
       const { data: signInData, error: signInError } =
       await supabase.auth.signInWithPassword({
         email,
