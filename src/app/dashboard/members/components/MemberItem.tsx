@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MemberProfile } from '@/@types/memberProfile';
 import { Pencil } from "lucide-react";
 import EditMemberModal from './EditMemberModal';
@@ -20,13 +20,14 @@ export default function MemberItem({ member, currentUserRole }: { member: Member
           
           <div className="flex flex-row items-center space-x-4">
             <Avatar>
+              <AvatarImage src={member.avatar_url || undefined} />
               <AvatarFallback>
                 {member.email?.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
 
             <div>
-              <p className="font-medium">{member.email}</p>
+              <p className="font-medium">{member.email} | {member.full_name}</p>
               <Badge>{member.role}</Badge>
             </div>
           </div>
