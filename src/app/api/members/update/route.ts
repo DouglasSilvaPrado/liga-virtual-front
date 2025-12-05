@@ -39,6 +39,8 @@ export async function POST(req: Request) {
   const isOwner = myMember?.role === 'owner';
 
   // 2) Atualizar PROFILE
+  const normalize = (v: string | null | undefined) => (v === '' ? null : v);
+
   const { error: profileError } = await supabase
     .from('profiles')
     .update({
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
       avatar_url,
       platform,
       country,
-      birth_date,
+      birth_date: normalize(birth_date),
       whatsapp,
       state,
       city,

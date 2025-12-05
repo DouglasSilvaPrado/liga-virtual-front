@@ -1,0 +1,27 @@
+// src/app/dashboard/championships/page.tsx
+import { createServerSupabase } from "@/lib/supabaseServer";
+import ChampionshipList from "./ChampionshipList";
+import { Championship } from '@/@types/championship';
+
+export default async function ChampionshipsPage() {
+  const { supabase, tenantId } = await createServerSupabase();
+
+  const { data, error } = await supabase
+    .from("championships")
+    .select("*")
+    .eq("tenant_id", tenantId);
+
+  if (error) {
+    console.error("[CHAMPIONSHIPS_ERROR]", error);
+  }
+
+  const championships = (data || []) as Championship[];
+
+  return (
+    <div className="p-6 space-y-4">
+      <h1 className="text-2xl font-bold">Campeonatos</h1>
+
+      <ChampionshipList championships={championships} />
+    </div>
+  );
+}
