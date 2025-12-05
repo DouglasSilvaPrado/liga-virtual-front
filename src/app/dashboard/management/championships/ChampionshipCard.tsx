@@ -9,7 +9,7 @@ interface Props {
 
 export default function ChampionshipCard({ champ }: Props) {
   return (
-    <Link href={`/dashboard/championships/${champ.id}/competitions`}>
+    <Link href={`/dashboard/management/championships/${champ.id}/competitions`}>
       <div className="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer">
         <h3 className="font-semibold text-lg">{champ.name}</h3>
 
