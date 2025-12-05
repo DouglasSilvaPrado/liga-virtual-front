@@ -8,7 +8,6 @@ const menu = [
   { href: "/dashboard", label: "Inicio" },
   { href: "/dashboard/members", label: "Membros" },
   { href: "/dashboard/championships", label: "Campeonatos" },
-  { href: "/dashboard/competitions", label: "Competições" },
   { href: "/dashboard/teams", label: "Times" },
   { href: "/dashboard/players", label: "Jogadores" },
   { href: "/dashboard/matches", label: "Partidas" },
