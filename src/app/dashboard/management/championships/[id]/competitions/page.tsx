@@ -1,9 +1,12 @@
 import { createServerSupabase } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
+import { Card, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Competition } from '@/@types/competition';
 
 export default async function ChampionshipCompetitionsPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
-
   const championshipId = id;
 
   const { supabase, tenantId } = await createServerSupabase();
@@ -34,21 +37,34 @@ export default async function ChampionshipCompetitionsPage(props: { params: Prom
         <p className="text-muted-foreground">Nenhuma competição cadastrada.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {competitions.map((comp) => (
-            <div
-              key={comp.id}
-              className="border rounded-lg p-4 shadow-sm hover:shadow-md"
-            >
-              <h3 className="font-semibold text-lg">{comp.name}</h3>
-              <p className="text-sm text-muted-foreground">Tipo: {comp.type}</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Criado em: {new Date(comp.created_at).toLocaleDateString("pt-BR")}
-              </p>
-            </div>
+          {competitions.map((comp: Competition) => (
+            <Card key={comp.id} className="rounded-xl shadow-sm">
+              <CardHeader className="flex flex-row justify-between items-center">
+
+                {/* Avatar da Competição */}
+                <div className="flex flex-row items-center space-x-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={comp.competition_url || undefined} />
+                    <AvatarFallback>
+                      {comp.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div>
+                    <p className="font-medium">{comp.name}</p>
+                    <Badge variant="outline">{comp.type}</Badge>
+
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Criado em: {new Date(comp.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                </div>
+
+              </CardHeader>
+            </Card>
           ))}
         </div>
       )}
     </div>
   );
 }
-
