@@ -1,4 +1,3 @@
-// src/app/dashboard/championships/page.tsx
 import { createServerSupabase } from "@/lib/supabaseServer";
 import ChampionshipList from "./ChampionshipList";
 import { Championship } from '@/@types/championship';
