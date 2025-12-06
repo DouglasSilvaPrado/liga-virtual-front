@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MemberProfile } from "@/@types/memberProfile";
 import { useState } from "react";
+import RoleSelect from '@/components/forms/select/RoleSelect';
 
 export default function EditMemberModal({
   member,
@@ -79,7 +80,7 @@ export default function EditMemberModal({
           </div>
 
           <div>
-            <Label>Plataforma</Label>
+            <Label>Plataforma (PSN/Live/Origin/Steam)</Label>
             <Input value={form.platform} onChange={(e) => updateField("platform", e.target.value)} />
           </div>
 
@@ -108,34 +109,12 @@ export default function EditMemberModal({
             <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} />
           </div>
 
-          {isOwner ? (
-              <div>
-                <Label>Role</Label>
-                <select
-                  className="w-full border rounded-md p-2"
-                  value={form.role}
-                  onChange={(e) => updateField("role", e.target.value)}
-                >
-                  <option value="owner">Owner</option>
-                  <option value="admin">Admin</option>
-                  <option value="member">Member</option>
-                </select>
-              </div>
-            ) : (
-              <div>
-                <Label>Role</Label>
-                <select
-                  className="w-full border rounded-md p-2 bg-gray-100"
-                  value={form.role}
-                  disabled
-                >
-                  <option value="owner">Owner</option>
-                  <option value="admin">Admin</option>
-                  <option value="member">Member</option>
-                </select>
-                <p className="text-xs text-gray-500">Somente o Owner pode editar o papel.</p>
-              </div>
-            )}
+           <RoleSelect
+              value={form.role}
+              onChange={(role) => updateField("role", role)}
+              disabled={false}          
+              showLockedMessage={!true} 
+            />
 
 
           <Button onClick={onSave} disabled={loading}>
