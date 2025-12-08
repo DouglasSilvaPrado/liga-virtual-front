@@ -33,8 +33,7 @@ export async function POST(req: Request) {
       .update({
         settings,
       })
-      .eq('id', competition_settings_id)
-      .eq('tenant_id', tenantId);
+      .eq('id', competition_settings_id);
 
     if (setErr) {
       return NextResponse.json({ error: setErr.message }, { status: 500 });

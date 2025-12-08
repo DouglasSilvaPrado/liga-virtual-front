@@ -18,8 +18,8 @@ import {
 } from "@/@types/competition";
 
 import { useForm } from "react-hook-form";
+import { useRouter } from 'next/navigation';
 
-// ----- FORM TYPE -----
 type CompetitionForm = {
   name: string;
   rules: string | null;
@@ -37,6 +37,8 @@ export default function EditCompetitionModal({
   onOpenChange: (v: boolean) => void;
   competition: CompetitionWithSettings;
 }) {
+
+  const router = useRouter();
   const { register, handleSubmit, reset, watch, setValue } =
     useForm<CompetitionForm>({
       defaultValues: {
@@ -48,7 +50,6 @@ export default function EditCompetitionModal({
       },
     });
 
-  // Watch full settings safely
   const settings = watch("settings");
 
   useEffect(() => {
@@ -64,18 +65,26 @@ export default function EditCompetitionModal({
   }, [open, competition, reset]);
 
   const onSubmit = async (values: CompetitionForm) => {
-    await fetch(`/api/competitions/update-with-settings`, {
+    const res = await fetch(`/api/competitions/update-with-settings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: competition.id,
         competition_settings_id: competition.competition_settings_id,
-        ...values,
+        name: values.name,
+        rules: values.rules,
+        competition_url: values.competition_url,
+        type: values.type,
+        settings: values.settings,
       }),
     });
 
+    if (!res.ok) {
+      console.error("Erro ao atualizar:", await res.text());
+      return;
+    }
+    router.refresh();
     onOpenChange(false);
-    window.location.reload();
   };
 
   return (
@@ -86,8 +95,6 @@ export default function EditCompetitionModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          
-          {/* BASIC FIELDS */}
           <div>
             <Label>Nome</Label>
             <Input {...register("name")} />
@@ -176,7 +183,6 @@ export default function EditCompetitionModal({
               })}
             </div>
           </div>
-
 
           <Button type="submit" className="w-full">
             Salvar alterações

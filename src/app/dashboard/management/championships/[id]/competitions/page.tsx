@@ -27,7 +27,6 @@ export default async function ChampionshipCompetitionsPage(props: { params: Prom
   const { data: competitions } = await supabase
     .from("competitions_with_settings")
     .select("*")
-    .eq("tenant_id", tenantId)
     .eq("championship_id", championshipId)
     .order("created_at", { ascending: false });
 
