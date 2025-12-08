@@ -38,9 +38,7 @@ export default function EditCompetitionModal({
     }
   }, [open]);
 
-  const onSubmit = async (values: any) => {
-
-    console.log("ID enviado:", competition.id);
+  const onSubmit = async (values: Partial<Competition>) => {
 
     setLoading(true);
 
