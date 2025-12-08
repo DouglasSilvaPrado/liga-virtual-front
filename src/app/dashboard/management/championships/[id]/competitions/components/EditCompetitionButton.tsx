@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Competition } from "@/@types/competition";
+import {  CompetitionWithSettings } from "@/@types/competition";
 import EditCompetitionModal from './EditCompetitionModal';
 
-export default function EditCompetitionButton({ competition }: { competition: Competition }) {
+export default function EditCompetitionButton({ competition }: { competition:  CompetitionWithSettings}) {
   const [open, setOpen] = useState(false);
 
   return (
