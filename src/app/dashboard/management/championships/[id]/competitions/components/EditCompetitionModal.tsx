@@ -37,7 +37,6 @@ export default function EditCompetitionModal({
   onOpenChange: (v: boolean) => void;
   competition: CompetitionWithSettings;
 }) {
-  console.log("🚀 ~ EditCompetitionModal ~ competition:", competition)
   const { register, handleSubmit, reset, watch, setValue } =
     useForm<CompetitionForm>({
       defaultValues: {
@@ -49,9 +48,8 @@ export default function EditCompetitionModal({
       },
     });
 
-  // Watch settings safely
+  // Watch full settings safely
   const settings = watch("settings");
-  console.log("🚀 ~ EditCompetitionModal ~ settings:", settings)
 
   useEffect(() => {
     if (open) {
@@ -88,8 +86,8 @@ export default function EditCompetitionModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
-          {/* Basic fields */}
+          
+          {/* BASIC FIELDS */}
           <div>
             <Label>Nome</Label>
             <Input {...register("name")} />
@@ -105,43 +103,80 @@ export default function EditCompetitionModal({
             <Textarea {...register("rules")} rows={3} />
           </div>
 
-          {/* MATCH SETTINGS TIPADO */}
+          {/* MATCH SETTINGS */}
           <div>
             <Label className="font-semibold">Configurações da Partida</Label>
 
             <div className="grid grid-cols-2 gap-3 mt-2">
-              {(
-                Object.keys(
-                  settings?.match_settings ?? {}
-                ) as (keyof MatchSettings)[]
-              ).map((key) => (
-                <div key={key}>
-                  <Label>{key.replace(/_/g, " ")}</Label>
+              {(Object.keys(settings?.match_settings ?? {}) as (keyof MatchSettings)[])
+                .map((key) => (
+                  <div key={key}>
+                    <Label>{key.replace(/_/g, " ")}</Label>
 
-                  {typeof settings.match_settings[key] === "boolean" ? (
-                    <input
-                      type="checkbox"
-                      className="scale-110 ml-2"
-                      checked={settings.match_settings[key] as boolean}
-                      onChange={(e) =>
-                        setValue(
-                          `settings.match_settings.${key}`,
-                          e.target.checked
-                        )
-                      }
-                    />
-                  ) : (
-                    <Input
-                      type="number"
-                      {...register(`settings.match_settings.${key}`, {
-                        valueAsNumber: true,
-                      })}
-                    />
-                  )}
-                </div>
-              ))}
+                    {typeof settings.match_settings[key] === "boolean" ? (
+                      <input
+                        type="checkbox"
+                        className="scale-110 ml-2"
+                        checked={settings.match_settings[key] as boolean}
+                        onChange={(e) =>
+                          setValue(
+                            `settings.match_settings.${key}`,
+                            e.target.checked
+                          )
+                        }
+                      />
+                    ) : (
+                      <Input
+                        type="number"
+                        {...register(`settings.match_settings.${key}`, {
+                          valueAsNumber: true,
+                        })}
+                      />
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
+
+          {/* SPECIFIC SETTINGS */}
+          <div>
+            <Label className="font-semibold">Configurações Específicas</Label>
+
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {Object.keys(settings?.specific ?? {}).map((key) => {
+                const specific = settings!.specific as Record<string, boolean | number>;
+
+                return (
+                  <div key={key}>
+                    <Label>{key.replace(/_/g, " ")}</Label>
+
+                    {typeof specific[key] === "boolean" ? (
+                      <input
+                        type="checkbox"
+                        className="scale-110 ml-2"
+                        checked={specific[key] as boolean}
+                        onChange={(e) =>
+                          setValue(`settings.specific.${key}`, e.target.checked)
+                        }
+                      />
+                    ) : (
+                      <Input
+                        type="number"
+                        value={specific[key] as number}
+                        onChange={(e) =>
+                          setValue(
+                            `settings.specific.${key}`,
+                            Number(e.target.value)
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
 
           <Button type="submit" className="w-full">
             Salvar alterações
