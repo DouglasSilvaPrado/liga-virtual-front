@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Competition } from '@/@types/competition';
 import CreateCompetitionButton from './components/CreateCompetitionButton';
+import EditCompetitionButton from './components/EditCompetitionButton';
 
 export default async function ChampionshipCompetitionsPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -62,6 +63,8 @@ export default async function ChampionshipCompetitionsPage(props: { params: Prom
                     </p>
                   </div>
                 </div>
+
+                <EditCompetitionButton competition={comp} />
 
               </CardHeader>
             </Card>
