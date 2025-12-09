@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,10 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Zod schema for the complete settings object. It will validate on client before submit.
@@ -43,10 +44,11 @@ const baseSettingsSchema = z.object({
 });
 
 const divisionSettings = z.object({
-  ida_volta: z.boolean().optional().default(true),
-  qtd_acessos: z.coerce.number().int().min(0).optional().nullable(),
-  qtd_rebaixados: z.coerce.number().int().min(0).optional().nullable(),
-  divisao_rebaixamento_competition_id: z.string().optional().nullable(),
+  ida_volta: z.boolean().default(true),
+  qtd_acessos: z.coerce.number().int().min(0).nullable(),
+  qtd_rebaixados: z.coerce.number().int().min(0).nullable(),
+  divisao_rebaixamento_competition_id: z.string().nullable(),
+  divisao_acesso_competition_id: z.string().nullable(),
 });
 
 const divMataSettings = z.object({
@@ -88,6 +90,8 @@ const formSchema = z.object({
   rules: z.string().optional().nullable(),
   competition_url: z.string().optional().nullable(),
   // settings is any object but we'll build from the above schemas
+  divisionSettings,
+
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -120,16 +124,25 @@ export default function CreateCompetitionModal({
     formState: { errors },
     reset,
   } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
       name: "",
       type: "divisao",
       rules: "",
       competition_url: "",
+      divisionSettings: {
+        ida_volta: true, 
+        qtd_rebaixados: 0,
+        qtd_acessos: 0,
+        divisao_rebaixamento_competition_id: null,
+        divisao_acesso_competition_id: null,
+      },
     },
   });
 
   const selectedType = watch("type");
+  const qtdRebaixados = Number(watch("divisionSettings.qtd_rebaixados") ?? 0);
+  const qtdAcessos = Number(watch("divisionSettings.qtd_acessos") ?? 0);
 
   // Default match settings local form controls (we'll read them with watch)
   // We use controller-less inputs for numbers and switches below.
@@ -240,6 +253,24 @@ export default function CreateCompetitionModal({
 
   // small helper to show type-specific UI
   const isType = (t: string) => selectedType === t;
+
+  const [divisionCompetitions, setDivisionCompetitions] = useState<
+    { id: string; name: string }[]
+  >([]);
+
+  useEffect(() => {
+  const load = async () => {
+    const { data } = await supabase
+      .from("competitions")
+      .select("*")
+      .eq("type", "divisao")
+      .eq('championship_id', championshipId);
+
+    setDivisionCompetitions(data || []);
+  };
+
+  load();
+}, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -363,21 +394,70 @@ export default function CreateCompetitionModal({
 
                 <div>
                   <Label>Qtd. acessos</Label>
-                  <Input id="divisao_qtd_acessos" type="number" />
+                  <Input {...register("divisionSettings.qtd_acessos")} type="number" />
                 </div>
 
                 <div>
                   <Label>Qtd. rebaixados</Label>
-                  <Input id="divisao_qtd_rebaixados" type="number" />
+                 <Input {...register("divisionSettings.qtd_rebaixados")} type="number" />
                 </div>
 
-                <div>
-                  <Label>Divisão de rebaixamento</Label>
-                  <Input
-                    id="divisao_rebaixamento_competition_id"
-                    placeholder="competition id"
-                  />
-                </div>
+                {Number(qtdRebaixados) > 0 && (
+                  <div>
+                    <Label>Divisão de rebaixamento</Label>
+                    <Controller
+                      control={control}
+                      name="divisionSettings.divisao_rebaixamento_competition_id"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a divisão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {divisionCompetitions.length === 0 && (
+                              <SelectItem disabled value="none">Nenhuma divisão encontrada</SelectItem>
+                            )}
+
+                            {divisionCompetitions.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {Number(qtdAcessos) > 0 && (
+                  <div>
+                    <Label>Divisão de Acesso</Label>
+                    <Controller
+                      control={control}
+                      name="divisionSettings.divisao_acesso_competition_id"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a divisão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {divisionCompetitions.length === 0 && (
+                              <SelectItem disabled value="none">Nenhuma divisão encontrada</SelectItem>
+                            )}
+
+                            {divisionCompetitions.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                )}
+
               </div>
             </div>
           )}
