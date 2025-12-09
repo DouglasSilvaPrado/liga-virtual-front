@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Label } from "@/components/ui/label";
+import { Label } from '@/components/ui/label';
 
 interface RoleSelectProps {
   value: string;
@@ -20,8 +20,8 @@ export default function RoleSelect({
       <Label>Role</Label>
 
       <select
-        className={`w-full border rounded-md p-2 ${
-          disabled ? "bg-gray-100 cursor-not-allowed" : ""
+        className={`w-full rounded-md border p-2 ${
+          disabled ? 'cursor-not-allowed bg-gray-100' : ''
         }`}
         value={value}
         disabled={disabled}
@@ -33,9 +33,7 @@ export default function RoleSelect({
       </select>
 
       {showLockedMessage && disabled && (
-        <p className="text-xs text-gray-500 mt-1">
-          Somente o Owner pode editar o papel.
-        </p>
+        <p className="mt-1 text-xs text-gray-500">Somente o Owner pode editar o papel.</p>
       )}
     </div>
   );

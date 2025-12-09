@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import MemberItem from './MemberItem';
 import { MemberProfile } from '@/@types/memberProfile';
@@ -17,11 +17,7 @@ export default function MembersList({
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {members.map((m) => (
-        <MemberItem
-          key={m.id}
-          member={m}
-          currentUserRole={currentUserRole}
-        />
+        <MemberItem key={m.id} member={m} currentUserRole={currentUserRole} />
       ))}
     </div>
   );

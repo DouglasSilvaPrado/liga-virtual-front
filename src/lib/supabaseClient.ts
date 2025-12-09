@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@supabase/ssr';
 
 export const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,11 +9,11 @@ export const supabase = createBrowserClient(
     cookies: {
       getAll() {
         return document.cookie
-          .split("; ")
+          .split('; ')
           .filter(Boolean)
           .map((c) => {
-            const [name, ...v] = c.split("=");
-            return { name, value: v.join("=") };
+            const [name, ...v] = c.split('=');
+            return { name, value: v.join('=') };
           });
       },
       setAll(cookies) {

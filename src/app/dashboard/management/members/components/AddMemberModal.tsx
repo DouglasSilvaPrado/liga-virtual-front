@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import RoleSelect from '@/components/forms/select/RoleSelect';
 
 export default function AddMemberModal({ tenantId }: { tenantId: string }) {
@@ -12,13 +12,12 @@ export default function AddMemberModal({ tenantId }: { tenantId: string }) {
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
-    email: "",
-    password: "",
-    role: "member",
+    email: '',
+    password: '',
+    role: 'member',
   });
 
-  const updateField = (key: string, value: string) =>
-    setForm((p) => ({ ...p, [key]: value }));
+  const updateField = (key: string, value: string) => setForm((p) => ({ ...p, [key]: value }));
 
   async function submit() {
     setLoading(true);
@@ -30,9 +29,9 @@ export default function AddMemberModal({ tenantId }: { tenantId: string }) {
       role: form.role,
     };
 
-    const res = await fetch("/api/members/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/members/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
@@ -44,7 +43,7 @@ export default function AddMemberModal({ tenantId }: { tenantId: string }) {
     } else {
       const error = await res.json();
       console.error(error);
-      alert("Erro ao criar membro! " + (error?.message || ""));
+      alert('Erro ao criar membro! ' + (error?.message || ''));
     }
   }
 
@@ -59,13 +58,12 @@ export default function AddMemberModal({ tenantId }: { tenantId: string }) {
           </DialogHeader>
 
           <div className="space-y-4">
-
             <div>
               <Label>Email (Login)</Label>
               <Input
                 placeholder="email@email.com"
                 value={form.email}
-                onChange={(e) => updateField("email", e.target.value)}
+                onChange={(e) => updateField('email', e.target.value)}
               />
             </div>
 
@@ -74,19 +72,19 @@ export default function AddMemberModal({ tenantId }: { tenantId: string }) {
               <Input
                 type="password"
                 value={form.password}
-                onChange={(e) => updateField("password", e.target.value)}
+                onChange={(e) => updateField('password', e.target.value)}
               />
             </div>
 
-             <RoleSelect
-                value={form.role}
-                onChange={(role) => updateField("role", role)}
-                disabled={false}          
-                showLockedMessage={!true} 
-              />
+            <RoleSelect
+              value={form.role}
+              onChange={(role) => updateField('role', role)}
+              disabled={false}
+              showLockedMessage={!true}
+            />
 
             <Button onClick={submit} disabled={loading}>
-              {loading ? "Salvando..." : "Criar Membro"}
+              {loading ? 'Salvando...' : 'Criar Membro'}
             </Button>
           </div>
         </DialogContent>

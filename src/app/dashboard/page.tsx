@@ -1,4 +1,4 @@
-import { createServerSupabase } from "@/lib/supabaseServer";
+import { createServerSupabase } from '@/lib/supabaseServer';
 
 export default async function DashboardHome() {
   const { supabase } = await createServerSupabase();
@@ -10,9 +10,7 @@ export default async function DashboardHome() {
   return (
     <div>
       <h1 className="text-2xl font-bold">Bem-vindo ao Dashboard</h1>
-      <p className="text-gray-600 mt-2">
-        Usuário: {user?.email}
-      </p>
+      <p className="mt-2 text-gray-600">Usuário: {user?.email}</p>
     </div>
   );
 }

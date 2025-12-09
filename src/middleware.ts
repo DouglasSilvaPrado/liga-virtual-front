@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSubdomainFromRequest } from "./lib/getTenant";
+import { NextRequest, NextResponse } from 'next/server';
+import { getSubdomainFromRequest } from './lib/getTenant';
 
 /**
  * Middleware:
@@ -16,14 +16,11 @@ export async function middleware(req: NextRequest) {
   let tenant = null;
   if (sub) {
     try {
-      const resolveUrl = new URL(
-        `/api/tenant/resolve?sub=${encodeURIComponent(sub)}`,
-        req.url,
-      );
+      const resolveUrl = new URL(`/api/tenant/resolve?sub=${encodeURIComponent(sub)}`, req.url);
       const r = await fetch(resolveUrl.toString(), {
         // importante: inclui cookies do navegador (já que é chamada interna)
         headers: {
-          cookie: req.headers.get("cookie") ?? "",
+          cookie: req.headers.get('cookie') ?? '',
         },
       });
 
@@ -35,27 +32,27 @@ export async function middleware(req: NextRequest) {
         tenant = null;
       }
     } catch (err) {
-      console.error("Middleware: erro ao chamar /api/tenant/resolve:", err);
+      console.error('Middleware: erro ao chamar /api/tenant/resolve:', err);
       tenant = null;
     }
   }
 
   const hasToken =
-    req.cookies.has("sb-access-token") ||
-    req.cookies.getAll().some((c) => c.name.includes("-auth-token"));
+    req.cookies.has('sb-access-token') ||
+    req.cookies.getAll().some((c) => c.name.includes('-auth-token'));
 
   // proteger rota /dashboard
-  if (url.pathname.startsWith("/dashboard")) {
+  if (url.pathname.startsWith('/dashboard')) {
     // se nao tem token, redireciona para /login
     if (!hasToken) {
-      url.pathname = "/login";
+      url.pathname = '/login';
       return NextResponse.redirect(url);
     }
 
     // se tem token mas não tem tenant (ex: host inválido), bloquear
     if (!tenant) {
       // Retornar 400 com mensagem simples (pode personalizar)
-      return new NextResponse("Tenant inválido", { status: 400 });
+      return new NextResponse('Tenant inválido', { status: 400 });
     }
   }
 
@@ -65,7 +62,7 @@ export async function middleware(req: NextRequest) {
   if (tenant?.id) {
     // cookie simples — não é httpOnly (pode ajustar conforme necessidade)
     // definir path=/ para ficar disponível em toda app
-    res.cookies.set("x-tenant-id", tenant.id, { path: "/" });
+    res.cookies.set('x-tenant-id', tenant.id, { path: '/' });
   } else {
     // opcional: limpar cookie se não houver tenant
     // res.cookies.delete("x-tenant-id", { path: "/" });
@@ -75,5 +72,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/dashboard"],
+  matcher: ['/dashboard/:path*', '/dashboard'],
 };

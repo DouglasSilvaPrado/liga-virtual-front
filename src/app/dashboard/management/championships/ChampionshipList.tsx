@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
 import { Championship } from '@/@types/championship';
-import ChampionshipCard from "./ChampionshipCard";
+import ChampionshipCard from './ChampionshipCard';
 
 interface Props {
   championships: Championship[];
@@ -9,11 +9,7 @@ interface Props {
 
 export default function ChampionshipList({ championships }: Props) {
   if (!championships.length) {
-    return (
-      <p className="text-muted-foreground">
-        Nenhum campeonato encontrado.
-      </p>
-    );
+    return <p className="text-muted-foreground">Nenhum campeonato encontrado.</p>;
   }
 
   return (

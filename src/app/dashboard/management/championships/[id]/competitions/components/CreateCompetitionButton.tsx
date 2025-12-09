@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import CreateCompetitionModal from "./CreateCompetitionModal";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import CreateCompetitionModal from './CreateCompetitionModal';
+import { Button } from '@/components/ui/button';
 
 export default function CreateCompetitionButton({ championshipId }: { championshipId: string }) {
   const [open, setOpen] = useState(false);
