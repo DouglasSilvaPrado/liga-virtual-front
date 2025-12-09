@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CompetitionWithSettings } from '@/@types/competition';
 import CreateCompetitionButton from './components/CreateCompetitionButton';
 import EditCompetitionButton from './components/EditCompetitionButton';
+import DeleteCompetitionButton from './components/DeleteCompetitionButton';
 
 export default async function ChampionshipCompetitionsPage(props: {
   params: Promise<{ id: string }>;
@@ -44,9 +45,9 @@ export default async function ChampionshipCompetitionsPage(props: {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {competitions.map((comp: CompetitionWithSettings) => (
             <Card key={comp.id} className="rounded-xl shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 {/* Avatar da Competição */}
-                <div className="flex flex-row items-center space-x-4">
+                <div className="flex flex-row items-center space-x-4 flex-1 min-w-0">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={comp.competition_url || undefined} />
                     <AvatarFallback>{comp.name.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -62,7 +63,11 @@ export default async function ChampionshipCompetitionsPage(props: {
                   </div>
                 </div>
 
-                <EditCompetitionButton competition={comp} />
+                <div className="flex flex-row items-center space-x-2 shrink-0">
+                  <EditCompetitionButton competition={comp} />
+                  <DeleteCompetitionButton competitionId={comp.id} />
+                </div>
+
               </CardHeader>
             </Card>
           ))}
