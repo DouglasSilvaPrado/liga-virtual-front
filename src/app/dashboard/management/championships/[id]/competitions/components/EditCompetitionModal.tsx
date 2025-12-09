@@ -53,7 +53,6 @@ export default function EditCompetitionModal({
   const settings = watch('settings');
   const qtdAcessos = watch('settings.specific.qtd_acessos');
   const qtdRebaixados = watch('settings.specific.qtd_rebaixados');
-  console.log('🚀 ~ EditCompetitionModal ~ qtdRebaixados:', qtdRebaixados);
 
   useEffect(() => {
     const load = async () => {
