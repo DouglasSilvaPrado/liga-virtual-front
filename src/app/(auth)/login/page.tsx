@@ -45,19 +45,31 @@ export default function LoginPage() {
       });
 
 
-
       if (signInError) return setError(signInError.message);
+
+      const userId = signInData.user.id;
+
+      // Buscar se o usuário existe como membro do tenant
+      const { data: membership, error: membershipError } = await supabase
+        .from("tenant_members")
+        .select("id")
+        .eq("tenant_id", tenant.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (membershipError) {
+        return setError("Erro ao validar tenant.");
+      }
+
+      if (!membership) {
+        return setError("Você não pertence a este tenant.");
+      }
 
       const user = signInData.user;
       if (!user) return setError("Usuário não retornado.");
 
       await supabase.auth.updateUser({
         data: { tenant_id: tenant.id }
-      });
-
-      await supabase.rpc("ensure_tenant_member", {
-        p_tenant_id: tenant.id,
-        p_user_id: user.id
       });
 
       await new Promise(r => setTimeout(r, 50));
