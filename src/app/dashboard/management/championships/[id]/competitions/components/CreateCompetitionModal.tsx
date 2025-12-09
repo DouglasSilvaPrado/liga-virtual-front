@@ -16,8 +16,8 @@ import {
 import { useForm, Controller, Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
+import { AvatarPreview } from '@/components/image/avatarPreview';
 
 /**
  * Zod schema for the complete settings object. It will validate on client before submit.
@@ -177,8 +177,6 @@ export default function CreateCompetitionModal({
         ida_volta: (document.getElementById("divisao_ida_volta") as HTMLInputElement)?.checked ?? true,
         qtd_acessos: parseInt((document.getElementById("divisao_qtd_acessos") as HTMLInputElement)?.value || "0") || null,
         qtd_rebaixados: parseInt((document.getElementById("divisao_qtd_rebaixados") as HTMLInputElement)?.value || "0") || null,
-        divisao_rebaixamento_competition_id:
-          (document.getElementById("divisao_rebaixamento_competition_id") as HTMLInputElement)?.value || null,
       };
     } else if (data.type === "divisao_mata") {
       typeSettings = {
@@ -279,6 +277,9 @@ export default function CreateCompetitionModal({
       <DialogHeader>
         <DialogTitle>Criar nova competição</DialogTitle>
       </DialogHeader>
+
+      <AvatarPreview avatarPreview={watch("competition_url") ?? ""} />
+      
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
           <div>

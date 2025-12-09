@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +17,10 @@ import {
   CompetitionSettingsData,
 } from "@/@types/competition";
 
-import { useForm } from "react-hook-form";
-import { useRouter } from 'next/navigation';
+import { useForm, Controller } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient"; // IMPORTANTE
+import { AvatarPreview } from '@/components/image/avatarPreview';
 
 type CompetitionForm = {
   name: string;
@@ -37,9 +39,13 @@ export default function EditCompetitionModal({
   onOpenChange: (v: boolean) => void;
   competition: CompetitionWithSettings;
 }) {
-
   const router = useRouter();
-  const { register, handleSubmit, reset, watch, setValue } =
+
+  const [divisionCompetitions, setDivisionCompetitions] = useState<
+    { id: number; name: string }[]
+  >([]);
+
+  const { register, handleSubmit, reset, watch, setValue, control } =
     useForm<CompetitionForm>({
       defaultValues: {
         name: competition.name,
@@ -51,6 +57,22 @@ export default function EditCompetitionModal({
     });
 
   const settings = watch("settings");
+  const qtdAcessos = watch("settings.specific.qtd_acessos");
+  const qtdRebaixados = watch("settings.specific.qtd_rebaixados");
+  console.log("🚀 ~ EditCompetitionModal ~ qtdRebaixados:", qtdRebaixados)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("competitions")
+        .select("id, name")
+        .eq("type", "divisao");
+
+      setDivisionCompetitions(data || []);
+    };
+
+    load();
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -89,12 +111,15 @@ export default function EditCompetitionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Competição</DialogTitle>
         </DialogHeader>
 
+        <AvatarPreview avatarPreview={watch("competition_url") ?? ""} />
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* ------------------------- CAMPOS BÁSICOS ------------------------- */}
           <div>
             <Label>Nome</Label>
             <Input {...register("name")} />
@@ -110,7 +135,7 @@ export default function EditCompetitionModal({
             <Textarea {...register("rules")} rows={3} />
           </div>
 
-          {/* MATCH SETTINGS */}
+          {/* --------------------- MATCH SETTINGS ---------------------------- */}
           <div>
             <Label className="font-semibold">Configurações da Partida</Label>
 
@@ -145,13 +170,14 @@ export default function EditCompetitionModal({
             </div>
           </div>
 
-          {/* SPECIFIC SETTINGS */}
+          {/* ----------------------- SPECIFIC SETTINGS ----------------------- */}
           <div>
             <Label className="font-semibold">Configurações Específicas</Label>
 
             <div className="grid grid-cols-2 gap-3 mt-2">
               {Object.keys(settings?.specific ?? {}).map((key) => {
-                const specific = settings!.specific as Record<string, boolean | number>;
+                const specific =
+                  settings!.specific as Record<string, boolean | number>;
 
                 return (
                   <div key={key}>
@@ -184,6 +210,61 @@ export default function EditCompetitionModal({
             </div>
           </div>
 
+          {/* --------------------- SELECTS DE DIVISÃO ------------------------ */}
+
+          {Number(qtdRebaixados) > 0 && (
+            <div>
+              <Label className="font-semibold">Divisão de Rebaixamento</Label>
+
+              <Controller
+                control={control}
+                name="settings.divisionSettings.divisao_rebaixamento_competition_id"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)} // UUID = string
+                    className="w-full border rounded p-2 mt-1"
+                  >
+                    <option value="">Selecione...</option>
+                    {divisionCompetitions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+
+            </div>
+          )}
+
+          {Number(qtdAcessos) > 0 && (
+            <div>
+              <Label className="font-semibold">Divisão de Acesso</Label>
+              <Controller
+                control={control}
+                name="settings.divisionSettings.divisao_acesso_competition_id"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="w-full border rounded p-2 mt-1"
+                  >
+                    <option value="">Selecione...</option>
+                    {divisionCompetitions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+            </div>
+          )}
+
+          {/* BOTÃO */}
           <Button type="submit" className="w-full">
             Salvar alterações
           </Button>

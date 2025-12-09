@@ -69,10 +69,16 @@ export interface CompetitionSettingsData {
   format: CompetitionType;
   specific: CompetitionSpecific;
   match_settings: MatchSettings;
+  divisionSettings?: DivisionSettings;
 }
 
 // VIEW
 export interface CompetitionWithSettings extends Competition {
   competition_settings_id: string;
   settings: CompetitionSettingsData;
+}
+
+export interface DivisionSettings {
+  divisao_rebaixamento_competition_id?: string | null;
+  divisao_acesso_competition_id?: string | null;
 }

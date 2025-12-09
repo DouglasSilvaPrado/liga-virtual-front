@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 import RoleSelect from "@/components/forms/select/RoleSelect";
+import { AvatarPreview } from '@/components/image/avatarPreview';
 
 export default function EditMemberModal({
 member,
@@ -63,19 +64,12 @@ if (res.ok) {
 
 }
 
-const avatarPreview = form.avatar_url?.length > 5 ? form.avatar_url : null;
 
 return ( <Dialog open={open} onOpenChange={onOpenChange}> <DialogContent> <DialogHeader> <DialogTitle>Editar membro</DialogTitle> </DialogHeader>
 
     <div className="space-y-4">
 
-      {/* AVATAR PREVIEW */}
-      <div className="flex flex-col items-center space-y-3">
-        <Avatar className="w-24 h-24 border shadow">
-          <AvatarImage src={avatarPreview ?? ""} alt="Avatar Preview" />
-          <AvatarFallback>NO IMG</AvatarFallback>
-        </Avatar>
-      </div>
+      <AvatarPreview avatarPreview={form.avatar_url} />
 
       <div>
         <Label>Avatar URL</Label>
