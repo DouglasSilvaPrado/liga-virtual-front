@@ -7,6 +7,7 @@ import { CompetitionWithSettings } from '@/@types/competition';
 import CreateCompetitionButton from './components/CreateCompetitionButton';
 import EditCompetitionButton from './components/EditCompetitionButton';
 import DeleteCompetitionButton from './components/DeleteCompetitionButton';
+import CompetitionTrophiesButton from './components/CompetitionTrophiesButton';
 
 export default async function ChampionshipCompetitionsPage(props: {
   params: Promise<{ id: string }>;
@@ -45,9 +46,9 @@ export default async function ChampionshipCompetitionsPage(props: {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {competitions.map((comp: CompetitionWithSettings) => (
             <Card key={comp.id} className="rounded-xl shadow-sm">
-             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {/* Avatar da Competição */}
-                <div className="flex flex-row items-center space-x-4 flex-1 min-w-0">
+                <div className="flex min-w-0 flex-1 flex-row items-center space-x-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={comp.competition_url || undefined} />
                     <AvatarFallback>{comp.name.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -63,11 +64,11 @@ export default async function ChampionshipCompetitionsPage(props: {
                   </div>
                 </div>
 
-                <div className="flex flex-row items-center space-x-2 shrink-0">
+                <div className="flex shrink-0 flex-row items-center space-x-2">
                   <EditCompetitionButton competition={comp} />
                   <DeleteCompetitionButton competitionId={comp.id} />
+                  <CompetitionTrophiesButton championshipId={championshipId} competitionId={comp.id} />
                 </div>
-
               </CardHeader>
             </Card>
           ))}
