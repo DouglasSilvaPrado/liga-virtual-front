@@ -9,7 +9,9 @@ export type Trophy = {
   tenant_id?: string;
   competition_id?: string;
   rule?: string;
-  type?: string;
+  type?: (typeof TROPHY_TYPES)[number];
   rule_value?: string;
   position?: number;
 };
+
+export const TROPHY_TYPES = ['posicao', 'artilharia', 'assistencia', 'vitoria'] as const;

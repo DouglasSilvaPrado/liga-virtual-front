@@ -54,6 +54,7 @@ export default function TrophyClient({
             <CardHeader>
               <AvatarPreview avatarPreview={trophy.trophy_url} />
               <div className="font-bold text-lg">{trophy.name}</div>
+              <div className="text-sm text-gray-500">Regra: {trophy.type}</div>
             </CardHeader>
             <CardContent>
               <p>💰 Dinheiro: {trophy.money}</p>
@@ -78,6 +79,7 @@ export default function TrophyClient({
         competitionId={competitionId}
         tenant_id={tenantId}
         trophy={editTrophy}
+        setTrophy={setEditTrophy}
         onSaved={reload}
       />
     </div>
