@@ -22,6 +22,7 @@ export default function TrophyClient({
   const [trophies, setTrophies] = useState(initial);
   const [open, setOpen] = useState(false);
   const [editTrophy, setEditTrophy] = useState<Trophy | null>(null);
+  console.log("🚀 ~ TrophyClient ~ editTrophy:", editTrophy)
 
   const reload = async () => {
     const { data } = await supabase
@@ -79,7 +80,6 @@ export default function TrophyClient({
         competitionId={competitionId}
         tenant_id={tenantId}
         trophy={editTrophy}
-        setTrophy={setEditTrophy}
         onSaved={reload}
       />
     </div>

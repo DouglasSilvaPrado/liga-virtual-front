@@ -7,16 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from "@/lib/supabaseClient";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 
-export default function TrophyFormDialog({ open, onOpenChange, competitionId, tenant_id, trophy, setTrophy, onSaved }: {
+export default function TrophyFormDialog({ open, onOpenChange, competitionId, tenant_id, trophy, onSaved }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   competitionId: string;
   tenant_id: string;
   trophy?: Trophy | null;
-  setTrophy:  (v: Trophy | null) => void;
   onSaved: () => void;
   }) {
   const [form, setForm] = useState<Trophy>(
@@ -33,14 +32,34 @@ export default function TrophyFormDialog({ open, onOpenChange, competitionId, te
     }
   );
 
+  useEffect(() => {
+    if (open) {
+      if (trophy) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setForm(trophy);
+      } else {
+        setForm({
+          name: "",
+          trophy_url: "",
+          money: 0,
+          point_rank: 0,
+          type: "posicao",
+          position: 1,
+          tenant_id,
+          competition_id: competitionId,
+          created_at: new Date().toISOString()
+        });
+      }
+    }
+  }, [open]);
+
+
 
   const save = async () => {
     if (trophy) {
     await supabase.from("trophies").update(form).eq("id", trophy.id);
-    setTrophy(null);
     } else {
     await supabase.from("trophies").insert(form);
-    setTrophy(null);
   }
 
 
