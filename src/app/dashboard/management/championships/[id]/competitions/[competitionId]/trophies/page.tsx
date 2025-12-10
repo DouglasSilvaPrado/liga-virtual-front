@@ -4,7 +4,7 @@ import TrophiesManager from './components/TrophiesManager';
 
 
 export default async function CompetitionTrophiesPage(props: { params: Promise<{ id: string; competitionId: string }> }) {
-  const { id, competitionId } = await props.params;
+  const {  competitionId } = await props.params;
 
   const { supabase, tenantId } = await createServerSupabase();
 
@@ -20,5 +20,5 @@ export default async function CompetitionTrophiesPage(props: { params: Promise<{
   if (!competition) return notFound();
 
 
-  return <TrophiesManager competitionId={id} />;
+  return <TrophiesManager competitionId={competitionId} />;
 }
