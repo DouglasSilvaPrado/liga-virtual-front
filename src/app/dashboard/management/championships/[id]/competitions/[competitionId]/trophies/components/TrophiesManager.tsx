@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Trophy as TrophyIcon } from "lucide-react";
 import { Trophy } from '@/@types/trophies';
+import TrophyFormDialog from './TrophyFormDialog';
 
 export default function TrophiesManager({ competitionId }: { competitionId: string }) {
   const [trophies, setTrophies] = useState<Trophy[]>([]);
@@ -26,11 +27,14 @@ export default function TrophiesManager({ competitionId }: { competitionId: stri
     let isMounted = true;
 
     (async () => {
+       const tenant_id = await supabase.auth.getUser().then(({ data: { user } }) => {
+        return user?.user_metadata?.tenant_id;
+      });
+
       const { data } = await supabase
         .from("trophies")
         .select("*")
-        .eq("competition_id", competitionId)
-        .order("created_at", { ascending: false });
+        .eq("tenant_id", tenant_id)
 
       if (isMounted) {
         setTrophies(data || []);
@@ -75,7 +79,7 @@ export default function TrophiesManager({ competitionId }: { competitionId: stri
                 <Button size="sm" onClick={() => { setEditTrophy(trophy); setOpen(true); }}>
                   Editar
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleDelete(trophy.id)}>
+                <Button size="sm" variant="destructive" onClick={() => handleDelete(trophy.id!)}>
                   Excluir
                 </Button>
               </div>
@@ -84,13 +88,13 @@ export default function TrophiesManager({ competitionId }: { competitionId: stri
         ))}
       </div>
 
-      {/* <TrophyFormDialog
+      <TrophyFormDialog
         open={open}
         onOpenChange={setOpen}
         competitionId={competitionId}
         trophy={editTrophy}
         onSaved={load}
-      /> */}
+      />
     </div>
   );
 }
