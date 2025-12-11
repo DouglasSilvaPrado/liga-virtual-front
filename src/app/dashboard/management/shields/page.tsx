@@ -45,7 +45,7 @@ export default async function ShieldsPage(props: {
         <CreateShieldModal tenantId={tenantId} tenant_member_id={tenant_member_id} />
       </div>
 
-      <ShieldsTable shields={shields || []} />
+      <ShieldsTable shields={shields || []} tenant_member_id={tenant_member_id} />
 
       <Pagination page={page} totalPages={totalPages} />
     </div>

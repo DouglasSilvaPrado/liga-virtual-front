@@ -11,8 +11,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import ShieldStatusBadge from "./ShieldStatusBadge";
+import EditShieldModal from './EditShieldModal';
 
-export default function ShieldsTable({ shields }: { shields: Shield[] }) {
+export default function ShieldsTable({ shields, tenant_member_id }: { shields: Shield[]; tenant_member_id: string }) {
   function isSofifa(url?: string | null) {
     if (!url) return false;
     try {
@@ -33,6 +34,7 @@ export default function ShieldsTable({ shields }: { shields: Shield[] }) {
             <TableHead>Nome</TableHead>
             <TableHead>Sigla</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -63,6 +65,12 @@ export default function ShieldsTable({ shields }: { shields: Shield[] }) {
 
               <TableCell>
                 <ShieldStatusBadge status={s.status} />
+              </TableCell>
+
+              <TableCell>
+                {s.tenant_member_id === tenant_member_id && (
+                  <EditShieldModal shield={s} />
+                )}
               </TableCell>
             </TableRow>
           ))}
