@@ -32,7 +32,7 @@ export default function CreateShieldModal({ tenantId, tenant_member_id }: { tena
       abbreviation: form.get("abbreviation"),
       stadium: form.get("stadium"),
       country: form.get("country"),
-      status: form.get("status"),
+      status: "pending",
       main_color: form.get("main_color"),
       shield_url: form.get("shield_url"),
       uniform_1_url: form.get("uniform_1_url"),
@@ -91,11 +91,6 @@ export default function CreateShieldModal({ tenantId, tenant_member_id }: { tena
           <div>
             <Label>Estádio</Label>
             <Input name="stadium" />
-          </div>
-
-          <div>
-            <Label>Status</Label>
-            <Input name="status" />
           </div>
 
           <div>
