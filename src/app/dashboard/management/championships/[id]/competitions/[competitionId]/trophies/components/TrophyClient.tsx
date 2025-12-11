@@ -22,7 +22,6 @@ export default function TrophyClient({
   const [trophies, setTrophies] = useState(initial);
   const [open, setOpen] = useState(false);
   const [editTrophy, setEditTrophy] = useState<Trophy | null>(null);
-  console.log("🚀 ~ TrophyClient ~ editTrophy:", editTrophy)
 
   const reload = async () => {
     const { data } = await supabase

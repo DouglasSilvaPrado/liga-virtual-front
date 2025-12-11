@@ -1,6 +1,7 @@
 import { createServerSupabase } from "@/lib/supabaseServer";
 import ShieldsTable from "./components/ShieldsTable";
 import Pagination from './components/Pagination';
+import CreateShieldModal from './components/CreateShieldModal';
 
 export default async function ShieldsPage(props: {
   searchParams: Promise<{ page?: string }>;
@@ -26,7 +27,10 @@ export default async function ShieldsPage(props: {
 
   return (
     <div className="space-y-4 p-6">
-      <h1 className="text-2xl font-bold">Escudos</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Escudos</h1>
+        <CreateShieldModal tenantId={tenantId} />
+      </div>
 
       <ShieldsTable shields={shields || []} />
 

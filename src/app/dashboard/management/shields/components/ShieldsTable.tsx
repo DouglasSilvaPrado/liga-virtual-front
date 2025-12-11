@@ -13,6 +13,17 @@ import {
 import ShieldStatusBadge from "./ShieldStatusBadge";
 
 export default function ShieldsTable({ shields }: { shields: Shield[] }) {
+  function isSofifa(url?: string | null) {
+    if (!url) return false;
+    try {
+      const u = new URL(url);
+      return u.hostname === "cdn.sofifa.net";
+    } catch {
+      return false;
+    }
+  }
+
+  
   return (
     <div className="overflow-x-auto w-full">
       <Table>
@@ -29,13 +40,21 @@ export default function ShieldsTable({ shields }: { shields: Shield[] }) {
           {shields.map((s) => (
             <TableRow key={s.id}>
               <TableCell>
-                <Image
-                  src={s.image_url ?? s.shield_url}
-                  width={40}
-                  height={40}
-                  alt={s.name}
-                  className="rounded-md"
-                />
+                {isSofifa(s.shield_url) ? (
+                  <Image
+                    src={s.shield_url}
+                    width={40}
+                    height={40}
+                    alt={s.name}
+                    className="rounded-md object-cover"
+                  />
+                ) : (
+                  <img
+                    src={s.shield_url}
+                    alt={s.name}
+                    className="h-10 w-10 rounded-md object-cover"
+                  />
+                )}
               </TableCell>
 
               <TableCell className="font-semibold">{s.name}</TableCell>
