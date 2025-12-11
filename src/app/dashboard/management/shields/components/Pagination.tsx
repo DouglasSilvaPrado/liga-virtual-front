@@ -7,17 +7,18 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationEllipsis,
 } from "@/components/ui/pagination";
 
 function getPages(current: number, total: number) {
-  const pages = [];
+  const pages: (number | string)[] = [];
 
   if (total <= 7)
     return Array.from({ length: total }, (_, i) => i + 1);
 
   pages.push(1);
 
-  if (current > 3) pages.push("…");
+  if (current > 3) pages.push("ellipsis-start");
 
   const start = Math.max(2, current - 2);
   const end = Math.min(total - 1, current + 2);
@@ -26,7 +27,7 @@ function getPages(current: number, total: number) {
     pages.push(i);
   }
 
-  if (current < total - 2) pages.push("…");
+  if (current < total - 2) pages.push("ellipsis-end");
 
   pages.push(total);
 
@@ -45,19 +46,15 @@ export default function Pagination({ page, totalPages }: { page: number; totalPa
     <ShadPagination>
       <PaginationContent>
         <PaginationItem>
-          <PaginationPrevious href={`?page=${prev}`} size="icon" />
+          <PaginationPrevious href={`?page=${prev}`} size="sm" />
         </PaginationItem>
 
         {pages.map((p, i) => (
           <PaginationItem key={i}>
-            {p === "…" ? (
-              <span className="px-4 py-2 text-muted-foreground">…</span>
+            {p === "ellipsis-start" || p === "ellipsis-end" ? (
+              <PaginationEllipsis />
             ) : (
-              <PaginationLink
-                href={`?page=${p}`}
-                isActive={page === p}
-                size="default"
-              >
+              <PaginationLink href={`?page=${p}`} isActive={page === p}  size="sm">
                 {p}
               </PaginationLink>
             )}
@@ -65,7 +62,7 @@ export default function Pagination({ page, totalPages }: { page: number; totalPa
         ))}
 
         <PaginationItem>
-          <PaginationNext href={`?page=${next}`} size="icon" />
+          <PaginationNext href={`?page=${next}`}  size="sm" />
         </PaginationItem>
       </PaginationContent>
     </ShadPagination>
