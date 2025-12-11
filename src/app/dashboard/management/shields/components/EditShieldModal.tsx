@@ -14,9 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Shield } from "@/@types/shield";
 import { AvatarPreview } from '@/components/image/avatarPreview';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function EditShieldModal({ shield, tenant_member_role }: { shield: Shield, tenant_member_role: string }) {
-  console.log("🚀 ~ EditShieldModal ~ tenant_member_role:", tenant_member_role)
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -77,24 +77,38 @@ export default function EditShieldModal({ shield, tenant_member_role }: { shield
             <Input name="abbreviation" defaultValue={shield.abbreviation} />
           </div>
 
-          <div>
-            <Label>Status</Label>
-            <Input name="status" defaultValue={shield.status} />
-          </div>
+          {(tenant_member_role === "owner" || tenant_member_role === "admin") && (
+            <div>
+              <Label>Status</Label>
+              <Select name="status" defaultValue={shield.status}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
 
            <div>
             <Label>País</Label>
-            <Input name="country" />
+            <Input name="country" defaultValue={shield.country} />
           </div>
 
           <div>
             <Label>Estádio</Label>
-            <Input name="stadium" />
+            <Input name="stadium" defaultValue={shield.stadium} />
           </div>
 
           <div>
             <Label>Cor Principal</Label>
-            <Input name="main_color" />
+            <Input name="main_color" defaultValue={shield.main_color} />
           </div>
 
           <div>
@@ -102,23 +116,24 @@ export default function EditShieldModal({ shield, tenant_member_role }: { shield
             <Input
               name="shield_url"
               required
+              defaultValue={shield.shield_url}
               onChange={(e) => setShieldUrl(e.target.value)}
             />
           </div>
 
           <div>
             <Label>URL Uniforme 1</Label>
-            <Input name="uniform_1_url" />
+            <Input name="uniform_1_url" defaultValue={shield.uniform_1_url} />
           </div>
 
           <div>
             <Label>URL Uniforme 2</Label>
-            <Input name="uniform_2_url" />
+            <Input name="uniform_2_url" defaultValue={shield.uniform_2_url} />
           </div>
 
           <div>
             <Label>URL Uniforme Goleiro</Label>
-            <Input name="uniform_gk_url" />
+            <Input name="uniform_gk_url" defaultValue={shield.uniform_gk_url} />
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
