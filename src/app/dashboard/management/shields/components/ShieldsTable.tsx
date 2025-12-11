@@ -13,7 +13,7 @@ import {
 import ShieldStatusBadge from "./ShieldStatusBadge";
 import EditShieldModal from './EditShieldModal';
 
-export default function ShieldsTable({ shields, tenant_member_id }: { shields: Shield[]; tenant_member_id: string }) {
+export default function ShieldsTable({ shields, tenant_member_id, tenant_member_role }: { shields: Shield[]; tenant_member_id: string, tenant_member_role: string}) {
   function isSofifa(url?: string | null) {
     if (!url) return false;
     try {
@@ -69,7 +69,7 @@ export default function ShieldsTable({ shields, tenant_member_id }: { shields: S
 
               <TableCell>
                 {s.tenant_member_id === tenant_member_id && (
-                  <EditShieldModal shield={s} />
+                  <EditShieldModal shield={s} tenant_member_role={tenant_member_role} />
                 )}
               </TableCell>
             </TableRow>

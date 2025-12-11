@@ -14,12 +14,13 @@ export default async function ShieldsPage(props: {
 
      const { data: member } = await supabase
       .from("tenant_members")
-      .select("id")
+      .select("id, role")
       .eq("user_id", user?.id)
       .limit(1)
       .single();
 
   const tenant_member_id = member?.id;
+  const tenant_member_role = member?.role;
 
   const searchParams = await props.searchParams;
 
@@ -45,7 +46,7 @@ export default async function ShieldsPage(props: {
         <CreateShieldModal tenantId={tenantId} tenant_member_id={tenant_member_id} />
       </div>
 
-      <ShieldsTable shields={shields || []} tenant_member_id={tenant_member_id} />
+      <ShieldsTable shields={shields || []} tenant_member_id={tenant_member_id} tenant_member_role={tenant_member_role} />
 
       <Pagination page={page} totalPages={totalPages} />
     </div>

@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Shield } from "@/@types/shield";
 import { AvatarPreview } from '@/components/image/avatarPreview';
 
-export default function EditShieldModal({ shield }: { shield: Shield }) {
+export default function EditShieldModal({ shield, tenant_member_role }: { shield: Shield, tenant_member_role: string }) {
+  console.log("🚀 ~ EditShieldModal ~ tenant_member_role:", tenant_member_role)
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
