@@ -2,11 +2,16 @@ import { createServerSupabase } from "@/lib/supabaseServer";
 import ShieldsTable from "./components/ShieldsTable";
 import Pagination from './components/Pagination';
 
-export default async function ShieldsPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function ShieldsPage(props: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { supabase, tenantId } = await createServerSupabase();
 
+  const searchParams = await props.searchParams;
+
   const page = Number(searchParams.page ?? 1);
-  const limit = 20; // melhor para 142 páginas
+  const limit = 20;
+
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -23,9 +28,7 @@ export default async function ShieldsPage({ searchParams }: { searchParams: { pa
     <div className="space-y-4 p-6">
       <h1 className="text-2xl font-bold">Escudos</h1>
 
-      <div className="rounded-lg border">
-        <ShieldsTable shields={shields || []} />
-      </div>
+      <ShieldsTable shields={shields || []} />
 
       <Pagination page={page} totalPages={totalPages} />
     </div>
