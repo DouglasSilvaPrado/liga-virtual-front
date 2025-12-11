@@ -4,7 +4,6 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 export async function POST(req: Request) {
   const body = await req.json();
   const { id, ...fields } = body;
-  console.log('🚀 ~ POST ~ id:', id);
 
   if (!id) {
     return NextResponse.json({ error: 'Shield ID is required' }, { status: 400 });
