@@ -13,4 +13,5 @@ export interface Shield {
   created_at: string;
   image_url: string;
   tenant_id: string;
+  tenant_member_id: string;
 }

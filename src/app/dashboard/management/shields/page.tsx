@@ -8,6 +8,19 @@ export default async function ShieldsPage(props: {
 }) {
   const { supabase, tenantId } = await createServerSupabase();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+     const { data: member } = await supabase
+      .from("tenant_members")
+      .select("id")
+      .eq("user_id", user?.id)
+      .limit(1)
+      .single();
+
+  const tenant_member_id = member?.id;
+
   const searchParams = await props.searchParams;
 
   const page = Number(searchParams.page ?? 1);
@@ -29,7 +42,7 @@ export default async function ShieldsPage(props: {
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Escudos</h1>
-        <CreateShieldModal tenantId={tenantId} />
+        <CreateShieldModal tenantId={tenantId} tenant_member_id={tenant_member_id} />
       </div>
 
       <ShieldsTable shields={shields || []} />

@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AvatarPreview } from '@/components/image/avatarPreview';
 
-export default function CreateShieldModal({ tenantId }: { tenantId: string }) {
+export default function CreateShieldModal({ tenantId, tenant_member_id }: { tenantId: string; tenant_member_id: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -39,6 +39,7 @@ export default function CreateShieldModal({ tenantId }: { tenantId: string }) {
       uniform_2_url: form.get("uniform_2_url"),
       uniform_gk_url: form.get("uniform_gk_url"),
       tenant_id: tenantId,
+      tenant_member_id: tenant_member_id,
     };
 
     const res = await fetch("/api/shields/create", {
