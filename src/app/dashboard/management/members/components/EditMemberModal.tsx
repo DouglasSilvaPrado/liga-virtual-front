@@ -14,12 +14,12 @@ export default function EditMemberModal({
   member,
   open,
   onOpenChange,
-  canEdit,
+  IsOwnerOrAdmin,
 }: {
   member: MemberProfile;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  canEdit: boolean;
+  IsOwnerOrAdmin: boolean;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -134,8 +134,8 @@ export default function EditMemberModal({
           <RoleSelect
             value={form.role}
             onChange={(role) => updateField('role', role)}
-            disabled={!canEdit}
-            showLockedMessage={!canEdit}
+            disabled={!IsOwnerOrAdmin}
+            showLockedMessage={!IsOwnerOrAdmin}
           />
 
           <Button onClick={onSave} disabled={loading}>
