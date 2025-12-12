@@ -41,7 +41,7 @@ export default function MemberItem({
             </div>
           </div>
 
-          { member.user_id === currentUserId && (
+          { (member.user_id === currentUserId || canEdit) && (
             <Pencil
               className="text-muted-foreground hover:text-primary h-5 w-5 cursor-pointer"
               onClick={() => setOpen(true)}
