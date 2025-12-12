@@ -17,13 +17,14 @@ export default async function MembersPage() {
   const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role || 'member';
 
   const isOwner = currentUserRole === 'owner';
+  const isAdmin = currentUserRole === 'admin';
 
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Membros</h1>
 
-        {isOwner && <AddMemberModal tenantId={tenantId} />}
+        {(isOwner || isAdmin) && <AddMemberModal tenantId={tenantId} />}
       </div>
 
       <MembersList members={members || []} currentUserRole={currentUserRole} currentUserId={user?.id || ''} />

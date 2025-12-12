@@ -19,12 +19,9 @@ export default function MemberItem({
 }) {
   const [open, setOpen] = useState(false);
 
-  const isOwner = currentUserRole === 'owner';
   const canEdit =
     currentUserRole === 'owner' ||
-    currentUserRole === 'admin' ||
-    member.user_id === currentUserId;
-
+    currentUserRole === 'admin'
 
   return (
     <>
@@ -44,7 +41,7 @@ export default function MemberItem({
             </div>
           </div>
 
-          {canEdit && (
+          { member.user_id === currentUserId && (
             <Pencil
               className="text-muted-foreground hover:text-primary h-5 w-5 cursor-pointer"
               onClick={() => setOpen(true)}
@@ -55,7 +52,7 @@ export default function MemberItem({
       </Card>
 
       {/* Modal */}
-      <EditMemberModal member={member} open={open} onOpenChange={setOpen} isOwner={isOwner} />
+      <EditMemberModal member={member} open={open} onOpenChange={setOpen} canEdit={canEdit} />
     </>
   );
 }

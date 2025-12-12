@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MemberProfile } from '@/@types/memberProfile';
 import { useState } from 'react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 import RoleSelect from '@/components/forms/select/RoleSelect';
 import { AvatarPreview } from '@/components/image/avatarPreview';
@@ -15,12 +14,12 @@ export default function EditMemberModal({
   member,
   open,
   onOpenChange,
-  isOwner,
+  canEdit,
 }: {
   member: MemberProfile;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  isOwner: boolean;
+  canEdit: boolean;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -135,8 +134,8 @@ export default function EditMemberModal({
           <RoleSelect
             value={form.role}
             onChange={(role) => updateField('role', role)}
-            disabled={!isOwner}
-            showLockedMessage={!isOwner}
+            disabled={!canEdit}
+            showLockedMessage={!canEdit}
           />
 
           <Button onClick={onSave} disabled={loading}>
