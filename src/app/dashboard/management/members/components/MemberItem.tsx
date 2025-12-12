@@ -11,13 +11,20 @@ import EditMemberModal from './EditMemberModal';
 export default function MemberItem({
   member,
   currentUserRole,
+  currentUserId
 }: {
   member: MemberProfile;
   currentUserRole: string;
+  currentUserId: string;
 }) {
   const [open, setOpen] = useState(false);
 
   const isOwner = currentUserRole === 'owner';
+  const canEdit =
+    currentUserRole === 'owner' ||
+    currentUserRole === 'admin' ||
+    member.user_id === currentUserId;
+
 
   return (
     <>
@@ -37,10 +44,13 @@ export default function MemberItem({
             </div>
           </div>
 
-          <Pencil
-            className="text-muted-foreground hover:text-primary h-5 w-5 cursor-pointer"
-            onClick={() => setOpen(true)}
-          />
+          {canEdit && (
+            <Pencil
+              className="text-muted-foreground hover:text-primary h-5 w-5 cursor-pointer"
+              onClick={() => setOpen(true)}
+            />
+          )}
+
         </CardHeader>
       </Card>
 

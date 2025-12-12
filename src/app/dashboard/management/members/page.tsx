@@ -26,7 +26,7 @@ export default async function MembersPage() {
         {isOwner && <AddMemberModal tenantId={tenantId} />}
       </div>
 
-      <MembersList members={members || []} currentUserRole={currentUserRole} />
+      <MembersList members={members || []} currentUserRole={currentUserRole} currentUserId={user?.id || ''} />
     </div>
   );
 }

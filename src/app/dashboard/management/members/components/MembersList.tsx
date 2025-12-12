@@ -6,9 +6,11 @@ import { MemberProfile } from '@/@types/memberProfile';
 export default function MembersList({
   members,
   currentUserRole,
+  currentUserId
 }: {
   members: MemberProfile[];
   currentUserRole: string;
+  currentUserId: string;
 }) {
   if (!members.length) {
     return <p className="text-muted-foreground">Nenhum membro encontrado.</p>;
@@ -17,7 +19,7 @@ export default function MembersList({
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {members.map((m) => (
-        <MemberItem key={m.id} member={m} currentUserRole={currentUserRole} />
+        <MemberItem key={m.id} member={m} currentUserRole={currentUserRole} currentUserId={currentUserId} />
       ))}
     </div>
   );
