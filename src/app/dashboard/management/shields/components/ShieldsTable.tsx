@@ -13,6 +13,7 @@ import {
 import ShieldStatusBadge from "./ShieldStatusBadge";
 import EditShieldModal from './EditShieldModal';
 import DeleteShieldModal from './DeleteShieldModal';
+import { isSofifa } from '@/util/isSofifa';
 
 export default function ShieldsTable({
   shields,
@@ -23,15 +24,7 @@ export default function ShieldsTable({
   tenant_member_id: string;
   tenant_member_role: string;
 }) {
-  function isSofifa(url?: string | null) {
-    if (!url) return false;
-    try {
-      const u = new URL(url);
-      return u.hostname === "cdn.sofifa.net";
-    } catch {
-      return false;
-    }
-  }
+  
 
   return (
     <div className="overflow-x-auto w-full">

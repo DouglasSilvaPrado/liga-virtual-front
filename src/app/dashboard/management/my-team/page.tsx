@@ -2,6 +2,8 @@
 import { createServerSupabase } from "@/lib/supabaseServer";
 import CreateTeamModal from './components/CreateTeamModal';
 import { Team } from '@/@types/team';
+import MyTeamCard from './components/MyTeamCard';
+import { Shield } from '@/@types/shield';
 
 export default async function MyTeamPage() {
   const { supabase, tenantId } = await createServerSupabase();
@@ -18,6 +20,15 @@ export default async function MyTeamPage() {
       </div>
     );
   }
+
+   // TODO: Adicionar um seletor para o user selecionar championship se tiver mais de 1
+    const { data: championship } = await supabase
+    .from("championships")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
 
   // Buscar tenant_member
   const { data: tenantMember, error: memberError } = await supabase
@@ -39,16 +50,15 @@ export default async function MyTeamPage() {
     .eq("tenant_member_id", tenantMember?.id)
     .maybeSingle<Team>();
 
-
-    // TODO: Adicionar um seletor para o user selecionar championship se tiver mais de 1
-    const { data: championship } = await supabase
-    .from("championships")
+  // Buscar escudo
+  const { data: shield } = await supabase
+    .from("shields")
     .select("*")
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+    .eq("id", team?.shield_id)
+    .maybeSingle<Shield>();
 
+  console.log("🚀 ~ MyTeamPage ~ shield:", shield)
 
 
   const hasTeam = !!team;
@@ -69,14 +79,9 @@ export default async function MyTeamPage() {
         </div>
       )}
 
-      {hasTeam && (
-        <div className="mt-6 p-4 border rounded-xl bg-muted/40 space-y-2">
-          <h2 className="text-xl font-semibold">Seu time</h2>
-          <p><strong>Nome:</strong> {team.name}</p>
-          <p><strong>Escudo:</strong> {team.shield_id}</p>
-          <p><strong>Campeonato:</strong> {team.championship_id}</p>
-
-          {/* depois podemos adicionar botão Editar */}
+      {hasTeam &&  (
+        <div className="mt-6">
+          <MyTeamCard team={team} shield={shield} />
         </div>
       )}
     </div>
