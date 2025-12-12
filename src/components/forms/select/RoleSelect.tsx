@@ -27,13 +27,13 @@ export default function RoleSelect({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="owner">Owner</option>
-        <option value="admin">Admin</option>
-        <option value="member">Member</option>
+        <option value="owner">Dono</option>
+        <option value="admin">Administrador</option>
+        <option value="member">Membro</option>
       </select>
 
       {showLockedMessage && disabled && (
-        <p className="mt-1 text-xs text-gray-500">Somente o Owner pode editar o papel.</p>
+        <p className="mt-1 text-xs text-gray-500">Somente o Dono pode editar o papel.</p>
       )}
     </div>
   );
