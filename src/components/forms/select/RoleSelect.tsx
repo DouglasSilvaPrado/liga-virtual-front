@@ -17,7 +17,7 @@ export default function RoleSelect({
 }: RoleSelectProps) {
   return (
     <div>
-      <Label>Role</Label>
+      <Label>Cargo</Label>
 
       <select
         className={`w-full rounded-md border p-2 ${

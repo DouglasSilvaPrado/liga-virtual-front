@@ -9,6 +9,7 @@ const managementMenu = [
   { href: "/dashboard/management/members", label: "Membros" },
   { href: "/dashboard/management/championships", label: "Campeonatos" },
   { href: "/dashboard/management/shields", label: "Escudos" },
+  { href: "/dashboard/management/my-team", label: "Meu Time" },
 ];
 
 export default function SidebarClient() {
