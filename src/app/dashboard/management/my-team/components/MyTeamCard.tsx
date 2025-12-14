@@ -48,7 +48,7 @@ export default function MyTeamCard({ team, shield }: Props) {
           <div>
             <h2 className="text-2xl font-bold">{team.name}</h2>
             <p className="text-muted-foreground text-sm">
-              {shield?.abbreviation ?? "N/A"} • {shield?.country ?? "N/A"}
+              {shield?.abbreviation ? shield?.abbreviation : "N/A"} • {shield?.country ? shield?.country : "N/A"}
             </p>
           </div>
         </div>
@@ -66,12 +66,12 @@ export default function MyTeamCard({ team, shield }: Props) {
         <div className="space-y-3 text-sm">
           <div className="flex items-center gap-2">
             <MapPin size={16} className="text-muted-foreground" />
-            <span><strong>Estádio:</strong> {shield?.stadium ?? "Não informado"}</span>
+            <span><strong>Estádio:</strong> {shield?.stadium ? shield.stadium : "Não informado"}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <Flag size={16} className="text-muted-foreground" />
-            <span><strong>País:</strong> {shield?.country ?? "N/A"}</span>
+            <span><strong>País:</strong> {shield?.country ? shield?.country : "N/A"}</span>
           </div>
         </div>
 
