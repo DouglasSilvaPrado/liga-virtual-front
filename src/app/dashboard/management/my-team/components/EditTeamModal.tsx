@@ -124,8 +124,6 @@ export default function EditTeamModal({
         name,
         shield_id: shieldId,
         tenant_member_id: tenantMemberId,
-
-        // dados do escudo associados ao time
         stadium,
         country,
         shield_url: shieldUrl,
@@ -195,33 +193,33 @@ export default function EditTeamModal({
           {/* URLs */}
           <div>
             <Label>URL do Escudo</Label>
-            <Input value={shieldUrl} onChange={(e) => setShieldUrl(e.target.value)} />
+            <Input value={shieldUrl} onChange={(e) => setShieldUrl(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
           </div>
 
           <div>
             <Label>URL Uniforme 1</Label>
-            <Input value={uniform1Url} onChange={(e) => setUniform1Url(e.target.value)} />
+            <Input value={uniform1Url} onChange={(e) => setUniform1Url(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
           </div>
 
           <div>
             <Label>URL Uniforme 2</Label>
-            <Input value={uniform2Url} onChange={(e) => setUniform2Url(e.target.value)} />
+            <Input value={uniform2Url} onChange={(e) => setUniform2Url(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
           </div>
 
           <div>
             <Label>URL Uniforme Goleiro</Label>
-            <Input value={uniformGkUrl} onChange={(e) => setUniformGkUrl(e.target.value)} />
+            <Input value={uniformGkUrl} onChange={(e) => setUniformGkUrl(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
           </div>
 
           {/* Localização */}
           <div>
             <Label>Estádio</Label>
-            <Input value={stadium} onChange={(e) => setStadium(e.target.value)} />
+            <Input value={stadium} onChange={(e) => setStadium(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
           </div>
 
           <div>
             <Label>País</Label>
-            <Input value={country} onChange={(e) => setCountry(e.target.value)} />
+            <Input value={country} onChange={(e) => setCountry(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
           </div>
 
           <Button className="w-full" disabled={loading}>
