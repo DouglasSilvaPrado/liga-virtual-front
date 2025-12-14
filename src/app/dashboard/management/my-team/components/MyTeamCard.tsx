@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import { Shirt, MapPin, Flag } from "lucide-react";
 import { isSofifa } from "@/util/isSofifa";
+import EditTeamModal from './EditTeamModal';
 
 interface Props {
   team: Team;
@@ -26,6 +27,13 @@ export default function MyTeamCard({ team, shield }: Props) {
   return (
     <Card className="overflow-hidden shadow-lg border border-border/50 bg-linear-to-b from-muted/60 to-background rounded-2xl">
       <CardContent className="p-6 space-y-6">
+        <EditTeamModal
+          team={team}
+          shield={shield}
+          tenantId={team.tenant_id}
+          tenantMemberId={team.tenant_member_id}
+        />
+
         {/* HEADER */}
         <div className="flex items-center gap-4">
           <div className="relative w-20 h-20">

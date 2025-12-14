@@ -58,8 +58,6 @@ export default async function MyTeamPage() {
     .eq("id", team?.shield_id)
     .maybeSingle<Shield>();
 
-  console.log("🚀 ~ MyTeamPage ~ shield:", shield)
-
 
   const hasTeam = !!team;
 
