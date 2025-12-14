@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     .from('shields')
     .select('*')
     .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+    .eq('status', 'active')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
