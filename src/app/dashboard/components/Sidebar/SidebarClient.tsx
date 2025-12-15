@@ -12,6 +12,11 @@ const managementMenu = [
   { href: "/dashboard/management/my-team", label: "Meu Time" },
 ];
 
+const cupMenu = [
+  { href: "/dashboard/cups", label: "Copas" },
+  { href: "/dashboard/cups/rounds", label: "Rodadas" },
+]
+
 export default function SidebarClient({
   onNavigate,
 }: {
@@ -19,7 +24,9 @@ export default function SidebarClient({
 }) {
   const pathname = usePathname();
   const autoOpen = pathname.startsWith("/dashboard/management");
+  const autoOpenCup = pathname.startsWith("/dashboard/cup");
   const [isOpen, setIsOpen] = useState(autoOpen);
+  const [isOpenCup, setIsOpenCup] = useState(autoOpenCup);
 
   useEffect(() => {
     setIsOpen(autoOpen);
@@ -56,6 +63,36 @@ export default function SidebarClient({
           {isOpen && (
             <div className="mt-2 ml-4 space-y-1">
               {managementMenu.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={handleNavigate}
+                  className={cn(
+                    "block rounded px-3 py-2 text-sm hover:bg-gray-100",
+                    pathname === item.href &&
+                      "bg-gray-200 font-medium"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Copas */}
+        <div>
+          <button
+            onClick={() => setIsOpenCup(!isOpenCup)}
+            className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
+          >
+            <span>Copas</span>
+            <span className="text-sm">{isOpenCup ? "▲" : "▼"}</span>
+          </button>
+
+          {isOpenCup && (
+            <div className="mt-2 ml-4 space-y-1">
+              {cupMenu.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
