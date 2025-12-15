@@ -5,16 +5,22 @@ import AddMemberModal from './components/AddMemberModal';
 export default async function MembersPage() {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const { data: members } = await supabase
-    .from('tenant_members_with_profiles')
-    .select('*')
-    .eq('tenant_id', tenantId);
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role || 'member';
+  if (!user) {
+    throw new Error('Usuário não autenticado');
+  }
+
+  const { data: members } = await supabase
+    .from('tenant_members_with_profiles')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('user_id', { ascending: false });
+
+  const currentUserRole =
+    members?.find((m) => m.user_id === user.id)?.role ?? 'member';
 
   const isOwner = currentUserRole === 'owner';
   const isAdmin = currentUserRole === 'admin';
@@ -27,7 +33,11 @@ export default async function MembersPage() {
         {(isOwner || isAdmin) && <AddMemberModal tenantId={tenantId} />}
       </div>
 
-      <MembersList members={members || []} currentUserRole={currentUserRole} currentUserId={user?.id || ''} />
+      <MembersList
+        members={members ?? []}
+        currentUserRole={currentUserRole}
+        currentUserId={user.id}
+      />
     </div>
   );
 }
