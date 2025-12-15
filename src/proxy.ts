@@ -3,11 +3,18 @@ import { getSubdomainFromRequest } from './lib/getTenant';
 
 export async function proxy(req: NextRequest) {
   const url = req.nextUrl.clone();
-  const sub = getSubdomainFromRequest(req) ?? null;
+
+  // 🔥 CRÍTICO: nunca interceptar API
+  if (url.pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
+  const sub = getSubdomainFromRequest(req);
 
   let tenant = null;
 
-  if (sub) {
+  // ⚠️ Ignore localhost como tenant
+  if (sub && sub !== 'localhost') {
     try {
       const resolveUrl = new URL(`/api/tenant/resolve?sub=${encodeURIComponent(sub)}`, req.url);
 
@@ -23,7 +30,6 @@ export async function proxy(req: NextRequest) {
       }
     } catch (err) {
       console.error('Proxy: erro ao chamar /api/tenant/resolve:', err);
-      tenant = null;
     }
   }
 
@@ -31,15 +37,15 @@ export async function proxy(req: NextRequest) {
     req.cookies.has('sb-access-token') ||
     req.cookies.getAll().some((c) => c.name.includes('-auth-token'));
 
-  if (url.pathname.startsWith('/dashboard')) {
-    if (!hasToken) {
-      url.pathname = '/login';
-      return NextResponse.redirect(url);
-    }
+  const protectedRoutes = url.pathname === '/' || url.pathname.startsWith('/dashboard');
 
-    if (!tenant) {
-      return new NextResponse('Tenant inválido', { status: 400 });
-    }
+  if (protectedRoutes && !hasToken) {
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
+
+  if (url.pathname.startsWith('/dashboard') && !tenant && sub !== 'localhost') {
+    return new NextResponse('Tenant inválido', { status: 400 });
   }
 
   const res = NextResponse.next();
@@ -54,5 +60,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/dashboard'],
+  matcher: ['/', '/dashboard/:path*', '/dashboard'],
 };
