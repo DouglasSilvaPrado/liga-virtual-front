@@ -83,6 +83,51 @@ export default function CreateCupModal() {
     );
   }, [numGrupos]);
 
+  function validateGroups(): string | null {
+    if (!numGrupos) return null;
+
+    const teamsArray = Object.values(selectedTeams);
+    const totalTeams = teamsArray.length;
+
+    if (totalTeams % numGrupos !== 0) {
+      return `O número de times (${totalTeams}) deve ser divisível por ${numGrupos} grupos.`;
+    }
+
+    const expectedPerGroup = totalTeams / numGrupos;
+
+    const groupsCount: Record<string, number> = {};
+
+    for (const t of teamsArray) {
+      if (t.group === "random") continue; // deixa o backend sortear
+      groupsCount[t.group] = (groupsCount[t.group] ?? 0) + 1;
+    }
+
+    for (const g of Object.keys(groupsCount)) {
+      if (groupsCount[g] > expectedPerGroup) {
+        return `O grupo ${g} não pode ter mais que ${expectedPerGroup} times.`;
+      }
+    }
+
+    return null;
+  }
+
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.values(selectedTeams).forEach((t) => {
+      if (t.group !== "random") {
+        counts[t.group] = (counts[t.group] ?? 0) + 1;
+      }
+    });
+    return counts;
+  }, [selectedTeams]);
+
+  const maxPerGroup =
+    numGrupos > 0
+      ? Object.keys(selectedTeams).length / numGrupos
+      : 0;
+
+
+
   /** LOADS */
   useEffect(() => {
     if (!open) return;
@@ -133,6 +178,13 @@ export default function CreateCupModal() {
   }
 
   async function handleSubmit() {
+    const error = validateGroups();
+
+    if (error) {
+      alert(error);
+      return;
+    }
+
     const payload = Object.values(selectedTeams).map((t) => ({
       competition_id: competitionId,
       team_id: t.team.id,
@@ -148,6 +200,7 @@ export default function CreateCupModal() {
     setOpen(false);
     setStep(1);
   }
+
 
   /** UI */
   return (
@@ -255,7 +308,11 @@ export default function CreateCupModal() {
                         <SelectContent>
                           <SelectItem value="random">Aleatório</SelectItem>
                           {groupOptions.map((g) => (
-                            <SelectItem key={g} value={g}>
+                            <SelectItem
+                              key={g}
+                              value={g}
+                              disabled={(groupCounts[g] ?? 0) >= maxPerGroup}
+                            >
                               Grupo {g}
                             </SelectItem>
                           ))}

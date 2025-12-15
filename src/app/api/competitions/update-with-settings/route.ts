@@ -5,6 +5,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { id, competition_settings_id, name, rules, competition_url, settings } = body;
+    console.log('🚀 ~ POST ~ settings:', settings);
 
     if (!id || !competition_settings_id) {
       return NextResponse.json({ error: 'Missing competition or settings ID.' }, { status: 400 });
