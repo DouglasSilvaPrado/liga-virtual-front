@@ -10,6 +10,20 @@ import { useState } from 'react';
 import RoleSelect from '@/components/forms/select/RoleSelect';
 import { AvatarPreview } from '@/components/image/avatarPreview';
 
+type FormState = {
+  full_name: string;
+  avatar_url: string;
+  platform: string;
+  country: string;
+  birth_date: string;
+  whatsapp: string;
+  state: string;
+  city: string;
+  role: string;
+  active: boolean;
+};
+
+
 export default function EditMemberModal({
   member,
   open,
@@ -23,7 +37,7 @@ export default function EditMemberModal({
 }) {
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     full_name: member.full_name ?? '',
     avatar_url: member.avatar_url ?? '',
     platform: member.platform ?? '',
@@ -33,10 +47,17 @@ export default function EditMemberModal({
     state: member.state ?? '',
     city: member.city ?? '',
     role: member.role ?? '',
+    active: member.active ?? false,
   });
 
-  const updateField = (key: string, value: string) =>
+
+  const updateField = <K extends keyof FormState>(
+    key: K,
+    value: FormState[K]
+  ) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
 
   async function onSave() {
     setLoading(true);
@@ -137,6 +158,23 @@ export default function EditMemberModal({
             disabled={!IsOwnerOrAdmin}
             showLockedMessage={!IsOwnerOrAdmin}
           />
+
+          <div>
+            <Label>Cargo</Label>
+            <select
+              className={`w-full rounded-md border p-2 ${
+                !IsOwnerOrAdmin ? 'cursor-not-allowed bg-gray-100' : ''
+              }`}
+              value={String(form.active)}
+              disabled={!IsOwnerOrAdmin}
+              onChange={(e) =>
+                updateField('active', e.target.value === 'true')
+              }
+            >
+              <option value="true">Ativo</option>
+              <option value="false">Inativo</option>
+            </select>
+          </div>
 
           <Button onClick={onSave} disabled={loading}>
             {loading ? 'Salvando...' : 'Salvar alterações'}

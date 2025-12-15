@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     state,
     city,
     role,
+    active,
   } = body;
 
   // pega o client
@@ -59,11 +60,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: profileError }, { status: 400 });
   }
 
-  // 3) Atualizar ROLE — mas somente se for OWNER
+  // 3) Atualizar ROLE e ACTIVE — mas somente se for OWNER
   if (role && isOwner) {
     const { error: roleError } = await supabase
       .from('tenant_members')
-      .update({ role })
+      .update({ role, active })
       .eq('id', tenant_member_id);
 
     if (roleError) {
