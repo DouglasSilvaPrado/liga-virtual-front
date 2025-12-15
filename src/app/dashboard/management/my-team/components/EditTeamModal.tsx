@@ -62,9 +62,7 @@ export default function EditTeamModal({
   async function loadShields(pageToLoad: number) {
     if (!hasMore) return;
 
-    const res = await fetch(
-      `/api/shields/list?tenant_id=${tenantId}&page=${pageToLoad}`
-    );
+    const res = await fetch(`/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${pageToLoad}`);
     const json: { data: Shield[] } = await res.json();
 
     if (json.data.length < 20) setHasMore(false);

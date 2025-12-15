@@ -54,7 +54,7 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
     async function fetchShields() {
       setLoadingShields(true);
 
-      const res = await fetch(`/api/shields/list?tenant_id=${tenantId}&page=${page}`);
+      const res = await fetch(`/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${page}`);
       const json: { data: Shield[] } = await res.json();
 
       if (!ignore) {
