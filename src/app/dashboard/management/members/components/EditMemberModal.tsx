@@ -86,7 +86,7 @@ export default function EditMemberModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {' '}
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] sm:max-h-[90vh] overflow-y-auto">
         {' '}
         <DialogHeader>
           {' '}

@@ -12,9 +12,12 @@ const managementMenu = [
   { href: "/dashboard/management/my-team", label: "Meu Time" },
 ];
 
-export default function SidebarClient() {
+export default function SidebarClient({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
-
   const autoOpen = pathname.startsWith("/dashboard/management");
   const [isOpen, setIsOpen] = useState(autoOpen);
 
@@ -22,12 +25,16 @@ export default function SidebarClient() {
     setIsOpen(autoOpen);
   }, [autoOpen]);
 
-  return (
-    <aside className="w-64 flex flex-col border-r bg-white p-4 shadow-sm">
-      <nav className="space-y-2">
+  function handleNavigate() {
+    onNavigate?.();
+  }
 
+  return (
+    <aside className="w-64 shrink-0 border-r bg-white p-4 shadow-sm">
+      <nav className="space-y-2">
         <Link
           href="/dashboard"
+          onClick={handleNavigate}
           className={cn(
             "block rounded px-3 py-2 hover:bg-gray-100",
             pathname === "/dashboard" && "bg-gray-200 font-medium"
@@ -36,7 +43,7 @@ export default function SidebarClient() {
           Início
         </Link>
 
-        {/* Grupo GERENCIAMENTO */}
+        {/* Gerenciamento */}
         <div>
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -52,9 +59,11 @@ export default function SidebarClient() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={handleNavigate}
                   className={cn(
                     "block rounded px-3 py-2 text-sm hover:bg-gray-100",
-                    pathname === item.href && "bg-gray-200 font-medium"
+                    pathname === item.href &&
+                      "bg-gray-200 font-medium"
                   )}
                 >
                   {item.label}

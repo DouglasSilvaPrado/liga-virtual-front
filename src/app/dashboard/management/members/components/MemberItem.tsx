@@ -26,30 +26,41 @@ export default function MemberItem({
   return (
     <>
       <Card className="rounded-xl shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex flex-row items-center space-x-4">
-            <Avatar>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          
+          {/* Esquerda */}
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage src={member.avatar_url || undefined} />
-              <AvatarFallback>{member.email?.slice(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback>
+                {member.email?.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
 
-            <div>
-              <p className="font-medium">
-                {member.email} | {member.full_name}
+            <div className="min-w-0">
+              <p className="font-medium truncate">
+                {member.full_name || member.email}
               </p>
-              <Badge>{member.role}</Badge>
+              <p className="text-sm text-muted-foreground truncate">
+                {member.email}
+              </p>
+
+              <Badge variant="secondary" className="mt-1">
+                {member.role}
+              </Badge>
             </div>
           </div>
 
-          { (member.user_id === currentUserId || IsOwnerOrAdmin) && (
+          {/* Ações */}
+          {(member.user_id === currentUserId || IsOwnerOrAdmin) && (
             <Pencil
-              className="text-muted-foreground hover:text-primary h-5 w-5 cursor-pointer"
+              className="h-5 w-5 cursor-pointer text-muted-foreground hover:text-primary self-end sm:self-auto"
               onClick={() => setOpen(true)}
             />
           )}
-
         </CardHeader>
       </Card>
+
 
       {/* Modal */}
       <EditMemberModal member={member} open={open} onOpenChange={setOpen} IsOwnerOrAdmin={IsOwnerOrAdmin} />
