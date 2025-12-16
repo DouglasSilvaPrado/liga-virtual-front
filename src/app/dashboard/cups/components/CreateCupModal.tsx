@@ -25,6 +25,7 @@ import {
   CompetitionWithSettings,
 } from "@/@types/competition";
 import { Team } from "@/@types/team";
+import { useRouter } from 'next/navigation';
 
 /* -------------------------------- TYPES -------------------------------- */
 
@@ -51,6 +52,8 @@ const CUP_TYPES: { label: string; value: CompetitionType }[] = [
 export default function CreateCupModal() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
+
+  const router = useRouter()
 
   // STEP 1
   const [cupType, setCupType] = useState<CompetitionType | "">("");
@@ -161,6 +164,7 @@ export default function CreateCupModal() {
     setOpen(false);
     setStep(1);
     setSelectedTeams({});
+    router.refresh();
   }
 
   /* -------------------------------- UI ---------------------------------- */
