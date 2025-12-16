@@ -19,25 +19,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Championship } from '@/@types/championship';
-import { CompetitionType, CompetitionWithSettings } from '@/@types/competition';
-import { Team } from '@/@types/team';
+import { Championship } from "@/@types/championship";
+import {
+  CompetitionType,
+  CompetitionWithSettings,
+} from "@/@types/competition";
+import { Team } from "@/@types/team";
 
-/**
- * STEPS:
- * 1) Tipo da copa + Championship + Competition (filtrada pelo tipo)
- * 2) Seleção de times + grupo (manual/aleatório)
- */
+/* -------------------------------- TYPES -------------------------------- */
+
+interface CompetitionGroup {
+  id: string;
+  code: string; // A, B, C...
+  name?: string | null;
+}
+
+interface SelectedTeam {
+  team: Team;
+  group_id: string | null; // null = aleatório
+}
+
+/* -------------------------------- CONST -------------------------------- */
 
 const CUP_TYPES: { label: string; value: CompetitionType }[] = [
   { label: "Mata-mata", value: "mata_mata" },
   { label: "Copa (Grupos + Mata)", value: "copa_grupo_mata" },
 ];
 
-interface SelectedTeam {
-  team: Team;
-  group: string | "random";
-}
+/* ------------------------------- COMPONENT ------------------------------ */
 
 export default function CreateCupModal() {
   const [open, setOpen] = useState(false);
@@ -45,90 +54,28 @@ export default function CreateCupModal() {
 
   // STEP 1
   const [cupType, setCupType] = useState<CompetitionType | "">("");
-  const [championshipId, setChampionshipId] = useState<string>("");
-  const [competitionId, setCompetitionId] = useState<string>("");
+  const [championshipId, setChampionshipId] = useState("");
+  const [competitionId, setCompetitionId] = useState("");
 
   const [championships, setChampionships] = useState<Championship[]>([]);
-  const [competitions, setCompetitions] = useState<CompetitionWithSettings[]>([]);
+  const [competitions, setCompetitions] = useState<CompetitionWithSettings[]>(
+    []
+  );
 
   // STEP 2
   const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedTeams, setSelectedTeams] = useState<Record<string, SelectedTeam>>({});
+  const [groups, setGroups] = useState<CompetitionGroup[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<
+    Record<string, SelectedTeam>
+  >({});
 
   const selectedCompetition = useMemo(
     () => competitions.find((c) => c.id === competitionId),
     [competitions, competitionId]
   );
 
-  const numGrupos = useMemo(() => {
-    const specific = selectedCompetition?.settings?.specific;
+  /* ------------------------------- LOADERS ------------------------------- */
 
-    if (
-      specific &&
-      typeof specific === "object" &&
-      "num_grupos" in specific &&
-      typeof (specific).num_grupos === "number"
-    ) {
-      return (specific as { num_grupos: number }).num_grupos;
-    }
-
-    return 0;
-  }, [selectedCompetition]);
-
-
-  const groupOptions = useMemo(() => {
-    if (!numGrupos) return [];
-    return Array.from({ length: numGrupos }).map((_, i) =>
-      String.fromCharCode(65 + i)
-    );
-  }, [numGrupos]);
-
-  function validateGroups(): string | null {
-    if (!numGrupos) return null;
-
-    const teamsArray = Object.values(selectedTeams);
-    const totalTeams = teamsArray.length;
-
-    if (totalTeams % numGrupos !== 0) {
-      return `O número de times (${totalTeams}) deve ser divisível por ${numGrupos} grupos.`;
-    }
-
-    const expectedPerGroup = totalTeams / numGrupos;
-
-    const groupsCount: Record<string, number> = {};
-
-    for (const t of teamsArray) {
-      if (t.group === "random") continue; // deixa o backend sortear
-      groupsCount[t.group] = (groupsCount[t.group] ?? 0) + 1;
-    }
-
-    for (const g of Object.keys(groupsCount)) {
-      if (groupsCount[g] > expectedPerGroup) {
-        return `O grupo ${g} não pode ter mais que ${expectedPerGroup} times.`;
-      }
-    }
-
-    return null;
-  }
-
-  const groupCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    Object.values(selectedTeams).forEach((t) => {
-      if (t.group !== "random") {
-        counts[t.group] = (counts[t.group] ?? 0) + 1;
-      }
-    });
-    return counts;
-  }, [selectedTeams]);
-
-  const maxPerGroup =
-    numGrupos > 0
-      ? Object.keys(selectedTeams).length / numGrupos
-      : 0;
-
-
-
-  /** LOADS */
   useEffect(() => {
     if (!open) return;
 
@@ -148,14 +95,19 @@ export default function CreateCupModal() {
   }, [championshipId, cupType]);
 
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 2 || !competitionId) return;
 
     fetch("/api/teams/list")
       .then((r) => r.json())
       .then((r) => setTeams(r.data ?? []));
-  }, [step]);
 
-  /** ACTIONS */
+    fetch(`/api/competition-groups/list?competition_id=${competitionId}`)
+      .then((r) => r.json())
+      .then((r) => setGroups(r.data ?? []));
+  }, [step, competitionId]);
+
+  /* ------------------------------- ACTIONS ------------------------------- */
+
   function toggleTeam(team: Team, checked: boolean) {
     setSelectedTeams((prev) => {
       const next = { ...prev };
@@ -163,46 +115,56 @@ export default function CreateCupModal() {
       if (!checked) {
         delete next[team.id];
       } else {
-        next[team.id] = { team, group: "random" };
+        next[team.id] = { team, group_id: null };
       }
 
       return next;
     });
   }
 
-  function setTeamGroup(teamId: string, group: string) {
+  function setTeamGroup(teamId: string, groupId: string | null) {
     setSelectedTeams((prev) => ({
       ...prev,
-      [teamId]: { ...prev[teamId], group },
+      [teamId]: { ...prev[teamId], group_id: groupId },
     }));
   }
 
   async function handleSubmit() {
-    const error = validateGroups();
+    if (!competitionId || !championshipId) return;
 
-    if (error) {
-      alert(error);
+    if (Object.keys(selectedTeams).length === 0) {
+      alert("Selecione ao menos um time");
       return;
     }
 
-    const payload = Object.values(selectedTeams).map((t) => ({
+    const payload = {
       competition_id: competitionId,
-      team_id: t.team.id,
-      group: t.group === "random" ? null : t.group,
-    }));
+      championship_id: championshipId,
+      teams: Object.values(selectedTeams).map((t) => ({
+        team_id: t.team.id,
+        group_id: t.group_id,
+      })),
+    };
 
-    await fetch("/api/competition-teams/create", {
+    const res = await fetch("/api/competition-teams/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.error ?? "Erro ao criar copa");
+      return;
+    }
+
     setOpen(false);
     setStep(1);
+    setSelectedTeams({});
   }
 
+  /* -------------------------------- UI ---------------------------------- */
 
-  /** UI */
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -276,7 +238,7 @@ export default function CreateCupModal() {
         )}
 
         {/* STEP 2 */}
-        {step === 2 && selectedCompetition && (
+        {step === 2 && (
           <div className="space-y-4">
             <ScrollArea className="h-80 rounded border p-2">
               {teams.map((team) => {
@@ -285,7 +247,7 @@ export default function CreateCupModal() {
                 return (
                   <div
                     key={team.id}
-                    className="flex items-center justify-between gap-3 border-b py-2"
+                    className="flex items-center justify-between border-b py-2"
                   >
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -297,23 +259,26 @@ export default function CreateCupModal() {
                       <span>{team.name}</span>
                     </div>
 
-                    {checked && numGrupos > 0 && (
+                    {checked && groups.length > 0 && (
                       <Select
-                        value={selectedTeams[team.id].group}
-                        onValueChange={(v) => setTeamGroup(team.id, v)}
+                        value={selectedTeams[team.id].group_id ?? "random"}
+                        onValueChange={(v) =>
+                          setTeamGroup(
+                            team.id,
+                            v === "random" ? null : v
+                          )
+                        }
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="random">Aleatório</SelectItem>
-                          {groupOptions.map((g) => (
-                            <SelectItem
-                              key={g}
-                              value={g}
-                              disabled={(groupCounts[g] ?? 0) >= maxPerGroup}
-                            >
-                              Grupo {g}
+                          <SelectItem value="random">
+                            Aleatório
+                          </SelectItem>
+                          {groups.map((g) => (
+                            <SelectItem key={g.id} value={g.id}>
+                              {g.name ?? `Grupo ${g.code}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -328,11 +293,7 @@ export default function CreateCupModal() {
               <Button variant="outline" onClick={() => setStep(1)}>
                 Voltar
               </Button>
-              <Button
-                className="flex-1"
-                disabled={Object.keys(selectedTeams).length === 0}
-                onClick={handleSubmit}
-              >
+              <Button className="flex-1" onClick={handleSubmit}>
                 Criar Copa
               </Button>
             </div>
