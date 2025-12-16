@@ -1,15 +1,16 @@
-// app/dashboard/cups/[id]/page.tsx
 import { createServerSupabase } from '@/lib/supabaseServer';
-import CupHeader from '../components/CupHeader';
-import CupActions from '../components/CupActions';
-import CupTabs from '../components/CupTabs';
+import CupHeader from './components/CupHeader';
+import CupStatus from './components/CupStatus';
+import GroupsStandings from './components/GroupsStandings';
+import GroupMatches from './components/GroupMatches';
+import KnockoutBracket from './components/KnockoutBracket';
 
 export default async function CupDetailsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params; 
+  const { id } = await params;
   const { supabase, tenantId } = await createServerSupabase();
 
   const { data: cup } = await supabase
@@ -26,14 +27,17 @@ export default async function CupDetailsPage({
     .single();
 
   if (!cup) {
-    return <p>Copa não encontrada</p>;
+    return <p className="p-6">Copa não encontrada</p>;
   }
 
   return (
     <div className="space-y-6 p-6">
       <CupHeader cup={cup} />
-      <CupActions competitionId={cup.id} />
-      <CupTabs competitionId={cup.id} />
+      <CupStatus competitionId={cup.id} />
+
+      <GroupsStandings competitionId={cup.id} />
+      <GroupMatches competitionId={cup.id} />
+      <KnockoutBracket competitionId={cup.id} />
     </div>
   );
 }
