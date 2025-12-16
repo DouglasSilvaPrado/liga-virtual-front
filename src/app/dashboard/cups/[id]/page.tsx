@@ -4,6 +4,7 @@ import CupStatus from './components/CupStatus';
 import GroupsStandings from './components/GroupsStandings';
 import GroupMatches from './components/GroupMatches';
 import KnockoutBracket from './components/KnockoutBracket';
+import GroupRounds from './components/GroupRounds';
 
 export default async function CupDetailsPage({
   params,
@@ -38,6 +39,7 @@ export default async function CupDetailsPage({
       <GroupsStandings competitionId={cup.id} />
       <GroupMatches competitionId={cup.id} />
       <KnockoutBracket competitionId={cup.id} />
+      <GroupRounds competitionId={cup.id} />
     </div>
   );
 }
