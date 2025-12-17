@@ -15,17 +15,6 @@ export default async function CupPage() {
   const competitionIds =
     standings?.map((s) => s.competition_id) ?? [];
 
-  /* Se ainda não existe nenhuma copa iniciada */
-  if (competitionIds.length === 0) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold">Copas</h1>
-        <p className="mt-4 text-muted-foreground">
-          Nenhuma copa iniciou a fase de grupos ainda.
-        </p>
-      </div>
-    );
-  }
 
   /* -------------------------------------------------- */
   /* 2️⃣ Busca apenas as copas válidas                  */
@@ -55,6 +44,16 @@ export default async function CupPage() {
         <h1 className="text-2xl font-bold">Copas</h1>
         <CreateCupModal />
       </div>
+
+
+      {competitionIds.length === 0 && (
+        <div className="p-2">
+          <p className="mt-2 text-muted-foreground">
+            Nenhuma copa iniciou a fase de grupos ainda.
+          </p>
+        </div>
+      )}
+  
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cups?.map((cup) => (

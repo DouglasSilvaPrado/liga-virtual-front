@@ -4,9 +4,30 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export default function MatchRow({ match }: any) {
-  const [homeGoals, setHomeGoals] = useState(match.home_goals ?? '');
-  const [awayGoals, setAwayGoals] = useState(match.away_goals ?? '');
+type MatchRowProps = {
+  match: {
+    id: string;
+    score_home: number | null;
+    score_away: number | null;
+    home_team: {
+      id: string;
+      name: string;
+    };
+    away_team: {
+      id: string;
+      name: string;
+    };
+  };
+};
+
+export default function MatchRow({ match }: MatchRowProps) {
+  console.log("🚀 ~ MatchRow ~ match:", match)
+  const [homeGoals, setHomeGoals] = useState<string | number>(
+    match.score_home ?? ''
+  );
+  const [awayGoals, setAwayGoals] = useState<string | number>(
+    match.score_away ?? ''
+  );
   const [loading, setLoading] = useState(false);
 
   async function save() {
@@ -27,7 +48,9 @@ export default function MatchRow({ match }: any) {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="w-32 text-right">{match.home_team.name}</span>
+      <span className="w-32 text-right">
+        {match.home_team?.name ?? '—'}
+      </span>
 
       <Input
         type="number"
@@ -45,10 +68,12 @@ export default function MatchRow({ match }: any) {
         onChange={(e) => setAwayGoals(e.target.value)}
       />
 
-      <span className="w-32">{match.away_team.name}</span>
+      <span className="w-32">
+        {match.away_team?.name ?? '—'}
+      </span>
 
       <Button size="sm" onClick={save} disabled={loading}>
-        Salvar
+        {loading ? 'Salvando...' : 'Salvar'}
       </Button>
     </div>
   );

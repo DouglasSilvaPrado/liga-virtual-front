@@ -5,7 +5,7 @@ import { updateStandingsFromMatch } from '@/lib/standings/updateStandingsFromMat
 export async function POST(req: Request) {
   const { match_id, home_goals, away_goals } = await req.json();
 
-  if (!match_id || home_goals == null || away_goals == null) {
+  if (!match_id || home_goals === undefined || away_goals === undefined) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
   }
 
@@ -20,15 +20,28 @@ export async function POST(req: Request) {
     })
     .eq('id', match_id)
     .eq('tenant_id', tenantId)
-    .select('*')
+    .select(
+      `
+      id,
+      competition_id,
+      tenant_id,
+      home_team_id,
+      away_team_id,
+      home_goals,
+      away_goals
+    `,
+    )
     .single();
 
   if (error || !match) {
     return NextResponse.json({ error: 'Erro ao salvar placar' }, { status: 500 });
   }
 
-  // Atualiza standings
-  await updateStandingsFromMatch({ supabase, match });
+  // ✅ Agora bate perfeitamente com o contrato
+  await updateStandingsFromMatch({
+    supabase,
+    match,
+  });
 
   return NextResponse.json({ success: true });
 }
