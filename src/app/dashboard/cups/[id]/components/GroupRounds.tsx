@@ -18,26 +18,17 @@ type MatchSelect = {
 };
 
 
-type MatchDB = {
-  id: string;
-  round: number;
-  score_home: number | null;
-  score_away: number | null;
-  group: MatchGroup | null;
-  home_team: { id: string; name: string } | null;
-  away_team: { id: string; name: string } | null;
-};
-
-
 type MatchWithTeamName = {
   id: string;
   round: number;
+  group_round: number;
   score_home: number | null;
   score_away: number | null;
   group: MatchGroup;
   home_team: { id: string; name: string };
   away_team: { id: string; name: string };
 };
+
 
 type GroupedRounds = Record<
   string,
@@ -70,6 +61,7 @@ export default async function GroupRounds({
     .select(`
       id,
       round,
+      group_round,
       score_home,
       score_away,
       group:competition_groups!matches_group_fk (
@@ -88,7 +80,7 @@ export default async function GroupRounds({
     `)
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
-    .order('round', { ascending: true });
+    .order('group_round', { ascending: true });
 
 
   const data = dataMatch as MatchSelect[] | null;
@@ -104,12 +96,9 @@ export default async function GroupRounds({
 
   const matches: MatchWithTeamName[] = (data ?? []).filter(isCompleteMatch);
 
-  console.log("🚀 ~ GroupRounds ~ matches:", matches)
-
-
-
   const grouped = matches.reduce<GroupedRounds>((acc, match) => {
     const groupId = match.group.id;
+    const round = match.group_round;
 
     if (!acc[groupId]) {
       acc[groupId] = {
@@ -118,11 +107,12 @@ export default async function GroupRounds({
       };
     }
 
-    acc[groupId].rounds[match.round] ??= [];
-    acc[groupId].rounds[match.round].push(match);
+    acc[groupId].rounds[round] ??= [];
+    acc[groupId].rounds[round].push(match);
 
     return acc;
   }, {});
+
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,6 @@
 import { Match } from '@/@types/match';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { generateGroupRounds } from './groupRoundRobin';
 
 type Params = {
   supabase: SupabaseClient;
@@ -44,51 +45,52 @@ export async function generateGroupMatches({
 
     const teamIds = teams.map((t) => t.team_id);
 
-    let round = 1;
+    const rounds = generateGroupRounds(teamIds);
+
     const matchesToInsert: Match[] = [];
 
     /* -------------------------------------------------- */
     /* 3️⃣ Jogos de ida                                   */
     /* -------------------------------------------------- */
-    for (let i = 0; i < teamIds.length; i++) {
-      for (let j = i + 1; j < teamIds.length; j++) {
+    rounds.forEach((roundMatches, index) => {
+      const groupRound = index + 1;
+
+      for (const match of roundMatches) {
         matchesToInsert.push({
           tenant_id: tenantId,
           championship_id: championshipId,
           competition_id: competitionId,
           group_id: group.id,
-          team_home: teamIds[i],
-          team_away: teamIds[j],
-          round,
+          group_round: groupRound,
+          team_home: match.home,
+          team_away: match.away,
           leg: 1,
           status: 'scheduled',
         });
-
-        round++;
       }
-    }
+    });
 
     /* -------------------------------------------------- */
     /* 4️⃣ Jogos de volta                                 */
     /* -------------------------------------------------- */
     if (idaVolta) {
-      for (let i = 0; i < teamIds.length; i++) {
-        for (let j = i + 1; j < teamIds.length; j++) {
+      rounds.forEach((roundMatches, index) => {
+        const groupRound = rounds.length + index + 1;
+
+        for (const match of roundMatches) {
           matchesToInsert.push({
             tenant_id: tenantId,
             championship_id: championshipId,
             competition_id: competitionId,
             group_id: group.id,
-            team_home: teamIds[j],
-            team_away: teamIds[i],
-            round,
+            group_round: groupRound,
+            team_home: match.away,
+            team_away: match.home,
             leg: 2,
             status: 'scheduled',
           });
-
-          round++;
         }
-      }
+      });
     }
 
     /* -------------------------------------------------- */
