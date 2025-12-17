@@ -1,14 +1,31 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import MatchRow from './MatchRow';
 
+type MatchGroup = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+type MatchSelect = {
+  id: string;
+  round: number;
+  score_home: number | null;
+  score_away: number | null;
+  group: MatchGroup | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+};
+
 
 type MatchDB = {
   id: string;
   round: number;
   score_home: number | null;
   score_away: number | null;
-  home_team: { id: string; name: string }[] | { id: string; name: string };
-  away_team: { id: string; name: string }[] | { id: string; name: string };
+  group: MatchGroup | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
 };
 
 
@@ -17,14 +34,27 @@ type MatchWithTeamName = {
   round: number;
   score_home: number | null;
   score_away: number | null;
+  group: MatchGroup;
   home_team: { id: string; name: string };
   away_team: { id: string; name: string };
 };
 
-function normalizeTeam(
-  team: { id: string; name: string }[] | { id: string; name: string }
-) {
-  return Array.isArray(team) ? team[0] : team;
+type GroupedRounds = Record<
+  string,
+  {
+    groupName: string;
+    rounds: Record<number, MatchWithTeamName[]>;
+  }
+>;
+
+function isCompleteMatch(
+  m: MatchSelect
+): m is MatchWithTeamName {
+  return (
+    m.group !== null &&
+    m.home_team !== null &&
+    m.away_team !== null
+  );
 }
 
 
@@ -35,19 +65,33 @@ export default async function GroupRounds({
 }) {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const { data, error } = await supabase
+  const { data: dataMatch, error } = await supabase
     .from('matches')
     .select(`
       id,
       round,
       score_home,
       score_away,
-      home_team:teams!team_home(id, name),
-      away_team:teams!team_away(id, name)
+      group:competition_groups!matches_group_fk (
+        id,
+        name,
+        code
+      ),
+      home_team:teams!team_home (
+        id,
+        name
+      ),
+      away_team:teams!team_away (
+        id,
+        name
+      )
     `)
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .order('round', { ascending: true });
+
+
+  const data = dataMatch as MatchSelect[] | null;
 
   if (error) {
     console.error(error);
@@ -58,19 +102,25 @@ export default async function GroupRounds({
     return <p>Nenhuma rodada encontrada</p>;
   }
 
-  const matches: MatchWithTeamName[] = (data as MatchDB[]).map((m) => ({
-    id: m.id,
-    round: m.round,
-    score_home: m.score_home,
-    score_away: m.score_away,
-    home_team: normalizeTeam(m.home_team),
-    away_team: normalizeTeam(m.away_team),
-  }));
+  const matches: MatchWithTeamName[] = (data ?? []).filter(isCompleteMatch);
+
+  console.log("🚀 ~ GroupRounds ~ matches:", matches)
 
 
-  const rounds = matches.reduce<Record<number, MatchWithTeamName[]>>((acc, match) => {
-    acc[match.round] ??= [];
-    acc[match.round].push(match);
+
+  const grouped = matches.reduce<GroupedRounds>((acc, match) => {
+    const groupId = match.group.id;
+
+    if (!acc[groupId]) {
+      acc[groupId] = {
+        groupName: match.group.name,
+        rounds: {},
+      };
+    }
+
+    acc[groupId].rounds[match.round] ??= [];
+    acc[groupId].rounds[match.round].push(match);
+
     return acc;
   }, {});
 
@@ -78,15 +128,22 @@ export default async function GroupRounds({
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Fase de Grupos</h2>
 
-      {Object.entries(rounds).map(([round, roundMatches]) => (
-        <div key={round} className="rounded border p-4 space-y-2">
-          <h3 className="font-medium">Rodada {round}</h3>
+      {Object.values(grouped).map((group) => (
+        <div key={group.groupName} className="space-y-4">
+          <h2 className="text-lg font-semibold">{group.groupName}</h2>
 
-          {roundMatches.map((match) => (
-            <MatchRow key={match.id} match={match} />
+          {Object.entries(group.rounds).map(([round, matches]) => (
+            <div key={round} className="rounded border p-4 space-y-2">
+              <h3 className="font-medium">Rodada {round}</h3>
+
+              {matches.map((match) => (
+                <MatchRow key={match.id} match={match} />
+              ))}
+            </div>
           ))}
         </div>
       ))}
+
     </div>
   );
 }

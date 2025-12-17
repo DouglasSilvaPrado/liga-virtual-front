@@ -1,3 +1,4 @@
+import { Match } from '@/@types/match';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 type Params = {
@@ -44,7 +45,7 @@ export async function generateGroupMatches({
     const teamIds = teams.map((t) => t.team_id);
 
     let round = 1;
-    const matchesToInsert: any[] = [];
+    const matchesToInsert: Match[] = [];
 
     /* -------------------------------------------------- */
     /* 3️⃣ Jogos de ida                                   */
@@ -55,6 +56,7 @@ export async function generateGroupMatches({
           tenant_id: tenantId,
           championship_id: championshipId,
           competition_id: competitionId,
+          group_id: group.id,
           team_home: teamIds[i],
           team_away: teamIds[j],
           round,
@@ -76,6 +78,7 @@ export async function generateGroupMatches({
             tenant_id: tenantId,
             championship_id: championshipId,
             competition_id: competitionId,
+            group_id: group.id,
             team_home: teamIds[j],
             team_away: teamIds[i],
             round,
