@@ -1,5 +1,20 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 
+export type MatchGroupRow = {
+  id: string;
+  round: number;
+  home_goals: number | null;
+  away_goals: number | null;
+  home_team: {
+    name: string;
+  } | null;
+  away_team: {
+    name: string;
+  } | null;
+};
+
+
+
 export default async function GroupMatches({
   competitionId,
 }: {
@@ -7,7 +22,7 @@ export default async function GroupMatches({
 }) {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const { data: matches } = await supabase
+  const { data } = await supabase
     .from('matches')
     .select(`
       id,
@@ -21,6 +36,9 @@ export default async function GroupMatches({
     .eq('tenant_id', tenantId)
     .eq('stage', 'group')
     .order('round');
+
+  const matches = data as MatchGroupRow[] | null;
+
 
   if (!matches || matches.length === 0) return null;
 

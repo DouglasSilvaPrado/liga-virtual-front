@@ -12,7 +12,7 @@ type MatchDB = {
 };
 
 
-type Match = {
+type MatchWithTeamName = {
   id: string;
   round: number;
   score_home: number | null;
@@ -58,7 +58,7 @@ export default async function GroupRounds({
     return <p>Nenhuma rodada encontrada</p>;
   }
 
-  const matches: Match[] = (data as MatchDB[]).map((m) => ({
+  const matches: MatchWithTeamName[] = (data as MatchDB[]).map((m) => ({
     id: m.id,
     round: m.round,
     score_home: m.score_home,
@@ -68,7 +68,7 @@ export default async function GroupRounds({
   }));
 
 
-  const rounds = matches.reduce<Record<number, Match[]>>((acc, match) => {
+  const rounds = matches.reduce<Record<number, MatchWithTeamName[]>>((acc, match) => {
     acc[match.round] ??= [];
     acc[match.round].push(match);
     return acc;

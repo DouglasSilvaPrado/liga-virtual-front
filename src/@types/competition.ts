@@ -82,3 +82,21 @@ export interface DivisionSettings {
   divisao_rebaixamento_competition_id?: string | null;
   divisao_acesso_competition_id?: string | null;
 }
+
+export interface CompetitionGroup {
+  id: string;
+  competition_id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  created_at: string;
+}
+export interface CompetitionTeam {
+  id: string;
+  competition_id: string;
+  team_id: string;
+  tenant_id: string;
+  championship_id: string;
+  group_id: string;
+  created_at: string;
+}

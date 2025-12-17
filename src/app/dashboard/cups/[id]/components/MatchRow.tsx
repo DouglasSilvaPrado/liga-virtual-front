@@ -21,7 +21,6 @@ type MatchRowProps = {
 };
 
 export default function MatchRow({ match }: MatchRowProps) {
-  console.log("🚀 ~ MatchRow ~ match:", match)
   const [homeGoals, setHomeGoals] = useState<string | number>(
     match.score_home ?? ''
   );

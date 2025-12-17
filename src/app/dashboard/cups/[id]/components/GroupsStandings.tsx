@@ -1,4 +1,30 @@
+import { CompetitionGroup } from '@/@types/competition';
+import { Standing } from '@/@types/standing';
+import { Team } from '@/@types/team';
 import { createServerSupabase } from '@/lib/supabaseServer';
+
+
+export type StandingWithTeam = Pick<
+  Standing,
+  | 'id'
+  | 'points'
+  | 'wins'
+  | 'draws'
+  | 'losses'
+  | 'goals_scored'
+  | 'goals_against'
+  | 'goal_diff'
+> & {
+  teams: Pick<Team, 'name'> | null;
+};
+
+export type CompetitionGroupWithStandings = Pick<
+  CompetitionGroup,
+  'id' | 'name' | 'code'
+> & {
+  standings: StandingWithTeam[] | null;
+};
+
 
 export default async function GroupsStandings({
   competitionId,
@@ -7,7 +33,7 @@ export default async function GroupsStandings({
 }) {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const { data: groups } = await supabase
+  const { data } = await supabase
     .from('competition_groups')
     .select(`
       id,
@@ -28,6 +54,8 @@ export default async function GroupsStandings({
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .order('code');
+
+  const groups = data as CompetitionGroupWithStandings[] | null;
 
   if (!groups || groups.length === 0) return null;
 

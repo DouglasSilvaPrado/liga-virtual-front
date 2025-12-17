@@ -5,6 +5,7 @@ import GroupsStandings from './components/GroupsStandings';
 import GroupMatches from './components/GroupMatches';
 import KnockoutBracket from './components/KnockoutBracket';
 import GroupRounds from './components/GroupRounds';
+import { CompetitionWithSettings } from '@/@types/competition';
 
 export default async function CupDetailsPage({
   params,
@@ -25,7 +26,7 @@ export default async function CupDetailsPage({
     `)
     .eq('id', id)
     .eq('tenant_id', tenantId)
-    .single();
+    .single<CompetitionWithSettings>();
 
   if (!cup) {
     return <p className="p-6">Copa não encontrada</p>;

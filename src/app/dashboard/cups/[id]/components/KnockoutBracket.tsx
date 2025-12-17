@@ -1,4 +1,5 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
+import { MatchGroupRow } from './GroupMatches';
 
 export default async function KnockoutBracket({
   competitionId,
@@ -7,7 +8,7 @@ export default async function KnockoutBracket({
 }) {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const { data: matches } = await supabase
+  const { data } = await supabase
     .from('matches')
     .select(`
       id,
@@ -21,6 +22,8 @@ export default async function KnockoutBracket({
     .eq('tenant_id', tenantId)
     .eq('stage', 'knockout')
     .order('round');
+
+    const matches = data as MatchGroupRow[] | null
 
   if (!matches || matches.length === 0) return null;
 
