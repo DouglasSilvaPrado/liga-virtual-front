@@ -104,7 +104,6 @@ export default function TrophyFormDialog({ open, onOpenChange, competitionId, te
             <Select
               value={form.type}
               onValueChange={(v) => {
-                console.log("🚀 ~ TrophyFormDialog ~ v:", v)
                 return setForm({ ...form, type: v as typeof TROPHY_TYPES[number] });
               }}
             >

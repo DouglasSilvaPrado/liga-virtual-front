@@ -3,12 +3,17 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useRouter } from 'next/navigation';
 
 type MatchRowProps = {
   match: {
     id: string;
     score_home: number | null;
     score_away: number | null;
+    status: 'scheduled' | 'in_progress' | 'finished' | 'canceled';
+    round_info: {
+      is_open: boolean;
+    };
     home_team: {
       id: string;
       name: string;
@@ -21,6 +26,8 @@ type MatchRowProps = {
 };
 
 export default function MatchRow({ match }: MatchRowProps) {
+  const router = useRouter();
+
   const [homeGoals, setHomeGoals] = useState<string | number>(
     match.score_home ?? ''
   );
@@ -29,7 +36,13 @@ export default function MatchRow({ match }: MatchRowProps) {
   );
   const [loading, setLoading] = useState(false);
 
+  const canEdit =
+    match.round_info.is_open &&
+    match.status !== 'finished';
+
   async function save() {
+    if (!canEdit) return;
+
     setLoading(true);
 
     await fetch('/api/matches/update-score', {
@@ -43,18 +56,20 @@ export default function MatchRow({ match }: MatchRowProps) {
     });
 
     setLoading(false);
+    router.refresh();
   }
 
   return (
     <div className="flex items-center gap-2 text-sm">
       <span className="w-32 text-right">
-        {match.home_team?.name ?? '—'}
+        {match.home_team.name}
       </span>
 
       <Input
         type="number"
         className="w-14 text-center"
         value={homeGoals}
+        disabled={!canEdit}
         onChange={(e) => setHomeGoals(e.target.value)}
       />
 
@@ -64,15 +79,26 @@ export default function MatchRow({ match }: MatchRowProps) {
         type="number"
         className="w-14 text-center"
         value={awayGoals}
+        disabled={!canEdit}
         onChange={(e) => setAwayGoals(e.target.value)}
       />
 
       <span className="w-32">
-        {match.away_team?.name ?? '—'}
+        {match.away_team.name}
       </span>
 
-      <Button size="sm" onClick={save} disabled={loading}>
-        {loading ? 'Salvando...' : 'Salvar'}
+      <Button
+        size="sm"
+        onClick={save}
+        disabled={!canEdit || loading}
+      >
+        {match.status === 'finished'
+          ? 'Finalizado'
+          : !match.round_info.is_open
+          ? 'Rodada bloqueada'
+          : loading
+          ? 'Salvando...'
+          : 'Salvar'}
       </Button>
     </div>
   );
