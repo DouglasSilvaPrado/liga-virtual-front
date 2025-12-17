@@ -7,27 +7,41 @@ export default async function CupStatus({
 }) {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const [{ count: teams }, { count: matches }] = await Promise.all([
+  const [
+    { count: teams },
+    { count: groupMatches },
+    { count: knockoutMatches },
+  ] = await Promise.all([
     supabase
       .from('competition_teams')
       .select('*', { count: 'exact', head: true })
       .eq('competition_id', competitionId)
       .eq('tenant_id', tenantId),
 
+    // 🟢 matches da fase de grupos
     supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
       .eq('competition_id', competitionId)
-      .eq('tenant_id', tenantId),
+      .eq('tenant_id', tenantId)
+      .not('group_id', 'is', null),
+
+    // 🔴 matches de mata-mata
+    supabase
+      .from('matches')
+      .select('*', { count: 'exact', head: true })
+      .eq('competition_id', competitionId)
+      .eq('tenant_id', tenantId)
+      .is('group_id', null),
   ]);
 
   let status = 'Aguardando times';
 
-  if ((teams ?? 0) > 0 && (matches ?? 0) === 0) {
+  if ((teams ?? 0) > 0) {
     status = 'Fase de grupos';
   }
 
-  if ((matches ?? 0) > 0) {
+  if ((knockoutMatches ?? 0) > 0) {
     status = 'Mata-mata';
   }
 

@@ -27,6 +27,7 @@ export default async function CupDetailsPage({
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single<CompetitionWithSettings>();
+  console.log("🚀 ~ CupDetailsPage ~ cup:", cup)
 
   if (!cup) {
     return <p className="p-6">Copa não encontrada</p>;
