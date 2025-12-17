@@ -37,8 +37,8 @@ export default function MatchRow({ match }: MatchRowProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         match_id: match.id,
-        home_goals: Number(homeGoals),
-        away_goals: Number(awayGoals),
+        score_home: Number(homeGoals),
+        score_away: Number(awayGoals),
       }),
     });
 

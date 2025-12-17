@@ -1,6 +1,16 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import CreateCupModal from './components/CreateCupModal';
 
+export interface Cup {
+  id: string
+  name: string
+  type: "mata_mata" | "copa_grupo_mata"
+  created_at: string
+  championships: {
+    name: string
+  }
+}
+
 export default async function CupPage() {
   const { supabase, tenantId } = await createServerSupabase();
 
@@ -19,7 +29,7 @@ export default async function CupPage() {
   /* -------------------------------------------------- */
   /* 2️⃣ Busca apenas as copas válidas                  */
   /* -------------------------------------------------- */
-  const { data: cups } = await supabase
+  const { data } = await supabase
     .from('competitions_with_settings')
     .select(`
       id,
@@ -34,6 +44,8 @@ export default async function CupPage() {
     .in('id', competitionIds)
     .in('type', ['mata_mata', 'copa_grupo_mata'])
     .order('created_at', { ascending: false });
+
+    const cups = data as Cup[] | null
 
   /* -------------------------------------------------- */
   /* 3️⃣ Render                                         */

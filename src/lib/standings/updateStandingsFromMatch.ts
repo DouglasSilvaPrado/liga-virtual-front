@@ -1,13 +1,19 @@
+import { Standing } from '@/@types/standing';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 type MatchRow = {
   competition_id: string;
   tenant_id: string;
-  home_team_id: string;
-  away_team_id: string;
-  home_goals: number;
-  away_goals: number;
+  team_home: string;
+  team_away: string;
+  score_home: number;
+  score_away: number;
 };
+
+type StandingUpdate = Pick<
+  Standing,
+  'goals_scored' | 'goals_against' | 'goal_diff' | 'wins' | 'draws' | 'losses' | 'points'
+>;
 
 export async function updateStandingsFromMatch({
   supabase,
@@ -16,13 +22,13 @@ export async function updateStandingsFromMatch({
   supabase: SupabaseClient;
   match: MatchRow;
 }) {
-  const { competition_id, tenant_id, home_team_id, away_team_id, home_goals, away_goals } = match;
+  const { competition_id, tenant_id, team_home, team_away, score_home, score_away } = match;
 
-  const homeWin = home_goals > away_goals;
-  const awayWin = away_goals > home_goals;
-  const draw = home_goals === away_goals;
+  const homeWin = score_home > score_away;
+  const awayWin = score_away > score_home;
+  const draw = score_home === score_away;
 
-  async function apply(teamId: string, data: any) {
+  async function apply(teamId: string, data: StandingUpdate) {
     await supabase
       .from('standings')
       .update(data)
@@ -32,10 +38,10 @@ export async function updateStandingsFromMatch({
   }
 
   // 🏠 TIME DA CASA
-  await apply(home_team_id, {
-    goals_scored: home_goals,
-    goals_against: away_goals,
-    goal_diff: home_goals - away_goals,
+  await apply(team_home, {
+    goals_scored: score_home,
+    goals_against: score_away,
+    goal_diff: score_home - score_away,
     wins: homeWin ? 1 : 0,
     draws: draw ? 1 : 0,
     losses: awayWin ? 1 : 0,
@@ -43,10 +49,10 @@ export async function updateStandingsFromMatch({
   });
 
   // ✈️ TIME VISITANTE
-  await apply(away_team_id, {
-    goals_scored: away_goals,
-    goals_against: home_goals,
-    goal_diff: away_goals - home_goals,
+  await apply(team_away, {
+    goals_scored: score_away,
+    goals_against: score_home,
+    goal_diff: score_away - score_home,
     wins: awayWin ? 1 : 0,
     draws: draw ? 1 : 0,
     losses: homeWin ? 1 : 0,

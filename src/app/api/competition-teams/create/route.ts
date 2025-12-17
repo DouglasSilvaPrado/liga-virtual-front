@@ -171,7 +171,7 @@ export async function POST(req: Request) {
       groups_created: groups.length,
       teams_per_group: teamsPerGroup,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message ?? 'Erro interno' }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: (err as Error).message ?? 'Erro interno' }, { status: 500 });
   }
 }
