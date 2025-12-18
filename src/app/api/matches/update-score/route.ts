@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { recalcStandingsFromGroup } from '@/lib/standings/updateStandingsFromMatch';
+import { tryAdvanceKnockout } from '@/lib/tryAdvanceKnockout';
 
 export async function POST(req: Request) {
   const { match_id, score_home, score_away } = await req.json();
@@ -72,16 +73,18 @@ export async function POST(req: Request) {
   /* -------------------------------------------------- */
   /* 5️⃣ Verifica rodada aberta                         */
   /* -------------------------------------------------- */
-  const { data: round } = await supabase
-    .from('group_rounds')
-    .select('is_open')
-    .eq('competition_id', match.competition_id)
-    .eq('group_id', match.group_id)
-    .eq('round', match.group_round)
-    .single();
+  if (match.group_id) {
+    const { data: round } = await supabase
+      .from('group_rounds')
+      .select('is_open')
+      .eq('competition_id', match.competition_id)
+      .eq('group_id', match.group_id)
+      .eq('round', match.group_round)
+      .single();
 
-  if (!round?.is_open && !isAdminOrOwner) {
-    return NextResponse.json({ error: 'Rodada fechada para edição' }, { status: 403 });
+    if (!round?.is_open && !isAdminOrOwner) {
+      return NextResponse.json({ error: 'Rodada fechada para edição' }, { status: 403 });
+    }
   }
 
   if (match.status === 'finished') {
@@ -96,7 +99,6 @@ export async function POST(req: Request) {
     .update({
       score_home,
       score_away,
-      is_final: true,
       status: 'finished',
       updated_at: new Date().toISOString(),
     })
@@ -115,6 +117,13 @@ export async function POST(req: Request) {
     )
     .single();
 
+  const { data: competition } = await supabase
+    .from('competitions_with_settings')
+    .select('settings')
+    .eq('id', match.competition_id)
+    .eq('tenant_id', tenantId)
+    .single();
+
   if (error || !updatedMatch) {
     return NextResponse.json({ error: 'Erro ao salvar placar' }, { status: 500 });
   }
@@ -122,12 +131,24 @@ export async function POST(req: Request) {
   /* -------------------------------------------------- */
   /* 7️⃣ Recalcula classificação do grupo               */
   /* -------------------------------------------------- */
-  await recalcStandingsFromGroup({
-    supabase,
-    competition_id: match.competition_id,
-    tenant_id: tenantId,
-    group_id: match.group_id,
-  });
-
+  if (match.group_id) {
+    // 🔵 FASE DE GRUPOS
+    await recalcStandingsFromGroup({
+      supabase,
+      competition_id: match.competition_id,
+      tenant_id: tenantId,
+      group_id: match.group_id,
+    });
+  } else {
+    // 🔴 MATA-MATA
+    if (competition?.settings) {
+      await tryAdvanceKnockout({
+        supabase,
+        competitionId: match.competition_id,
+        tenantId,
+        settings: competition.settings,
+      });
+    }
+  }
   return NextResponse.json({ success: true });
 }

@@ -46,6 +46,7 @@ export default async function CupPage() {
     .order('created_at', { ascending: false });
 
     const cups = data as Cup[] | null
+    
 
   /* -------------------------------------------------- */
   /* 3️⃣ Render                                         */

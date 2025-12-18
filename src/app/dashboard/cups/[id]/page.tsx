@@ -32,15 +32,37 @@ export default async function CupDetailsPage({
     return <p className="p-6">Copa não encontrada</p>;
   }
 
+  /* 🔍 Existe mata-mata? */
+  const { count: knockoutMatches } = await supabase
+    .from('matches')
+    .select('*', { count: 'exact', head: true })
+    .eq('competition_id', cup.id)
+    .eq('tenant_id', tenantId)
+    .is('group_id', null);
+
+  const hasKnockout = (knockoutMatches ?? 0) > 0;
+
   return (
     <div className="space-y-6 p-6">
       <CupHeader cup={cup} />
       <CupStatus competitionId={cup.id} />
 
-      <GroupsStandings competitionId={cup.id} />
-      <GroupMatches competitionId={cup.id} />
-      <KnockoutBracket competitionId={cup.id} />
-      <GroupRounds competitionId={cup.id} />
+      {/* 🔵 FASE DE GRUPOS */}
+      {!hasKnockout && (
+        <>
+          <GroupsStandings competitionId={cup.id} />
+          <GroupMatches competitionId={cup.id} />
+          <GroupRounds competitionId={cup.id} />
+        </>
+      )}
+
+      {/* 🔴 MATA-MATA */}
+      {hasKnockout && (
+        <KnockoutBracket
+          competitionId={cup.id}
+          settings={cup.settings}
+        />
+      )}
     </div>
   );
 }
