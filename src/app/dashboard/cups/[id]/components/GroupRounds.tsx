@@ -1,15 +1,15 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
-import MatchRow from './MatchRow';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import MatchRow from './MatchRow';
 import ToggleRoundButton from './ToggleRoundButton';
 
+/* ───────────────────────── TYPES ───────────────────────── */
 
 type MatchGroup = {
   id: string;
   name: string;
   code: string;
 };
-
 
 export type MatchWithTeamName = {
   id: string;
@@ -28,7 +28,18 @@ export type MatchWithTeamName = {
   away_team: { id: string; name: string };
 };
 
+type MatchFromDB = {
+  id: string;
+  group_round: number;
+  score_home: number | null;
+  score_away: number | null;
+  status: 'scheduled' | 'in_progress' | 'finished' | 'canceled';
 
+  group: MatchGroup | null;
+  round_info: { round: number; is_open: boolean } | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+};
 
 type GroupedRounds = Record<
   string,
@@ -39,23 +50,7 @@ type GroupedRounds = Record<
   }
 >;
 
-type MatchFromDB = {
-  id: string;
-  group_round: number;
-  score_home: number | null;
-  score_away: number | null;
-  status: 'scheduled' | 'in_progress' | 'finished' | 'canceled';
-
-  group: MatchGroup | null;
-
-  round_info: {
-    round: number;
-    is_open: boolean;
-  } | null;
-
-  home_team: { id: string; name: string } | null;
-  away_team: { id: string; name: string } | null;
-};
+/* ───────────────────────── HELPERS ───────────────────────── */
 
 function isCompleteMatch(
   m: MatchFromDB
@@ -68,6 +63,7 @@ function isCompleteMatch(
   );
 }
 
+/* ───────────────────────── COMPONENT ───────────────────────── */
 
 export default async function GroupRounds({
   competitionId,
@@ -75,75 +71,95 @@ export default async function GroupRounds({
   competitionId: string;
 }) {
   const { supabase, tenantId } = await createServerSupabase();
+  const supabaseAuth = await createSupabaseServerClient();
 
-  /* 🔐 Descobre se é admin/owner */
-  const supabaseClient = await createSupabaseServerClient();
-
+  /* 🔐 Usuário logado */
   const {
     data: { user },
-  } = await supabaseClient.auth.getUser();
+  } = await supabaseAuth.auth.getUser();
 
   let isAdminOrOwner = false;
+  let memberTeamId: string | null = null;
 
+  /* 🔑 Descobre role e time */
   if (user) {
     const { data: member } = await supabase
       .from('tenant_members')
-      .select('role')
+      .select('id, role')
       .eq('tenant_id', tenantId)
       .eq('user_id', user.id)
       .single();
 
     isAdminOrOwner =
       member?.role === 'admin' || member?.role === 'owner';
+
+    if (member?.role === 'member') {
+      const { data: team } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('tenant_member_id', member.id)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      memberTeamId = team?.id ?? null;
+    }
   }
 
-  const { data: dataMatch, error } = await supabase
-  .from('matches')
-  .select(`
-    id,
-    score_home,
-    score_away,
-    group_round,
-    status,
-    group:competition_groups!matches_group_fk (
+  /* 📥 Query base */
+  let query = supabase
+    .from('matches')
+    .select(`
       id,
-      name,
-      code
-    ),
-    round_info:group_rounds!inner (
-      round,
-      is_open
-    ),
-    home_team:teams!team_home (
-      id,
-      name
-    ),
-    away_team:teams!team_away (
-      id,
-      name
-    )
-  `)
-  .eq('competition_id', competitionId)
-  .eq('tenant_id', tenantId)
-  .order('group_round', { ascending: true });
+      score_home,
+      score_away,
+      group_round,
+      status,
+      group:competition_groups!matches_group_fk (
+        id,
+        name,
+        code
+      ),
+      round_info:group_rounds!inner (
+        round,
+        is_open
+      ),
+      home_team:teams!team_home (
+        id,
+        name
+      ),
+      away_team:teams!team_away (
+        id,
+        name
+      )
+    `)
+    .eq('competition_id', competitionId)
+    .eq('tenant_id', tenantId)
+    .order('group_round', { ascending: true });
 
+  /* 🔒 Filtro para MEMBER */
+  if (!isAdminOrOwner && memberTeamId) {
+    query = query
+      .or(
+        `team_home.eq.${memberTeamId},team_away.eq.${memberTeamId}`
+      )
+      .eq('round_info.is_open', true);
+  }
 
-
-  const data = dataMatch as MatchFromDB[] | null;
-
+  const { data: dataMatch, error } = await query;
 
   if (error) {
     console.error(error);
     return <p>Erro ao carregar rodadas</p>;
   }
 
-  if (!data || data.length === 0) {
+  if (!dataMatch || dataMatch.length === 0) {
     return <p>Nenhuma rodada encontrada</p>;
   }
 
-  const matches: MatchWithTeamName[] = (data ?? []).filter(isCompleteMatch);
+  const matches = (dataMatch as unknown as MatchFromDB[])
+    .filter(isCompleteMatch);
 
-
+  /* 🧠 Agrupamento */
   const grouped = matches.reduce<GroupedRounds>((acc, match) => {
     const groupId = match.group.id;
     const round = match.group_round;
@@ -156,29 +172,36 @@ export default async function GroupRounds({
       };
     }
 
-
     acc[groupId].rounds[round] ??= [];
     acc[groupId].rounds[round].push(match);
 
     return acc;
   }, {});
 
- return (
+  /* 🖥️ Render */
+  return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Fase de Grupos</h2>
 
       {Object.values(grouped).map((group) => (
         <div key={group.groupCode} className="space-y-4">
-          <h2 className="text-lg font-semibold">{group.groupName}</h2>
+          <h2 className="text-lg font-semibold">
+            {group.groupName}
+          </h2>
 
           {Object.entries(group.rounds).map(([round, matches]) => {
             const isOpen = matches[0].round_info.is_open;
             const groupId = matches[0].group.id;
 
             return (
-              <div key={round} className="rounded border p-4 space-y-2">
+              <div
+                key={round}
+                className="rounded border p-4 space-y-2"
+              >
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium">Rodada {round}</h3>
+                  <h3 className="font-medium">
+                    Rodada {round}
+                  </h3>
 
                   {isAdminOrOwner && (
                     <ToggleRoundButton
@@ -191,7 +214,10 @@ export default async function GroupRounds({
                 </div>
 
                 {matches.map((match) => (
-                  <MatchRow key={match.id} match={match} />
+                  <MatchRow
+                    key={match.id}
+                    match={match}
+                  />
                 ))}
               </div>
             );

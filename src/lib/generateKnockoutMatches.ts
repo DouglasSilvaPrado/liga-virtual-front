@@ -70,7 +70,6 @@ export async function generateKnockoutMatches({
       tenant_id: tenantId,
       home_team_id: grupoA[0].team_id,
       away_team_id: grupoB[1].team_id,
-      stage: 'quartas', // ajustável
     });
 
     // B1 x A2
@@ -80,7 +79,6 @@ export async function generateKnockoutMatches({
       tenant_id: tenantId,
       home_team_id: grupoB[0].team_id,
       away_team_id: grupoA[1].team_id,
-      stage: 'quartas',
     });
   }
 

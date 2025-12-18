@@ -25,7 +25,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message ?? 'Erro ao gerar mata-mata' }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { error: (err as Error).message ?? 'Erro ao gerar mata-mata' },
+      { status: 500 },
+    );
   }
 }
