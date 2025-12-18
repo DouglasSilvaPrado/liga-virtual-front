@@ -1,61 +1,97 @@
-import { Standing } from '@/@types/standing';
 import { SupabaseClient } from '@supabase/supabase-js';
 
-type MatchRow = {
-  competition_id: string;
-  tenant_id: string;
-  team_home: string;
-  team_away: string;
-  score_home: number;
-  score_away: number;
+type Acc = {
+  goals_scored: number;
+  goals_against: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  points: number;
 };
 
-type StandingUpdate = Pick<
-  Standing,
-  'goals_scored' | 'goals_against' | 'goal_diff' | 'wins' | 'draws' | 'losses' | 'points'
->;
-
-export async function updateStandingsFromMatch({
+export async function recalcStandingsFromGroup({
   supabase,
-  match,
+  competition_id,
+  tenant_id,
+  group_id,
 }: {
   supabase: SupabaseClient;
-  match: MatchRow;
+  competition_id: string;
+  tenant_id: string;
+  group_id: string;
 }) {
-  const { competition_id, tenant_id, team_home, team_away, score_home, score_away } = match;
+  // 1️⃣ Buscar partidas finalizadas
+  const { data: matches, error } = await supabase
+    .from('matches')
+    .select('team_home, team_away, score_home, score_away')
+    .eq('competition_id', competition_id)
+    .eq('tenant_id', tenant_id)
+    .eq('group_id', group_id)
+    .eq('status', 'finished');
 
-  const homeWin = score_home > score_away;
-  const awayWin = score_away > score_home;
-  const draw = score_home === score_away;
-
-  async function apply(teamId: string, data: StandingUpdate) {
-    await supabase
-      .from('standings')
-      .update(data)
-      .eq('competition_id', competition_id)
-      .eq('team_id', teamId)
-      .eq('tenant_id', tenant_id);
+  if (error || !matches || matches.length === 0) {
+    console.error('Sem partidas para recalcular', error);
+    return;
   }
 
-  // 🏠 TIME DA CASA
-  await apply(team_home, {
-    goals_scored: score_home,
-    goals_against: score_away,
-    goal_diff: score_home - score_away,
-    wins: homeWin ? 1 : 0,
-    draws: draw ? 1 : 0,
-    losses: awayWin ? 1 : 0,
-    points: homeWin ? 3 : draw ? 1 : 0,
-  });
+  // 2️⃣ Limpar standings do grupo
+  await supabase
+    .from('standings')
+    .delete()
+    .eq('competition_id', competition_id)
+    .eq('tenant_id', tenant_id)
+    .eq('group_id', group_id);
 
-  // ✈️ TIME VISITANTE
-  await apply(team_away, {
-    goals_scored: score_away,
-    goals_against: score_home,
-    goal_diff: score_away - score_home,
-    wins: awayWin ? 1 : 0,
-    draws: draw ? 1 : 0,
-    losses: homeWin ? 1 : 0,
-    points: awayWin ? 3 : draw ? 1 : 0,
-  });
+  // 3️⃣ Acumulador em memória
+  const table: Record<string, Acc> = {};
+
+  function ensure(teamId: string) {
+    if (!table[teamId]) {
+      table[teamId] = {
+        goals_scored: 0,
+        goals_against: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        points: 0,
+      };
+    }
+    return table[teamId];
+  }
+
+  // 4️⃣ Processar jogos
+  for (const m of matches) {
+    const draw = m.score_home === m.score_away;
+
+    const home = ensure(m.team_home);
+    const away = ensure(m.team_away);
+
+    // 🏠 Casa
+    home.goals_scored += m.score_home;
+    home.goals_against += m.score_away;
+    home.wins += m.score_home > m.score_away ? 1 : 0;
+    home.draws += draw ? 1 : 0;
+    home.losses += m.score_home < m.score_away ? 1 : 0;
+    home.points += m.score_home > m.score_away ? 3 : draw ? 1 : 0;
+
+    // ✈️ Visitante
+    away.goals_scored += m.score_away;
+    away.goals_against += m.score_home;
+    away.wins += m.score_away > m.score_home ? 1 : 0;
+    away.draws += draw ? 1 : 0;
+    away.losses += m.score_away < m.score_home ? 1 : 0;
+    away.points += m.score_away > m.score_home ? 3 : draw ? 1 : 0;
+  }
+
+  // 5️⃣ Persistir standings
+  for (const [team_id, data] of Object.entries(table)) {
+    await supabase.from('standings').insert({
+      competition_id,
+      tenant_id,
+      group_id,
+      team_id,
+      ...data,
+      goal_diff: data.goals_scored - data.goals_against,
+    });
+  }
 }

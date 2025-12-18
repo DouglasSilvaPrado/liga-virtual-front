@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
-import { updateStandingsFromMatch } from '@/lib/standings/updateStandingsFromMatch';
+import { recalcStandingsFromGroup } from '@/lib/standings/updateStandingsFromMatch';
 
 export async function POST(req: Request) {
   const { match_id, score_home, score_away } = await req.json();
@@ -120,11 +120,13 @@ export async function POST(req: Request) {
   }
 
   /* -------------------------------------------------- */
-  /* 7️⃣ Atualiza classificação                         */
+  /* 7️⃣ Recalcula classificação do grupo               */
   /* -------------------------------------------------- */
-  await updateStandingsFromMatch({
+  await recalcStandingsFromGroup({
     supabase,
-    match: updatedMatch,
+    competition_id: match.competition_id,
+    tenant_id: tenantId,
+    group_id: match.group_id,
   });
 
   return NextResponse.json({ success: true });
