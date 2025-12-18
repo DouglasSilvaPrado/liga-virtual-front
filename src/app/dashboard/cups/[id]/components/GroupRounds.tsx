@@ -1,20 +1,13 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import MatchRow from './MatchRow';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import ToggleRoundButton from './ToggleRoundButton';
+
 
 type MatchGroup = {
   id: string;
   name: string;
   code: string;
-};
-
-type MatchSelect = {
-  id: string;
-  round: number;
-  score_home: number | null;
-  score_away: number | null;
-  group: MatchGroup | null;
-  home_team: { id: string; name: string } | null;
-  away_team: { id: string; name: string } | null;
 };
 
 
@@ -83,6 +76,27 @@ export default async function GroupRounds({
 }) {
   const { supabase, tenantId } = await createServerSupabase();
 
+  /* 🔐 Descobre se é admin/owner */
+  const supabaseClient = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabaseClient.auth.getUser();
+
+  let isAdminOrOwner = false;
+
+  if (user) {
+    const { data: member } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .single();
+
+    isAdminOrOwner =
+      member?.role === 'admin' || member?.role === 'owner';
+  }
+
   const { data: dataMatch, error } = await supabase
   .from('matches')
   .select(`
@@ -149,29 +163,41 @@ export default async function GroupRounds({
     return acc;
   }, {});
 
-
-  return (
+ return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Fase de Grupos</h2>
 
-      {Object.values(grouped)
-        .sort((a, b) => a.groupCode.localeCompare(b.groupCode))
-        .map((group) => (
-        <div key={group.groupName} className="space-y-4">
+      {Object.values(grouped).map((group) => (
+        <div key={group.groupCode} className="space-y-4">
           <h2 className="text-lg font-semibold">{group.groupName}</h2>
 
-          {Object.entries(group.rounds).map(([round, matches]) => (
-            <div key={round} className="rounded border p-4 space-y-2">
-              <h3 className="font-medium">Rodada {round}</h3>
+          {Object.entries(group.rounds).map(([round, matches]) => {
+            const isOpen = matches[0].round_info.is_open;
+            const groupId = matches[0].group.id;
 
-              {matches.map((match) => (
-                <MatchRow key={match.id} match={match} />
-              ))}
-            </div>
-          ))}
+            return (
+              <div key={round} className="rounded border p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium">Rodada {round}</h3>
+
+                  {isAdminOrOwner && (
+                    <ToggleRoundButton
+                      competitionId={competitionId}
+                      groupId={groupId}
+                      round={Number(round)}
+                      isOpen={isOpen}
+                    />
+                  )}
+                </div>
+
+                {matches.map((match) => (
+                  <MatchRow key={match.id} match={match} />
+                ))}
+              </div>
+            );
+          })}
         </div>
       ))}
-
     </div>
   );
 }
