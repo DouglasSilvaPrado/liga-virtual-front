@@ -35,7 +35,7 @@ export default function ToggleRoundButton({
   return (
     <button
       onClick={toggle}
-      className="text-xs text-blue-600 underline"
+      className="text-xs text-blue-600 underline cursor-pointer"
     >
       {isOpen ? 'Fechar rodada' : 'Abrir rodada'}
     </button>
