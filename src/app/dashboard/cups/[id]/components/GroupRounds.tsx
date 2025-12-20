@@ -13,7 +13,6 @@ type MatchGroup = {
 
 export type MatchWithTeamName = {
   id: string;
-  group_round: number;
   score_home: number | null;
   score_away: number | null;
   status: 'scheduled' | 'in_progress' | 'finished' | 'canceled';
@@ -30,7 +29,6 @@ export type MatchWithTeamName = {
 
 type MatchFromDB = {
   id: string;
-  group_round: number;
   score_home: number | null;
   score_away: number | null;
   status: 'scheduled' | 'in_progress' | 'finished' | 'canceled';
@@ -52,9 +50,7 @@ type GroupedRounds = Record<
 
 /* ───────────────────────── HELPERS ───────────────────────── */
 
-function isCompleteMatch(
-  m: MatchFromDB
-): m is MatchWithTeamName {
+function isCompleteMatch(m: MatchFromDB): m is MatchWithTeamName {
   return (
     m.group !== null &&
     m.home_team !== null &&
@@ -105,36 +101,38 @@ export default async function GroupRounds({
     }
   }
 
-  /* 📥 Query base */
+  /* 📥 Query base (CORRIGIDA) */
   let query = supabase
     .from('matches')
     .select(`
       id,
       score_home,
       score_away,
-      group_round,
       status,
       group:competition_groups!matches_group_fk (
         id,
         name,
         code
       ),
-      round_info:group_rounds!inner (
+      round_info:group_rounds!matches_group_round_id_fkey (
         round,
         is_open
       ),
-      home_team:teams!team_home (
+      home_team:teams!matches_team_home_fk (
         id,
         name
       ),
-      away_team:teams!team_away (
+      away_team:teams!matches_team_away_fk (
         id,
         name
       )
     `)
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
-    .order('group_round', { ascending: true });
+    .order('round', {
+      referencedTable: 'group_rounds',
+      ascending: true,
+    });
 
   /* 🔒 Filtro para MEMBER */
   if (!isAdminOrOwner && memberTeamId) {
@@ -156,13 +154,12 @@ export default async function GroupRounds({
     return <p>Nenhuma rodada encontrada</p>;
   }
 
-  const matches = (dataMatch as unknown as MatchFromDB[])
-    .filter(isCompleteMatch);
+  const matches = (dataMatch as unknown as MatchFromDB[]).filter(isCompleteMatch);
 
-  /* 🧠 Agrupamento */
+  /* 🧠 Agrupamento por grupo → rodada */
   const grouped = matches.reduce<GroupedRounds>((acc, match) => {
     const groupId = match.group.id;
-    const round = match.group_round;
+    const round = match.round_info.round;
 
     if (!acc[groupId]) {
       acc[groupId] = {
@@ -214,10 +211,7 @@ export default async function GroupRounds({
                 </div>
 
                 {matches.map((match) => (
-                  <MatchRow
-                    key={match.id}
-                    match={match}
-                  />
+                  <MatchRow key={match.id} match={match} />
                 ))}
               </div>
             );

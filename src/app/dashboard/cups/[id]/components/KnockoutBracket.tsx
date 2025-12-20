@@ -51,7 +51,6 @@ export default async function KnockoutBracket({
   if (!data || data.length === 0) return null;
 
   const dataRound = data as unknown as BracketMatch[]
-  console.log("🚀 ~ KnockoutBracket ~ dataRound:", dataRound)
 
   const normalized: BracketMatch[] = dataRound.map((m) => {
     return {

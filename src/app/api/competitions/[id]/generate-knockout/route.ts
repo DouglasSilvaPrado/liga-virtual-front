@@ -4,8 +4,6 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id: competitionId } = await context.params;
 
-  console.log('🚀 competitionId:', competitionId);
-
   const { supabase, tenantId } = await createServerSupabase();
 
   /* ───────────────────────── 🔐 USUÁRIO ───────────────────────── */
@@ -56,7 +54,6 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     .eq('id', competitionId)
     .eq('tenant_id', tenantId)
     .single();
-  console.log('🚀 ~ POST ~ competition:', competition);
 
   if (!competition?.settings) {
     return NextResponse.json(
@@ -102,7 +99,6 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     classificadosPorGrupo[s.group_id] ??= [];
     classificadosPorGrupo[s.group_id].push(s);
   }
-  console.log('🚀 ~ POST ~ classificadosPorGrupo:', classificadosPorGrupo);
 
   const classificados: any[] = [];
 
@@ -113,7 +109,6 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   if (classificados.length < 2) {
     return NextResponse.json({ error: 'Classificados insuficientes' }, { status: 400 });
   }
-  console.log('🚀 ~ POST ~ classificados:', classificados);
 
   /* ───────────────────────── 🔀 MONTAGEM DA CHAVE ───────────────────────── */
 
@@ -176,7 +171,6 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         is_final: false,
       });
     }
-    console.log('🚀 ~ POST ~ matchesToInsert:', matchesToInsert);
   });
 
   const { error: insertError } = await supabase.from('matches').insert(matchesToInsert);

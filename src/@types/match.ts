@@ -12,6 +12,7 @@ export interface Match {
   leg?: number;
   group_id?: string;
   group_round?: number;
+  group_round_id: string;
   created_at?: string;
   updated_at?: string;
 }

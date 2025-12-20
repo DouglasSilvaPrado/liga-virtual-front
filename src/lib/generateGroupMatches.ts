@@ -52,6 +52,7 @@ export async function generateGroupMatches({
 
     const matchesToInsert: Match[] = [];
     const roundsToInsert: {
+      tenant_id: string;
       competition_id: string;
       group_id: string;
       round: number;
@@ -63,26 +64,70 @@ export async function generateGroupMatches({
       championship_id: championshipId,
       competition_id: competitionId,
       group_id: group.id,
-      status: 'scheduled' as const, // ✅ válido no CHECK
+      status: 'scheduled' as const,
     };
 
     /* -------------------------------------------------- */
-    /* 4️⃣ Jogos de ida                                   */
+    /* 4️⃣ Criar rodadas (IDA)                            */
     /* -------------------------------------------------- */
-    rounds.forEach((roundMatches, index) => {
-      const groupRound = index + 1;
-
+    rounds.forEach((_, index) => {
       roundsToInsert.push({
+        tenant_id: tenantId,
         competition_id: competitionId,
         group_id: group.id,
-        round: groupRound,
-        is_open: false, // 🔒 começa bloqueada
+        round: index + 1,
+        is_open: false,
       });
+    });
+
+    /* -------------------------------------------------- */
+    /* 5️⃣ Criar rodadas (VOLTA)                          */
+    /* -------------------------------------------------- */
+    if (idaVolta) {
+      rounds.forEach((_, index) => {
+        roundsToInsert.push({
+          tenant_id: tenantId,
+          competition_id: competitionId,
+          group_id: group.id,
+          round: rounds.length + index + 1,
+          is_open: false,
+        });
+      });
+    }
+
+    /* -------------------------------------------------- */
+    /* 6️⃣ Inserir rodadas e capturar IDs                 */
+    /* -------------------------------------------------- */
+    const { data: insertedRounds, error: roundsErr } = await supabase
+      .from('group_rounds')
+      .insert(roundsToInsert)
+      .select('id, round');
+
+    if (roundsErr || !insertedRounds) {
+      throw new Error('Erro ao criar rodadas de grupo');
+    }
+
+    /* -------------------------------------------------- */
+    /* 6️⃣.1️⃣ Mapear round → group_round_id               */
+    /* -------------------------------------------------- */
+    const roundIdMap = new Map<number, string>();
+    for (const r of insertedRounds) {
+      roundIdMap.set(r.round, r.id);
+    }
+
+    /* -------------------------------------------------- */
+    /* 7️⃣ Criar partidas (IDA)                           */
+    /* -------------------------------------------------- */
+    rounds.forEach((roundMatches, index) => {
+      const roundNumber = index + 1;
+      const groupRoundId = roundIdMap.get(roundNumber);
+      if (!groupRoundId) return;
 
       for (const match of roundMatches) {
         matchesToInsert.push({
           ...baseMatch,
-          group_round: groupRound,
+          group_round_id: groupRoundId,
+          round: roundNumber,
           team_home: match.home,
           team_away: match.away,
           leg: 1,
@@ -91,23 +136,19 @@ export async function generateGroupMatches({
     });
 
     /* -------------------------------------------------- */
-    /* 5️⃣ Jogos de volta                                 */
+    /* 8️⃣ Criar partidas (VOLTA)                         */
     /* -------------------------------------------------- */
     if (idaVolta) {
       rounds.forEach((roundMatches, index) => {
-        const groupRound = rounds.length + index + 1;
-
-        roundsToInsert.push({
-          competition_id: competitionId,
-          group_id: group.id,
-          round: groupRound,
-          is_open: false,
-        });
+        const roundNumber = rounds.length + index + 1;
+        const groupRoundId = roundIdMap.get(roundNumber);
+        if (!groupRoundId) return;
 
         for (const match of roundMatches) {
           matchesToInsert.push({
             ...baseMatch,
-            group_round: groupRound,
+            group_round_id: groupRoundId,
+            round: roundNumber,
             team_home: match.away,
             team_away: match.home,
             leg: 2,
@@ -117,12 +158,7 @@ export async function generateGroupMatches({
     }
 
     /* -------------------------------------------------- */
-    /* 6️⃣ Inserir rodadas                                */
-    /* -------------------------------------------------- */
-    await supabase.from('group_rounds').insert(roundsToInsert);
-
-    /* -------------------------------------------------- */
-    /* 7️⃣ Inserir partidas                               */
+    /* 9️⃣ Inserir partidas                               */
     /* -------------------------------------------------- */
     if (matchesToInsert.length) {
       const { error } = await supabase.from('matches').insert(matchesToInsert);

@@ -64,7 +64,6 @@ export default async function GroupsStandings({
       <h2 className="text-lg font-semibold">Grupos</h2>
 
       {groups.map((group) => {
-        console.log("🚀 ~ GroupsStandings ~ group:", group)
         return (
           <div key={group.id} className="rounded border p-3">
             <h3 className="font-medium mb-2">{group.name}</h3>

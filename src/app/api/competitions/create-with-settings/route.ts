@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       .from('competition_settings')
       .insert({
         competition_id,
+        tenant_id: tenantId,
         settings: settings || {},
       })
       .select()
