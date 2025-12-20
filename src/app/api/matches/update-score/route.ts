@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       competition_id,
       tenant_id,
       group_id,
-      group_round,
+      group_round_id,
       is_final,
       status
     `,
@@ -73,22 +73,20 @@ export async function POST(req: Request) {
   /* -------------------------------------------------- */
   /* 5️⃣ Verifica rodada aberta                         */
   /* -------------------------------------------------- */
-  if (match.group_id) {
-    const { data: round } = await supabase
+  if (match.group_round_id) {
+    const { data: round, error: roundErr } = await supabase
       .from('group_rounds')
       .select('is_open')
-      .eq('competition_id', match.competition_id)
-      .eq('group_id', match.group_id)
-      .eq('round', match.group_round)
+      .eq('id', match.group_round_id)
       .single();
 
-    if (!round?.is_open && !isAdminOrOwner) {
+    if (roundErr || !round) {
+      return NextResponse.json({ error: 'Rodada não encontrada' }, { status: 404 });
+    }
+
+    if (!round.is_open && !isAdminOrOwner) {
       return NextResponse.json({ error: 'Rodada fechada para edição' }, { status: 403 });
     }
-  }
-
-  if (match.status === 'finished') {
-    return NextResponse.json({ error: 'Partida já finalizada' }, { status: 403 });
   }
 
   /* -------------------------------------------------- */
