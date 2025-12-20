@@ -1,19 +1,44 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
+type StandingRow = {
+  team_id: string;
+  group_id: string;
+  championship_id: string;
+  points: number;
+  goal_diff: number;
+  goals_scored: number;
+};
+
+/* ───────────────────────── HELPERS ───────────────────────── */
+
+function shuffle<T>(array: T[]) {
+  return [...array].sort(() => Math.random() - 0.5);
+}
+
+function getInitialRound(totalTeams: number): number {
+  /**
+   * totalTeams = 16 → oitavas (round 1)
+   * totalTeams = 8  → quartas (round 2)
+   * totalTeams = 4  → semi (round 3)
+   * totalTeams = 2  → final (round 4)
+   */
+  return Math.log2(totalTeams);
+}
+
+/* ───────────────────────── API ───────────────────────── */
+
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id: competitionId } = await context.params;
-
   const { supabase, tenantId } = await createServerSupabase();
 
-  /* ───────────────────────── 🔐 USUÁRIO ───────────────────────── */
+  /* ───────────────────────── 🔐 AUTH ───────────────────────── */
 
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (!user) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
@@ -21,7 +46,8 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   const { data: member } = await supabase
     .from('tenant_members')
-    .select('tenant_id, role')
+    .select('role')
+    .eq('tenant_id', tenantId)
     .eq('user_id', user.id)
     .single();
 
@@ -29,14 +55,14 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Permissão negada' }, { status: 403 });
   }
 
-  /* ───────────────────────── ⛔ JOGOS DE GRUPO ABERTOS ───────────────────────── */
+  /* ───────────────────────── ⛔ VERIFICA GRUPOS FINALIZADOS ───────────────────────── */
 
   const { count: openGroupMatches } = await supabase
     .from('matches')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
-    .not('group_id', 'is', null)
+    .not('group_round_id', 'is', null)
     .neq('status', 'finished');
 
   if ((openGroupMatches ?? 0) > 0) {
@@ -62,13 +88,11 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     );
   }
 
-  const specific = competition.settings.specific;
+  const specific = competition.settings.specific ?? {};
 
-  const qtdPorGrupo: number = specific?.qtd_classifica_por_grupo;
-
-  const chaveAutomatica: 'aleatorio' | 'cruzado' = specific?.chave_automatica ?? 'cruzado';
-
-  const idaVolta: boolean = specific?.mata_em_ida_e_volta ?? false;
+  const qtdPorGrupo: number = specific.qtd_classifica_por_grupo;
+  const chaveAutomatica: 'aleatorio' | 'cruzado' = specific.chave_automatica ?? 'aleatorio';
+  const idaVolta: boolean = specific.mata_em_ida_e_volta ?? false;
 
   if (!qtdPorGrupo || qtdPorGrupo < 1) {
     return NextResponse.json({ error: 'Configuração inválida de classificação' }, { status: 400 });
@@ -78,7 +102,15 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   const { data: standings } = await supabase
     .from('standings')
-    .select('*')
+    .select(
+      `
+      team_id,
+      group_id,
+      points,
+      goal_diff,
+      goals_scored
+    `,
+    )
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .order('points', { ascending: false })
@@ -89,74 +121,70 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Classificação não encontrada' }, { status: 400 });
   }
 
-  /* ───────────────────────── 🏆 CLASSIFICADOS ───────────────────────── */
+  /* ───────────────────────── 🏆 CLASSIFICADOS POR GRUPO ───────────────────────── */
 
-  const classificadosPorGrupo: Record<string, any[]> = {};
+  const classificadosPorGrupo: Record<string, StandingRow[]> = {};
 
-  for (const s of standings) {
+  for (const s of standings as StandingRow[]) {
     if (!s.group_id) continue;
 
     classificadosPorGrupo[s.group_id] ??= [];
     classificadosPorGrupo[s.group_id].push(s);
   }
 
-  const classificados: any[] = [];
+  let classificados: StandingRow[] = [];
 
   for (const groupId in classificadosPorGrupo) {
     classificados.push(...classificadosPorGrupo[groupId].slice(0, qtdPorGrupo));
   }
 
   if (classificados.length < 2) {
-    return NextResponse.json({ error: 'Classificados insuficientes' }, { status: 400 });
+    return NextResponse.json({ error: 'Times insuficientes para o mata-mata' }, { status: 400 });
   }
 
-  /* ───────────────────────── 🔀 MONTAGEM DA CHAVE ───────────────────────── */
-
-  let confrontos: any[][] = [];
+  /* ───────────────────────── 🔀 ORDENA CLASSIFICADOS ───────────────────────── */
 
   if (chaveAutomatica === 'aleatorio') {
-    const shuffled = [...classificados].sort(() => Math.random() - 0.5);
-
-    for (let i = 0; i < shuffled.length; i += 2) {
-      confrontos.push([shuffled[i], shuffled[i + 1]]);
-    }
+    classificados = shuffle(classificados);
   } else {
-    // cruzado (Grupo A 1º x Grupo B 2º)
-    const grupos = Object.values(classificadosPorGrupo);
+    // cruzado genérico: 1ºs x últimos
+    const ordenados = [...classificados];
+    classificados = [];
 
-    if (grupos.length !== 2) {
-      return NextResponse.json(
-        { error: 'Chave cruzada requer exatamente 2 grupos' },
-        { status: 400 },
-      );
+    while (ordenados.length >= 2) {
+      classificados.push(ordenados.shift()!, ordenados.pop()!);
     }
-
-    confrontos = [
-      [grupos[0][0], grupos[1][1]],
-      [grupos[1][0], grupos[0][1]],
-    ];
   }
 
-  /* ───────────────────────── ⚽ CRIA JOGOS ───────────────────────── */
+  /* ───────────────────────── ⚽ GERA CONFRONTOS ───────────────────────── */
+
+  const totalTeams = classificados.length;
+  const roundNumber = getInitialRound(totalTeams);
 
   const matchesToInsert: any[] = [];
 
-  confrontos.forEach((confronto, index) => {
-    const [home, away] = confronto;
+  for (let i = 0; i < classificados.length; i += 2) {
+    const home = classificados[i];
+    const away = classificados[i + 1];
 
+    if (!home || !away) continue;
+
+    // JOGO DE IDA
     matchesToInsert.push({
       competition_id: competitionId,
       championship_id: home.championship_id,
       tenant_id: tenantId,
       team_home: home.team_id,
       team_away: away.team_id,
-      round: 1, // semifinal
+      round: roundNumber,
       leg: 1,
       status: 'scheduled',
       group_id: null,
-      is_final: false,
+      group_round_id: null,
+      is_final: totalTeams === 2,
     });
 
+    // JOGO DE VOLTA
     if (idaVolta) {
       matchesToInsert.push({
         competition_id: competitionId,
@@ -164,14 +192,17 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         tenant_id: tenantId,
         team_home: away.team_id,
         team_away: home.team_id,
-        round: 1,
+        round: roundNumber,
         leg: 2,
         status: 'scheduled',
         group_id: null,
-        is_final: false,
+        group_round_id: null,
+        is_final: totalTeams === 2,
       });
     }
-  });
+  }
+
+  /* ───────────────────────── 💾 INSERT ───────────────────────── */
 
   const { error: insertError } = await supabase.from('matches').insert(matchesToInsert);
 
@@ -180,7 +211,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Erro ao criar jogos do mata-mata' }, { status: 500 });
   }
 
-  /* ───────────────────────── 📝 LOG (opcional) ───────────────────────── */
+  /* ───────────────────────── 📝 LOG ───────────────────────── */
 
   await supabase.from('activity_logs').insert({
     tenant_id: tenantId,
@@ -188,12 +219,15 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     action: 'generate_knockout',
     metadata: {
       competition_id: competitionId,
-      classificados: classificados.map((c) => c.team_id),
+      total_classificados: classificados.length,
+      round: roundNumber,
+      ida_volta: idaVolta,
     },
   });
 
   return NextResponse.json({
     success: true,
-    matches_created: matchesToInsert.length,
+    fase_inicial: roundNumber,
+    jogos_criados: matchesToInsert.length,
   });
 }

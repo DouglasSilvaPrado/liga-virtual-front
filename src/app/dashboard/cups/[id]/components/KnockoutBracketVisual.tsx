@@ -10,11 +10,19 @@ interface KnockoutBracketVisualProps {
   idaVolta: boolean;
 }
 
-function getRoundLabel(round: number) {
-  if (round === 1) return 'Semifinal';
-  if (round === 2) return 'Final';
-  return `Fase ${round}`;
+function getRoundLabel(round: number, totalRounds: number) {
+  const fases = [
+    'Final',
+    'Semifinal',
+    'Quartas de final',
+    'Oitavas de final',
+    '16-avos',
+  ];
+
+  const index = totalRounds - round;
+  return fases[index] ?? `Fase ${round}`;
 }
+
 
 
 export function KnockoutBracketVisual({
@@ -22,7 +30,7 @@ export function KnockoutBracketVisual({
   idaVolta,
 }: KnockoutBracketVisualProps) {
   const sortedRounds = Object.entries(rounds).sort(
-    ([a], [b]) => Number(a) - Number(b)
+    ([a], [b]) => Number(b) - Number(a)
   );
 
   return (
@@ -33,7 +41,7 @@ export function KnockoutBracketVisual({
           className="min-w-[280px] flex flex-col gap-4"
         >
           <h3 className="text-center font-medium">
-            {getRoundLabel(Number(round))}
+            {getRoundLabel(Number(round), sortedRounds.length)}
             {idaVolta && <span className="text-xs"> (Ida e Volta)</span>}
           </h3>
 
