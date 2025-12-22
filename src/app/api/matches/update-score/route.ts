@@ -4,9 +4,15 @@ import { recalcStandingsFromGroup } from '@/lib/standings/updateStandingsFromMat
 import { tryAdvanceKnockout } from '@/lib/tryAdvanceKnockout';
 
 export async function POST(req: Request) {
-  const { match_id, score_home, score_away } = await req.json();
+  const { match_id, score_home, score_away, penalties_home, penalties_away } = await req.json();
 
-  if (!match_id || score_home === undefined || score_away === undefined) {
+  /* -------------------------------------------------- */
+  /* 0️⃣ Validação básica                               */
+  /* -------------------------------------------------- */
+  if (
+    !match_id ||
+    (score_home === undefined && (penalties_home === undefined || penalties_away === undefined))
+  ) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
   }
 
@@ -28,7 +34,7 @@ export async function POST(req: Request) {
   /* -------------------------------------------------- */
   const { data: member, error: memberErr } = await supabase
     .from('tenant_members')
-    .select('id, role')
+    .select('role')
     .eq('tenant_id', tenantId)
     .eq('user_id', user.id)
     .single();
@@ -51,8 +57,11 @@ export async function POST(req: Request) {
       tenant_id,
       group_id,
       group_round_id,
-      is_final,
-      status
+      status,
+      is_locked,
+      round,
+      team_home,
+      team_away
     `,
     )
     .eq('id', match_id)
@@ -64,35 +73,118 @@ export async function POST(req: Request) {
   }
 
   /* -------------------------------------------------- */
-  /* 4️⃣ Bloqueio se já finalizada                      */
+  /* 4️⃣ Bloqueios                                      */
   /* -------------------------------------------------- */
-  if (match.status === 'finished' && !isAdminOrOwner) {
-    return NextResponse.json({ error: 'Partida já finalizada' }, { status: 403 });
+  if (match.is_locked && !isAdminOrOwner) {
+    return NextResponse.json({ error: 'Partida já encerrada' }, { status: 409 });
   }
 
   /* -------------------------------------------------- */
-  /* 5️⃣ Verifica rodada aberta                         */
+  /* 5️⃣ Verifica rodada aberta (fase de grupos)        */
   /* -------------------------------------------------- */
   if (match.group_round_id) {
-    const { data: round, error: roundErr } = await supabase
+    const { data: round } = await supabase
       .from('group_rounds')
       .select('is_open')
       .eq('id', match.group_round_id)
       .single();
 
-    if (roundErr || !round) {
-      return NextResponse.json({ error: 'Rodada não encontrada' }, { status: 404 });
-    }
-
-    if (!round.is_open && !isAdminOrOwner) {
+    if (!round?.is_open && !isAdminOrOwner) {
       return NextResponse.json({ error: 'Rodada fechada para edição' }, { status: 403 });
     }
   }
 
   /* -------------------------------------------------- */
-  /* 6️⃣ Atualiza placar                                */
+  /* 6️⃣ SALVA PÊNALTIS (agregado)                       */
   /* -------------------------------------------------- */
-  const { data: updatedMatch, error } = await supabase
+  if (penalties_home != null && penalties_away != null) {
+    // 🔎 Buscar todos os jogos do confronto (ida/volta)
+    const { data: confrontos, error: confErr } = await supabase
+      .from('matches')
+      .select(
+        `
+      id,
+      team_home,
+      team_away,
+      score_home,
+      score_away
+    `,
+      )
+      .eq('competition_id', match.competition_id)
+      .eq('tenant_id', tenantId)
+      .or(
+        `and(team_home.eq.${match.team_home},team_away.eq.${match.team_away}),and(team_home.eq.${match.team_away},team_away.eq.${match.team_home})`,
+      );
+
+    if (confErr || !confrontos || confrontos.length === 0) {
+      return NextResponse.json({ error: 'Confronto não encontrado' }, { status: 404 });
+    }
+
+    // 🧮 Calcula agregado
+    let golsA = 0;
+    let golsB = 0;
+
+    for (const m of confrontos) {
+      if (m.score_home == null || m.score_away == null) continue;
+
+      if (m.team_home === match.team_home) {
+        golsA += m.score_home;
+        golsB += m.score_away;
+      } else {
+        golsA += m.score_away;
+        golsB += m.score_home;
+      }
+    }
+
+    // ❌ NÃO é empate no agregado
+    if (golsA !== golsB) {
+      return NextResponse.json(
+        { error: 'Pênaltis só permitidos em caso de empate no agregado' },
+        { status: 400 },
+      );
+    }
+
+    // ✅ Salva pênaltis e trava edição
+    const { error: penErr } = await supabase
+      .from('matches')
+      .update({
+        penalties_home,
+        penalties_away,
+        status: 'finished',
+        is_locked: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', match_id)
+      .eq('tenant_id', tenantId);
+
+    if (penErr) {
+      return NextResponse.json({ error: 'Erro ao salvar pênaltis' }, { status: 500 });
+    }
+
+    // 🔴 Avança mata-mata
+    const { data: competition } = await supabase
+      .from('competitions_with_settings')
+      .select('settings')
+      .eq('id', match.competition_id)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (competition?.settings) {
+      await tryAdvanceKnockout({
+        supabase,
+        competitionId: match.competition_id,
+        tenantId,
+        settings: competition.settings,
+      });
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  /* -------------------------------------------------- */
+  /* 7️⃣ SALVA PLACAR NORMAL                            */
+  /* -------------------------------------------------- */
+  const { error: scoreErr } = await supabase
     .from('matches')
     .update({
       score_home,
@@ -101,36 +193,17 @@ export async function POST(req: Request) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', match_id)
-    .eq('tenant_id', tenantId)
-    .select(
-      `
-      competition_id,
-      tenant_id,
-      team_home,
-      team_away,
-      score_home,
-      score_away,
-      status
-    `,
-    )
-    .single();
+    .eq('tenant_id', tenantId);
 
-  const { data: competition } = await supabase
-    .from('competitions_with_settings')
-    .select('settings')
-    .eq('id', match.competition_id)
-    .eq('tenant_id', tenantId)
-    .single();
-
-  if (error || !updatedMatch) {
+  if (scoreErr) {
     return NextResponse.json({ error: 'Erro ao salvar placar' }, { status: 500 });
   }
 
   /* -------------------------------------------------- */
-  /* 7️⃣ Recalcula classificação do grupo               */
+  /* 8️⃣ Pós-processamento                              */
   /* -------------------------------------------------- */
   if (match.group_id) {
-    // 🔵 FASE DE GRUPOS
+    // 🔵 Fase de grupos
     await recalcStandingsFromGroup({
       supabase,
       competition_id: match.competition_id,
@@ -138,7 +211,14 @@ export async function POST(req: Request) {
       group_id: match.group_id,
     });
   } else {
-    // 🔴 MATA-MATA
+    // 🔴 Mata-mata
+    const { data: competition } = await supabase
+      .from('competitions_with_settings')
+      .select('settings')
+      .eq('id', match.competition_id)
+      .eq('tenant_id', tenantId)
+      .single();
+
     if (competition?.settings) {
       await tryAdvanceKnockout({
         supabase,
@@ -148,5 +228,6 @@ export async function POST(req: Request) {
       });
     }
   }
+
   return NextResponse.json({ success: true });
 }

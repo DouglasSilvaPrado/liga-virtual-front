@@ -15,9 +15,9 @@ function getRoundLabel(round: number) {
     case 2:
       return 'Semifinal';
     case 3:
-      return 'Quartas de final';
+      return 'Quartas';
     case 4:
-      return 'Oitavas de final';
+      return 'Oitavas';
     default:
       return `Fase ${round}`;
   }
@@ -32,31 +32,28 @@ function groupConfrontos(matches: BracketMatch[]) {
         ? `${m.team_home.name}-${m.team_away.name}`
         : `${m.team_away.name}-${m.team_home.name}`;
 
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(m);
+    map.set(key, [...(map.get(key) ?? []), m]);
   }
 
   return Array.from(map.values());
 }
 
-export function KnockoutBracketVisual({
-  rounds,
-}: KnockoutBracketVisualProps) {
+export function KnockoutBracketVisual({ rounds }: KnockoutBracketVisualProps) {
   const sortedRounds = Object.entries(rounds).sort(
     ([a], [b]) => Number(b) - Number(a)
   );
 
   return (
-    <div className="relative flex gap-32 min-h-[600px]">
+    <div className="flex gap-32 items-stretch min-h-[700px]">
       {sortedRounds.map(([round, matches]) => {
         const confrontos = groupConfrontos(matches);
 
         return (
           <div
             key={round}
-            className="flex flex-col justify-around min-h-[600px]"
+            className="flex flex-col justify-evenly min-h-[700px]"
           >
-            <h3 className="text-center font-semibold mb-6">
+            <h3 className="text-center font-semibold mb-8">
               {getRoundLabel(Number(round))}
             </h3>
 

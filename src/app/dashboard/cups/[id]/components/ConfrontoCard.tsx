@@ -3,56 +3,48 @@
 import { BracketMatch } from '@/@types/knockout';
 import { Card, CardContent } from '@/components/ui/card';
 import { MatchCard } from './MatchCard';
+import { motion } from 'framer-motion';
 
-export function ConfrontoCard({
-  matches,
-}: {
-  matches: BracketMatch[];
-}) {
+export function ConfrontoCard({ matches }: { matches: BracketMatch[] }) {
   const ida = matches.find(m => m.leg === 1);
   const volta = matches.find(m => m.leg === 2);
 
   const teamA = ida?.team_home ?? matches[0].team_home;
   const teamB = ida?.team_away ?? matches[0].team_away;
 
-  function golsDoTime(
-    match: BracketMatch | undefined,
-    teamName: string
-  ) {
-    if (!match || match.score_home == null || match.score_away == null) return 0;
-
-    return match.team_home.name === teamName
-      ? match.score_home
-      : match.score_away;
+  function gols(match: BracketMatch | undefined, team: string) {
+    if (!match) return 0;
+    return match.team_home.name === team
+      ? match.score_home ?? 0
+      : match.score_away ?? 0;
   }
 
-  const golsA =
-    golsDoTime(ida, teamA.name) +
-    golsDoTime(volta, teamA.name);
-
-  const golsB =
-    golsDoTime(ida, teamB.name) +
-    golsDoTime(volta, teamB.name);
+  const golsA = gols(ida, teamA.name) + gols(volta, teamA.name);
+  const golsB = gols(ida, teamB.name) + gols(volta, teamB.name);
 
   const finished = matches.every(m => m.status === 'finished');
+  const empate = finished && golsA === golsB;
+
+  const penaltiesDefined =
+    ida?.penalties_home != null && ida?.penalties_away != null;
 
   let winner: string | null = null;
 
   if (finished) {
     if (golsA > golsB) winner = teamA.name;
     else if (golsB > golsA) winner = teamB.name;
-    else if (ida?.penalties_home != null && ida?.penalties_away != null) {
+    else if (penaltiesDefined) {
       winner =
-        ida.penalties_home > ida.penalties_away
-          ? ida.team_home.name
-          : ida.team_away.name;
+        ida!.penalties_home! > ida!.penalties_away!
+          ? ida!.team_home.name
+          : ida!.team_away.name;
     }
   }
 
   return (
-    <Card className="relative before:absolute before:-right[-32px] before:top-1/2 before:w-8 before:h-px before:bg-muted my-2">
-      <CardContent className="p-4 space-y-3">
-        <h4 className="font-semibold text-center">
+    <Card className="relative my-6">
+      <CardContent className="space-y-3 p-4">
+        <h4 className="text-center font-semibold">
           {teamA.name} x {teamB.name}
         </h4>
 
@@ -65,10 +57,32 @@ export function ConfrontoCard({
           </div>
         )}
 
+        {empate && ida && (
+          <>
+            {/* FORMULÁRIO (quando ainda não foi salvo) */}
+            {!penaltiesDefined && (
+              <MatchCard match={ida} idaVolta isPenalties />
+            )}
+
+            {/* RESULTADO (quando já foi salvo) */}
+            {penaltiesDefined && (
+              <div className="text-center text-sm font-semibold text-yellow-600">
+                Pênaltis: {ida.team_home.name}{' '}
+                {ida.penalties_home} (p) {ida.penalties_away}{' '}
+                {ida.team_away.name}
+              </div>
+            )}
+          </>
+        )}
+
         {winner && (
-          <div className="text-center text-green-600 font-semibold animate-pulse">
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center text-green-600 font-semibold"
+          >
             Classificado: {winner}
-          </div>
+          </motion.div>
         )}
       </CardContent>
     </Card>
