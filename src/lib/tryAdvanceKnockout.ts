@@ -32,39 +32,25 @@ type Match = {
 /* 🧮 Calcula vencedor do confronto               */
 /* ───────────────────────────────────────────── */
 
-function getWinnerFromConfronto(matches: Match[], idaVolta: boolean): string | null {
-  if (!idaVolta) {
-    const m = matches[0];
-    if (m.score_home > m.score_away) return m.team_home;
-    if (m.score_away > m.score_home) return m.team_away;
-    return null; // empate (futuro: pênaltis)
+function getWinnerFromConfronto(jogos: any[], idaVolta: boolean): string | null {
+  if (jogos.some((j) => j.status !== 'finished')) return null;
+
+  const gols: Record<string, number> = {};
+
+  for (const j of jogos) {
+    gols[j.team_home] = (gols[j.team_home] ?? 0) + j.score_home;
+    gols[j.team_away] = (gols[j.team_away] ?? 0) + j.score_away;
   }
 
-  if (matches.length < 2) return null;
+  const [[teamA, golsA], [teamB, golsB]] = Object.entries(gols);
 
-  const [m1, m2] = matches;
+  if (golsA > golsB) return teamA;
+  if (golsB > golsA) return teamB;
 
-  let goalsA = 0;
-  let goalsB = 0;
+  const pen = jogos.find((j) => j.penalties_home != null);
+  if (!pen) return null;
 
-  // time A = team_home do primeiro jogo
-  const teamA = m1.team_home;
-  const teamB = m1.team_away;
-
-  for (const m of matches) {
-    if (m.team_home === teamA) {
-      goalsA += m.score_home;
-      goalsB += m.score_away;
-    } else {
-      goalsA += m.score_away;
-      goalsB += m.score_home;
-    }
-  }
-
-  if (goalsA > goalsB) return teamA;
-  if (goalsB > goalsA) return teamB;
-
-  return null; // empate agregado
+  return pen.penalties_home > pen.penalties_away ? pen.team_home : pen.team_away;
 }
 
 /* ───────────────────────────────────────────── */
@@ -84,7 +70,7 @@ export async function tryAdvanceKnockout({
 }) {
   const idaVolta = isIdaVolta(settings);
 
-  /* 1️⃣ Descobre a rodada MAIS ALTA existente (ex: 3 = Quartas) */
+  /* 1️⃣ Última rodada existente */
   const { data: lastRound } = await supabase
     .from('matches')
     .select('round')
@@ -100,8 +86,8 @@ export async function tryAdvanceKnockout({
   const currentRound = lastRound.round;
   const nextRound = currentRound - 1;
 
-  /* 2️⃣ Verifica se ainda existem jogos abertos */
-  const { count: openMatches } = await supabase
+  /* 2️⃣ Verifica jogos pendentes */
+  const { count: open } = await supabase
     .from('matches')
     .select('*', { count: 'exact', head: true })
     .eq('competition_id', competitionId)
@@ -109,62 +95,57 @@ export async function tryAdvanceKnockout({
     .eq('round', currentRound)
     .neq('status', 'finished');
 
-  if ((openMatches ?? 0) > 0) return;
+  if ((open ?? 0) > 0) return;
 
-  /* 3️⃣ Evita criar a próxima fase duas vezes */
+  /* 3️⃣ Evita duplicar rodada */
   if (nextRound > 0) {
-    const { count: nextExists } = await supabase
+    const { count } = await supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
       .eq('competition_id', competitionId)
       .eq('tenant_id', tenantId)
       .eq('round', nextRound);
 
-    if ((nextExists ?? 0) > 0) return;
+    if ((count ?? 0) > 0) return;
   }
 
-  /* 4️⃣ Busca todos os jogos do round atual */
+  /* 4️⃣ Busca jogos */
   const { data: matches } = await supabase
     .from('matches')
-    .select(
-      `
-      id,
-      round,
-      leg,
-      team_home,
-      team_away,
-      score_home,
-      score_away,
-      status
-    `,
-    )
+    .select('*')
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .eq('round', currentRound);
 
-  if (!matches || matches.length === 0) return;
+  if (!matches?.length) return;
 
-  /* 5️⃣ Agrupa confrontos */
-  const confrontos = new Map<string, Match[]>();
+  /* 5️⃣ Agrupa confrontos corretamente */
+  const confrontos = new Map<string, any[]>();
 
   for (const m of matches) {
-    const key =
-      m.team_home < m.team_away ? `${m.team_home}-${m.team_away}` : `${m.team_away}-${m.team_home}`;
-
-    if (!confrontos.has(key)) confrontos.set(key, []);
-    confrontos.get(key)!.push(m);
+    const pair = [m.team_home, m.team_away].sort().join('|');
+    if (!confrontos.has(pair)) confrontos.set(pair, []);
+    confrontos.get(pair)!.push(m);
   }
 
-  /* 6️⃣ Calcula vencedores */
+  /* 6️⃣ Determina vencedores */
   const winners: string[] = [];
 
   for (const jogos of confrontos.values()) {
     const winner = getWinnerFromConfronto(jogos, idaVolta);
-    if (!winner) return; // aguarda desempate futuro
+    if (!winner) return;
     winners.push(winner);
   }
 
-  /* 7️⃣ Final → encerra competição */
+  /* 7️⃣ Trava edição da rodada atual */
+  await supabase
+    .from('matches')
+    .update({ status: 'locked' })
+    .eq('competition_id', competitionId)
+    .eq('tenant_id', tenantId)
+    .eq('round', currentRound);
+
+  /* 8️⃣ Final */
   if (winners.length === 1 || nextRound === 0) {
     await supabase
       .from('competitions')
@@ -174,22 +155,18 @@ export async function tryAdvanceKnockout({
       })
       .eq('id', competitionId)
       .eq('tenant_id', tenantId);
-
     return;
   }
 
-  /* 8️⃣ Cria próxima fase */
-  const matchesToInsert: any[] = [];
+  /* 9️⃣ Cria próxima fase */
+  const inserts = [];
 
   for (let i = 0; i < winners.length; i += 2) {
-    const home = winners[i];
-    const away = winners[i + 1];
-
-    matchesToInsert.push({
+    inserts.push({
       competition_id: competitionId,
       tenant_id: tenantId,
-      team_home: home,
-      team_away: away,
+      team_home: winners[i],
+      team_away: winners[i + 1],
       round: nextRound,
       leg: 1,
       status: 'scheduled',
@@ -198,11 +175,11 @@ export async function tryAdvanceKnockout({
     });
 
     if (idaVolta) {
-      matchesToInsert.push({
+      inserts.push({
         competition_id: competitionId,
         tenant_id: tenantId,
-        team_home: away,
-        team_away: home,
+        team_home: winners[i + 1],
+        team_away: winners[i],
         round: nextRound,
         leg: 2,
         status: 'scheduled',
@@ -212,5 +189,5 @@ export async function tryAdvanceKnockout({
     }
   }
 
-  await supabase.from('matches').insert(matchesToInsert);
+  await supabase.from('matches').insert(inserts);
 }

@@ -1,6 +1,7 @@
 'use client';
+
 import { BracketMatch } from '@/@types/knockout';
-import { MatchCard } from './MatchCard';
+import { ConfrontoCard } from './ConfrontoCard';
 
 interface KnockoutBracketVisualProps {
   rounds: Record<number, BracketMatch[]>;
@@ -17,66 +18,59 @@ function getRoundLabel(round: number) {
       return 'Quartas de final';
     case 4:
       return 'Oitavas de final';
-    case 5:
-      return '16-avos de final';
     default:
       return `Fase ${round}`;
   }
 }
 
-function splitMatches(matches: BracketMatch[]) {
-  const half = Math.ceil(matches.length / 2);
+function groupConfrontos(matches: BracketMatch[]) {
+  const map = new Map<string, BracketMatch[]>();
 
-  return {
-    left: matches.slice(0, half),
-    right: matches.slice(half),
-  };
+  for (const m of matches) {
+    const key =
+      m.team_home.name < m.team_away.name
+        ? `${m.team_home.name}-${m.team_away.name}`
+        : `${m.team_away.name}-${m.team_home.name}`;
+
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(m);
+  }
+
+  return Array.from(map.values());
 }
-
 
 export function KnockoutBracketVisual({
   rounds,
-  idaVolta,
 }: KnockoutBracketVisualProps) {
   const sortedRounds = Object.entries(rounds).sort(
     ([a], [b]) => Number(b) - Number(a)
   );
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex items-start gap-16 min-w-[900px]">
-        {sortedRounds.map(([round, matches]) => {
-          const { left, right } = splitMatches(matches);
+    <div className="relative flex gap-24 min-w-[1200px]">
+      {sortedRounds.map(([round, matches]) => {
+        const confrontos = groupConfrontos(matches);
+        const spacing = Math.pow(2, Number(round) - 1) * 40;
 
-          return (
-            <div
-              key={round}
-              className="flex flex-col gap-6 min-w-[260px]"
-            >
-              <h3 className="text-center font-semibold">
-                {getRoundLabel(Number(round))}
-              </h3>
+        return (
+          <div
+            key={round}
+            className="flex flex-col items-center"
+            style={{ gap: spacing }}
+          >
+            <h3 className="font-semibold mb-4">
+              {getRoundLabel(Number(round))}
+            </h3>
 
-              <div className="flex justify-between gap-10">
-                {/* LADO ESQUERDO */}
-                <div className="flex flex-col gap-4 flex-1">
-                  {left.map((m) => (
-                    <MatchCard key={m.id} match={m} idaVolta={idaVolta} />
-                  ))}
-                </div>
-
-                {/* LADO DIREITO */}
-                <div className="flex flex-col gap-4 flex-1">
-                  {right.map((m) => (
-                    <MatchCard key={m.id} match={m} idaVolta={idaVolta} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            {confrontos.map((c, idx) => (
+              <ConfrontoCard
+                key={idx}
+                matches={c}
+              />
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
-
