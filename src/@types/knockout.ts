@@ -7,6 +7,8 @@ export type BracketMatch = {
   score_home: number | null;
   score_away: number | null;
   status: 'scheduled' | 'finished';
-  team_home: { name: string }; // um objeto, não array
-  team_away: { name: string }; // um objeto, não array
+  team_home: { name: string };
+  team_away: { name: string };
+  competition_id: string;
+  championship_id: string;
 };

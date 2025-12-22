@@ -61,6 +61,7 @@ export default async function CupDetailsPage({
         <KnockoutBracket
           competitionId={cup.id}
           settings={cup.settings}
+          championshipId= {cup.championship_id}
         />
       )}
     </div>

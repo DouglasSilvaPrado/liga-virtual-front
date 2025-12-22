@@ -1,7 +1,9 @@
+'use client';
+
+import { useState } from 'react';
 import { BracketMatch } from '@/@types/knockout';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 export function MatchCard({
   match,
@@ -10,43 +12,67 @@ export function MatchCard({
   match: BracketMatch;
   idaVolta: boolean;
 }) {
-  const finished = match.status === 'finished';
+  const [home, setHome] = useState(match.score_home ?? '');
+  const [away, setAway] = useState(match.score_away ?? '');
+  const [loading, setLoading] = useState(false);
+
+  async function saveScore() {
+    setLoading(true);
+
+    const res = await fetch('/api/matches/update-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        match_id: match.id,
+        score_home: Number(home),
+        score_away: Number(away),
+        competition_id: match.competition_id
+      }),
+    });
+
+    setLoading(false);
+
+    if (res.ok) {
+      location.reload();
+    } else {
+      alert('Erro ao salvar placar');
+    }
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <Card
-        className={`relative ${
-          finished ? 'border-green-500' : 'border-muted'
-        }`}
-      >
-        <CardContent className="p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <Badge
-              variant="secondary"
-              className={finished ? 'bg-green-600 text-white' : ''}
-            >
-              {finished ? 'Finalizado' : 'Agendado'}
-            </Badge>
+    <Card>
+      <CardContent className="p-4 space-y-2">
+        <div className="flex justify-between text-sm items-center">
+          <span>{match.team_home.name}</span>
 
-            {idaVolta && (
-              <span className="text-xs text-muted-foreground">
-                Jogo {match.leg}
-              </span>
-            )}
+          <div className="flex gap-1 items-center">
+            <input
+              className="w-10 border text-center"
+              type="number"
+              value={home}
+              onChange={(e) => setHome(e.target.value)}
+            />
+            <span>x</span>
+            <input
+              className="w-10 border text-center"
+              type="number"
+              value={away}
+              onChange={(e) => setAway(e.target.value)}
+            />
           </div>
 
-          <div className="flex justify-between text-sm">
-            <span>{match.team_home.name}</span> 
-            <strong>
-              {" "}{match.score_home ?? '-'} x {match.score_away ?? '-'}
-            </strong>
-            <span>{match.team_away.name}</span>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+          <span>{match.team_away.name}</span>
+        </div>
+
+        <Button
+          size="sm"
+          className="w-full"
+          onClick={saveScore}
+          disabled={loading}
+        >
+          Salvar placar
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

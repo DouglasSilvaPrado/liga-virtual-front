@@ -6,6 +6,7 @@ import { BracketMatch } from '@/@types/knockout';
 interface KnockoutBracketProps {
   competitionId: string;
   settings: CompetitionSettingsData;
+  championshipId: string
 }
 
 function hasJogosIdaVolta(
@@ -22,6 +23,7 @@ function hasJogosIdaVolta(
 export default async function KnockoutBracket({
   competitionId,
   settings,
+  championshipId,
 }: KnockoutBracketProps) {
   const { supabase, tenantId } = await createServerSupabase();
 
@@ -39,7 +41,9 @@ export default async function KnockoutBracket({
     score_away,
     status,
     team_home:teams!team_home(id, name),
-    team_away:teams!team_away(id, name)
+    team_away:teams!team_away(id, name),
+    competition_id,
+    championship_id
   `)
   .eq('competition_id', competitionId)
   .eq('tenant_id', tenantId)
@@ -67,6 +71,9 @@ export default async function KnockoutBracket({
     team_away: {
       name: m.team_away?.name ?? '—',
     },
+
+    competition_id: competitionId,
+    championship_id: championshipId
   };
   });
 

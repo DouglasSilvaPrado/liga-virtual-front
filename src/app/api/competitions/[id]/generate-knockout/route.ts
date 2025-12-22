@@ -158,6 +158,17 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   /* ───────────────────────── ⚽ GERA CONFRONTOS ───────────────────────── */
 
+  const { data: dataCompetition } = await supabase
+    .from('competitions')
+    .select('championship_id')
+    .eq('id', competitionId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (!dataCompetition) {
+    return NextResponse.json({ error: 'Competição não encontrada' }, { status: 400 });
+  }
+
   const totalTeams = classificados.length;
   const roundNumber = getInitialRound(totalTeams);
 
@@ -172,7 +183,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     // JOGO DE IDA
     matchesToInsert.push({
       competition_id: competitionId,
-      championship_id: home.championship_id,
+      championship_id: dataCompetition.championship_id,
       tenant_id: tenantId,
       team_home: home.team_id,
       team_away: away.team_id,
@@ -188,7 +199,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     if (idaVolta) {
       matchesToInsert.push({
         competition_id: competitionId,
-        championship_id: home.championship_id,
+        championship_id: dataCompetition.championship_id,
         tenant_id: tenantId,
         team_home: away.team_id,
         team_away: home.team_id,
