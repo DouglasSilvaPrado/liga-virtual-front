@@ -1,9 +1,6 @@
 'use client';
-
-import { motion } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { BracketMatch } from '@/@types/knockout';
+import { MatchCard } from './MatchCard';
 
 interface KnockoutBracketVisualProps {
   rounds: Record<number, BracketMatch[]>;
@@ -27,6 +24,15 @@ function getRoundLabel(round: number) {
   }
 }
 
+function splitMatches(matches: BracketMatch[]) {
+  const half = Math.ceil(matches.length / 2);
+
+  return {
+    left: matches.slice(0, half),
+    right: matches.slice(half),
+  };
+}
+
 
 export function KnockoutBracketVisual({
   rounds,
@@ -37,70 +43,40 @@ export function KnockoutBracketVisual({
   );
 
   return (
-    <div className="flex gap-8 overflow-x-auto pb-4">
-      {sortedRounds.map(([round, matches], roundIndex) => (
-        <div
-          key={round}
-          className="min-w-[280px] flex flex-col gap-4"
-        >
-          <h3 className="text-center font-medium">
-            {getRoundLabel(Number(round))}
-            {idaVolta && <span className="text-xs"> (Ida e Volta)</span>}
-          </h3>
+    <div className="overflow-x-auto">
+      <div className="flex items-start gap-16 min-w-[900px]">
+        {sortedRounds.map(([round, matches]) => {
+          const { left, right } = splitMatches(matches);
 
+          return (
+            <div
+              key={round}
+              className="flex flex-col gap-6 min-w-[260px]"
+            >
+              <h3 className="text-center font-semibold">
+                {getRoundLabel(Number(round))}
+              </h3>
 
-          {matches.map((m) => {
-            const finished = m.status === 'finished';
+              <div className="flex justify-between gap-10">
+                {/* LADO ESQUERDO */}
+                <div className="flex flex-col gap-4 flex-1">
+                  {left.map((m) => (
+                    <MatchCard key={m.id} match={m} idaVolta={idaVolta} />
+                  ))}
+                </div>
 
-            return (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card
-                  className={`relative ${
-                    finished
-                      ? 'border-green-500'
-                      : 'border-muted'
-                  }`}
-                >
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Badge
-                        variant="secondary"
-                        className={
-                          finished
-                            ? 'bg-green-600 text-white'
-                            : ''
-                        }
-                      >
-                        {finished ? 'Finalizado' : 'Agendado'}
-                      </Badge>
-
-                      {idaVolta && (
-                        <span className="text-xs text-muted-foreground">
-                          Jogo {m.leg}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex justify-between text-sm">
-                      <span>{m.team_home.name}</span>
-                      <strong>
-                        {m.score_home ?? '-'} x{' '}
-                        {m.score_away ?? '-'}
-                      </strong>
-                      <span>{m.team_away.name}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      ))}
+                {/* LADO DIREITO */}
+                <div className="flex flex-col gap-4 flex-1">
+                  {right.map((m) => (
+                    <MatchCard key={m.id} match={m} idaVolta={idaVolta} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
