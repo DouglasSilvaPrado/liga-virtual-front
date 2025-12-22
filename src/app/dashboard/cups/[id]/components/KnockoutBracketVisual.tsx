@@ -47,26 +47,21 @@ export function KnockoutBracketVisual({
   );
 
   return (
-    <div className="relative flex gap-24 min-w-[1200px]">
+    <div className="relative flex gap-32 min-h-[600px]">
       {sortedRounds.map(([round, matches]) => {
         const confrontos = groupConfrontos(matches);
-        const spacing = Math.pow(2, Number(round) - 1) * 40;
 
         return (
           <div
             key={round}
-            className="flex flex-col items-center"
-            style={{ gap: spacing }}
+            className="flex flex-col justify-around min-h-[600px]"
           >
-            <h3 className="font-semibold mb-4">
+            <h3 className="text-center font-semibold mb-6">
               {getRoundLabel(Number(round))}
             </h3>
 
             {confrontos.map((c, idx) => (
-              <ConfrontoCard
-                key={idx}
-                matches={c}
-              />
+              <ConfrontoCard key={idx} matches={c} />
             ))}
           </div>
         );

@@ -39,6 +39,8 @@ export function MatchCard({
     }
   }
 
+  const locked = match.is_locked || match.status === 'finished';
+
   return (
     <Card>
       <CardContent className="p-4 space-y-2">
@@ -68,9 +70,9 @@ export function MatchCard({
           size="sm"
           className="w-full"
           onClick={saveScore}
-          disabled={loading}
+          disabled={locked || loading}
         >
-          Salvar placar
+           {locked ? 'Bloqueado' : 'Salvar placar'}
         </Button>
       </CardContent>
     </Card>

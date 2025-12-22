@@ -140,7 +140,7 @@ export async function tryAdvanceKnockout({
   /* 7️⃣ Trava edição da rodada atual */
   await supabase
     .from('matches')
-    .update({ status: 'locked' })
+    .update({ is_locked: true })
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .eq('round', currentRound);

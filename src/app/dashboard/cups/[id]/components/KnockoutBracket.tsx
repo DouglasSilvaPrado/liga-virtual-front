@@ -2,7 +2,6 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 import { CompetitionSettingsData } from '@/@types/competition';
 import { KnockoutBracketVisual } from './KnockoutBracketVisual';
 import { BracketMatch } from '@/@types/knockout';
-import { BracketLines } from './BracketLines';
 
 interface KnockoutBracketProps {
   competitionId: string;
@@ -92,7 +91,6 @@ export default async function KnockoutBracket({
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Mata-mata</h2>
       <div className="relative">
-            <BracketLines />
             <KnockoutBracketVisual
               rounds={rounds}
               idaVolta={idaVolta}

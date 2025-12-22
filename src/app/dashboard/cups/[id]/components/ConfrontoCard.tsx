@@ -50,7 +50,7 @@ export function ConfrontoCard({
   }
 
   return (
-    <Card className="border-l-4 border-primary">
+    <Card className="relative before:absolute before:-right[-32px] before:top-1/2 before:w-8 before:h-px before:bg-muted my-2">
       <CardContent className="p-4 space-y-3">
         <h4 className="font-semibold text-center">
           {teamA.name} x {teamB.name}

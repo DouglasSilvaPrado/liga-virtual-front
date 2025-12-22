@@ -11,6 +11,7 @@ export type BracketMatch = {
   team_away: { name: string };
   competition_id: string;
   championship_id: string;
-  penalties_home: number;
-  penalties_away: number;
+  penalties_home?: number;
+  penalties_away?: number;
+  is_locked?: boolean;
 };
