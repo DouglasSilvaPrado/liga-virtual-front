@@ -6,6 +6,7 @@ import {
 } from '@/@types/competition';
 import { KnockoutBracketVisual } from './KnockoutBracketVisual';
 import { KnockoutRoundView } from '@/@types/knockout';
+import { unknown } from 'zod';
 
 interface KnockoutBracketProps {
   competitionId: string;
@@ -76,8 +77,10 @@ export default async function KnockoutBracket({
     );
   }
 
+  const dataView = data as unknown as KnockoutRoundView[];
+
  const safeRounds: KnockoutRoundView[] =
-  data?.map((round) => ({
+  dataView?.map((round) => ({
     id: round.id,
     round_number: round.round_number,
     matches: round.matches.map((m) => ({
@@ -90,6 +93,7 @@ export default async function KnockoutBracket({
       status: m.status,
       team_home: m.team_home ?? { id: '—', name: '—' },
       team_away: m.team_away ?? { id: '—', name: '—' },
+      competition_id: competitionId,
     }))
   })) ?? [];
 
