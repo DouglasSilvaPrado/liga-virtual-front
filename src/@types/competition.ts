@@ -100,3 +100,7 @@ export interface CompetitionTeam {
   group_id: string;
   created_at: string;
 }
+
+function hasJogosIdaVolta(specific: CompetitionSpecific): specific is MataMataSpecific {
+  return typeof specific === 'object' && specific !== null && 'jogos_ida_volta' in specific;
+}

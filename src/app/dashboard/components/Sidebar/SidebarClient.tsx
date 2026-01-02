@@ -14,7 +14,6 @@ const managementMenu = [
 
 const cupMenu = [
   { href: "/dashboard/cups", label: "Copas" },
-  { href: "/dashboard/cups/rounds", label: "Rodadas" },
 ]
 
 export default function SidebarClient({

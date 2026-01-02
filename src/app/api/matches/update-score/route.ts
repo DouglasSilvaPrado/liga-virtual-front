@@ -57,6 +57,7 @@ export async function POST(req: Request) {
       tenant_id,
       group_id,
       group_round_id,
+      knockout_round_id,
       status,
       is_locked,
       round,
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
     .eq('id', match_id)
     .eq('tenant_id', tenantId)
     .single();
+  console.log('🚀 ~ POST ~ match:', match);
 
   if (matchErr || !match) {
     return NextResponse.json({ error: 'Partida não encontrada' }, { status: 404 });
@@ -103,18 +105,20 @@ export async function POST(req: Request) {
       .from('matches')
       .select(
         `
-      id,
-      team_home,
-      team_away,
-      score_home,
-      score_away
-    `,
+    id,
+    team_home,
+    team_away,
+    score_home,
+    score_away,
+    leg
+  `,
       )
-      .eq('competition_id', match.competition_id)
+      .eq('knockout_round_id', match.knockout_round_id)
       .eq('tenant_id', tenantId)
-      .or(
-        `and(team_home.eq.${match.team_home},team_away.eq.${match.team_away}),and(team_home.eq.${match.team_away},team_away.eq.${match.team_home})`,
-      );
+      .in('team_home', [match.team_home, match.team_away])
+      .in('team_away', [match.team_home, match.team_away]);
+
+    console.log('🚀 ~ POST ~ confrontos:', confrontos);
 
     if (confErr || !confrontos || confrontos.length === 0) {
       return NextResponse.json({ error: 'Confronto não encontrado' }, { status: 404 });

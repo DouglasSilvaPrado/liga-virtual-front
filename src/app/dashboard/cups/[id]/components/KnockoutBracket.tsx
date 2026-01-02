@@ -1,17 +1,22 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
-import { CompetitionSettingsData } from '@/@types/competition';
+import {
+  CompetitionSettingsData,
+  CompetitionSpecific,
+  MataMataSpecific,
+} from '@/@types/competition';
 import { KnockoutBracketVisual } from './KnockoutBracketVisual';
-import { BracketMatch } from '@/@types/knockout';
+import { KnockoutRoundView } from '@/@types/knockout';
 
 interface KnockoutBracketProps {
   competitionId: string;
   settings: CompetitionSettingsData;
-  championshipId: string;
 }
 
+/* ───────── TYPE GUARD ───────── */
+
 function hasJogosIdaVolta(
-  specific: unknown
-): specific is { jogos_ida_volta: boolean } {
+  specific: CompetitionSpecific
+): specific is MataMataSpecific {
   return (
     typeof specific === 'object' &&
     specific !== null &&
@@ -22,7 +27,6 @@ function hasJogosIdaVolta(
 export default async function KnockoutBracket({
   competitionId,
   settings,
-  championshipId,
 }: KnockoutBracketProps) {
   const { supabase, tenantId } = await createServerSupabase();
 
@@ -30,68 +34,70 @@ export default async function KnockoutBracket({
     ? settings.specific.jogos_ida_volta
     : false;
 
-  const { data } = await supabase
-    .from('matches')
-    .select(`
+  const { data, error } = await supabase
+  .from('knockout_rounds')
+  .select(`
+    id,
+    round_number,
+    name,
+    matches:matches!matches_knockout_round_fk (
       id,
-      round,
       leg,
       score_home,
       score_away,
       penalties_home,
       penalties_away,
       status,
-      is_locked,
-      team_home:teams!team_home(name),
-      team_away:teams!team_away(name),
-      competition_id,
-      championship_id
-    `)
-    .eq('competition_id', competitionId)
-    .eq('tenant_id', tenantId)
-    .is('group_id', null)
-    .order('round', { ascending: false })
-    .order('leg');
-
-  if (!data?.length) return null;
-
-   const dataRound = data as unknown as BracketMatch[]
-
-   const normalized: BracketMatch[] = dataRound.map(m => ({
-    id: m.id,
-    round: m.round,
-    leg: m.leg,
-    score_home: m.score_home,
-    score_away: m.score_away,
-    penalties_home: m.penalties_home,
-    penalties_away: m.penalties_away,
-    status: m.status === 'finished' ? 'finished' : 'scheduled',
-    is_locked: m.is_locked,
-
-    team_home: { name: m.team_home?.name ?? '—' },
-    team_away: { name: m.team_away?.name ?? '—' },
-
-    competition_id: competitionId,
-    championship_id: championshipId,
-  }));
+      team_home:teams!matches_team_home_fk (
+        id,
+        name
+      ),
+      team_away:teams!matches_team_away_fk (
+        id,
+        name
+      )
+    )
+  `)
+  .eq('competition_id', competitionId)
+  .eq('tenant_id', tenantId)
+  .order('round_number', { ascending: false });
 
 
-  const rounds = normalized.reduce<Record<number, BracketMatch[]>>(
-    (acc, match) => {
-      acc[match.round] ??= [];
-      acc[match.round].push(match);
-      return acc;
-    },
-    {}
-  );
+  if (error) {
+    console.error('Erro knockout:', error);
+    return <p>Erro ao carregar mata-mata</p>;
+  }
+
+  if (!data?.length) {
+    return (
+      <p className="text-muted-foreground">
+        Nenhuma rodada de mata-mata encontrada
+      </p>
+    );
+  }
+
+ const safeRounds: KnockoutRoundView[] =
+  data?.map((round) => ({
+    id: round.id,
+    round_number: round.round_number,
+    matches: round.matches.map((m) => ({
+      id: m.id,
+      leg: m.leg,
+      score_home: m.score_home,
+      score_away: m.score_away,
+      penalties_home: m.penalties_home,
+      penalties_away: m.penalties_away,
+      status: m.status,
+      team_home: m.team_home ?? { id: '—', name: '—' },
+      team_away: m.team_away ?? { id: '—', name: '—' },
+    }))
+  })) ?? [];
+
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Mata-mata</h2>
-
-      <div className="relative overflow-x-auto">
-        <KnockoutBracketVisual rounds={rounds} idaVolta={idaVolta} />
-      </div>
+      <KnockoutBracketVisual rounds={safeRounds} idaVolta={idaVolta} />
     </div>
   );
 }

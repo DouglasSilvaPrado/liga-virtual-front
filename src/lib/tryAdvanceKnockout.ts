@@ -1,152 +1,113 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { CompetitionSettingsData } from '@/@types/competition';
 
-/* ───────────────────────────────────────────── */
-/* 🔎 Helpers                                    */
-/* ───────────────────────────────────────────── */
+/* ───────────────────────── HELPERS ───────────────────────── */
 
-function hasIdaVolta(specific: unknown): specific is { jogos_ida_volta: boolean } {
-  return (
-    typeof specific === 'object' &&
-    specific !== null &&
-    'jogos_ida_volta' in specific &&
-    typeof (specific as any).jogos_ida_volta === 'boolean'
-  );
-}
+function getIdaVolta(settings: CompetitionSettingsData, roundNumber: number): boolean {
+  const specific = settings?.specific as Partial<{
+    mata_em_ida_e_volta: boolean;
+    final_ida_volta: boolean;
+  }>;
 
-function isIdaVolta(settings: CompetitionSettingsData): boolean {
-  return hasIdaVolta(settings.specific) ? settings.specific.jogos_ida_volta : false;
-}
+  if (!specific) return false;
 
-type Match = {
-  id: string;
-  round: number;
-  leg: number;
-  team_home: string;
-  team_away: string;
-  score_home: number;
-  score_away: number;
-  status: 'scheduled' | 'finished';
-};
-
-/* ───────────────────────────────────────────── */
-/* 🧮 Calcula vencedor do confronto               */
-/* ───────────────────────────────────────────── */
-
-function getWinnerFromConfronto(jogos: any[], idaVolta: boolean): string | null {
-  if (jogos.some((j) => j.status !== 'finished')) return null;
-
-  const gols: Record<string, number> = {};
-
-  for (const j of jogos) {
-    gols[j.team_home] = (gols[j.team_home] ?? 0) + j.score_home;
-    gols[j.team_away] = (gols[j.team_away] ?? 0) + j.score_away;
+  if (roundNumber === 1) {
+    return specific.final_ida_volta === true;
   }
 
-  const [[teamA, golsA], [teamB, golsB]] = Object.entries(gols);
-
-  if (golsA > golsB) return teamA;
-  if (golsB > golsA) return teamB;
-
-  const pen = jogos.find((j) => j.penalties_home != null);
-  if (!pen) return null;
-
-  return pen.penalties_home > pen.penalties_away ? pen.team_home : pen.team_away;
+  return specific.mata_em_ida_e_volta === true;
 }
 
-/* ───────────────────────────────────────────── */
-/* 🔁 Avanço automático do mata-mata              */
-/* ───────────────────────────────────────────── */
+/* ───────────────────────── MAIN ───────────────────────── */
 
 export async function tryAdvanceKnockout({
+  supabase,
   competitionId,
   tenantId,
-  supabase,
   settings,
 }: {
+  supabase: SupabaseClient;
   competitionId: string;
   tenantId: string;
-  supabase: any;
   settings: CompetitionSettingsData;
 }) {
-  const idaVolta = isIdaVolta(settings);
-
-  /* 1️⃣ Última rodada existente */
-  const { data: lastRound } = await supabase
-    .from('matches')
-    .select('round')
-    .eq('competition_id', competitionId)
-    .eq('tenant_id', tenantId)
-    .is('group_id', null)
-    .order('round', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (!lastRound?.round) return;
-
-  const currentRound = lastRound.round;
-  const nextRound = currentRound - 1;
-
-  /* 2️⃣ Verifica jogos pendentes */
-  const { count: open } = await supabase
-    .from('matches')
-    .select('*', { count: 'exact', head: true })
-    .eq('competition_id', competitionId)
-    .eq('tenant_id', tenantId)
-    .eq('round', currentRound)
-    .neq('status', 'finished');
-
-  if ((open ?? 0) > 0) return;
-
-  /* 3️⃣ Evita duplicar rodada */
-  if (nextRound > 0) {
-    const { count } = await supabase
-      .from('matches')
-      .select('*', { count: 'exact', head: true })
-      .eq('competition_id', competitionId)
-      .eq('tenant_id', tenantId)
-      .eq('round', nextRound);
-
-    if ((count ?? 0) > 0) return;
-  }
-
-  /* 4️⃣ Busca jogos */
-  const { data: matches } = await supabase
-    .from('matches')
+  /* 🔎 Rodada atual */
+  const { data: round } = await supabase
+    .from('knockout_rounds')
     .select('*')
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
-    .eq('round', currentRound);
+    .eq('is_current', true)
+    .single();
+
+  if (!round || round.is_finished) return;
+
+  const idaVolta = getIdaVolta(settings, round.round_number);
+
+  /* 🔎 Jogos da rodada */
+  const { data: matches } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('knockout_round_id', round.id)
+    .eq('tenant_id', tenantId);
 
   if (!matches?.length) return;
 
-  /* 5️⃣ Agrupa confrontos corretamente */
-  const confrontos = new Map<string, any[]>();
+  /* ⛔ Ainda há jogos abertos */
+  if (matches.some((m) => m.status !== 'finished')) return;
+
+  /* 🧮 Agrupar confrontos (ida/volta) */
+  const confrontos = new Map<string, typeof matches>();
 
   for (const m of matches) {
-    const pair = [m.team_home, m.team_away].sort().join('|');
-    if (!confrontos.has(pair)) confrontos.set(pair, []);
-    confrontos.get(pair)!.push(m);
+    const key = [m.team_home, m.team_away].sort().join('|');
+    confrontos.set(key, [...(confrontos.get(key) ?? []), m]);
   }
 
-  /* 6️⃣ Determina vencedores */
+  /* ⛔ Se for ida/volta, garantir 2 jogos por confronto */
+  if (idaVolta) {
+    for (const jogos of confrontos.values()) {
+      if (jogos.length < 2) {
+        console.log('⛔ Ida/volta incompleto, aguardando volta');
+        return;
+      }
+    }
+  }
+
+  /* 🏆 Determinar vencedores */
   const winners: string[] = [];
 
   for (const jogos of confrontos.values()) {
-    const winner = getWinnerFromConfronto(jogos, idaVolta);
-    if (!winner) return;
-    winners.push(winner);
+    const gols: Record<string, number> = {};
+
+    for (const j of jogos) {
+      gols[j.team_home] = (gols[j.team_home] ?? 0) + (j.score_home ?? 0);
+      gols[j.team_away] = (gols[j.team_away] ?? 0) + (j.score_away ?? 0);
+    }
+
+    const [[a, ga], [b, gb]] = Object.entries(gols);
+
+    if (ga > gb) {
+      winners.push(a);
+    } else if (gb > ga) {
+      winners.push(b);
+    } else {
+      const pen = jogos.find((j) => j.penalties_home != null);
+      if (!pen) return;
+
+      winners.push(pen.penalties_home > pen.penalties_away ? pen.team_home : pen.team_away);
+    }
   }
 
-  /* 7️⃣ Trava edição da rodada atual */
+  /* 🔒 Finaliza rodada atual */
   await supabase
-    .from('matches')
-    .update({ is_locked: true })
-    .eq('competition_id', competitionId)
-    .eq('tenant_id', tenantId)
-    .eq('round', currentRound);
+    .from('knockout_rounds')
+    .update({ is_current: false, is_finished: true })
+    .eq('id', round.id)
+    .eq('tenant_id', tenantId);
 
-  /* 8️⃣ Final */
-  if (winners.length === 1 || nextRound === 0) {
+  /* 🏆 Final do campeonato */
+  if (winners.length === 1) {
     await supabase
       .from('competitions')
       .update({
@@ -155,39 +116,66 @@ export async function tryAdvanceKnockout({
       })
       .eq('id', competitionId)
       .eq('tenant_id', tenantId);
+
     return;
   }
 
-  /* 9️⃣ Cria próxima fase */
+  /* ➕ Próxima rodada */
+  const nextRoundNumber = round.round_number - 1;
+
+  const roundName =
+    nextRoundNumber === 1
+      ? 'Final'
+      : nextRoundNumber === 2
+        ? 'Semifinal'
+        : nextRoundNumber === 3
+          ? 'Quartas'
+          : `Fase ${nextRoundNumber}`;
+
+  const { data: nextRound } = await supabase
+    .from('knockout_rounds')
+    .insert({
+      competition_id: competitionId,
+      tenant_id: tenantId,
+      round_number: nextRoundNumber,
+      is_current: true,
+      name: roundName,
+    })
+    .select()
+    .single();
+
+  if (!nextRound) return;
+
+  /* 🆕 Criar jogos da próxima rodada */
   const inserts = [];
 
   for (let i = 0; i < winners.length; i += 2) {
+    if (!winners[i + 1]) continue;
+
     inserts.push({
       competition_id: competitionId,
       tenant_id: tenantId,
+      knockout_round_id: nextRound.id,
       team_home: winners[i],
       team_away: winners[i + 1],
-      round: nextRound,
       leg: 1,
       status: 'scheduled',
-      group_id: null,
-      is_final: nextRound === 1,
     });
 
     if (idaVolta) {
       inserts.push({
         competition_id: competitionId,
         tenant_id: tenantId,
+        knockout_round_id: nextRound.id,
         team_home: winners[i + 1],
         team_away: winners[i],
-        round: nextRound,
         leg: 2,
         status: 'scheduled',
-        group_id: null,
-        is_final: nextRound === 1,
       });
     }
   }
 
-  await supabase.from('matches').insert(inserts);
+  if (inserts.length) {
+    await supabase.from('matches').insert(inserts);
+  }
 }

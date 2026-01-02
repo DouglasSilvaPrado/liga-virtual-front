@@ -1,18 +1,18 @@
 'use client';
 
-import { BracketMatch } from '@/@types/knockout';
 import { Card, CardContent } from '@/components/ui/card';
 import { MatchCard } from './MatchCard';
 import { motion } from 'framer-motion';
+import { BracketMatchView } from '@/@types/knockout';
 
-export function ConfrontoCard({ matches }: { matches: BracketMatch[] }) {
+export function ConfrontoCard({ matches }: { matches: BracketMatchView[] }) {
   const ida = matches.find(m => m.leg === 1);
   const volta = matches.find(m => m.leg === 2);
 
   const teamA = ida?.team_home ?? matches[0].team_home;
   const teamB = ida?.team_away ?? matches[0].team_away;
 
-  function gols(match: BracketMatch | undefined, team: string) {
+  function gols(match: BracketMatchView | undefined, team: string) {
     if (!match) return 0;
     return match.team_home.name === team
       ? match.score_home ?? 0

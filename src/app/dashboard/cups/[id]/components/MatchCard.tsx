@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { BracketMatch } from '@/@types/knockout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { BracketMatchView } from '@/@types/knockout';
 
 export function MatchCard({
   match,
   idaVolta,
   isPenalties = false,
 }: {
-  match: BracketMatch;
+  match: BracketMatchView;
   idaVolta: boolean;
   isPenalties?: boolean;
 }) {
@@ -54,7 +54,6 @@ export function MatchCard({
   const locked = isPenalties
   ? match.is_locked
   : match.is_locked || match.status === 'finished';
-
 
   return (
     <Card className={isPenalties ? 'border-dashed border-yellow-500' : ''}>

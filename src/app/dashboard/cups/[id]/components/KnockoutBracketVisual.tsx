@@ -1,10 +1,10 @@
 'use client';
 
-import { BracketMatch } from '@/@types/knockout';
+import { BracketMatchView, KnockoutRoundView } from '@/@types/knockout';
 import { ConfrontoCard } from './ConfrontoCard';
 
 interface KnockoutBracketVisualProps {
-  rounds: Record<number, BracketMatch[]>;
+  rounds: KnockoutRoundView[];
   idaVolta: boolean;
 }
 
@@ -23,46 +23,37 @@ function getRoundLabel(round: number) {
   }
 }
 
-function groupConfrontos(matches: BracketMatch[]) {
-  const map = new Map<string, BracketMatch[]>();
-
-  for (const m of matches) {
-    const key =
-      m.team_home.name < m.team_away.name
-        ? `${m.team_home.name}-${m.team_away.name}`
-        : `${m.team_away.name}-${m.team_home.name}`;
-
-    map.set(key, [...(map.get(key) ?? []), m]);
-  }
-
-  return Array.from(map.values());
-}
-
-export function KnockoutBracketVisual({ rounds }: KnockoutBracketVisualProps) {
-  const sortedRounds = Object.entries(rounds).sort(
-    ([a], [b]) => Number(b) - Number(a)
-  );
-
+export function KnockoutBracketVisual({
+  rounds,
+}: KnockoutBracketVisualProps) {
   return (
     <div className="flex gap-32 items-stretch min-h-[700px]">
-      {sortedRounds.map(([round, matches]) => {
-        const confrontos = groupConfrontos(matches);
+      {rounds.map((round) => (
+        <div
+          key={round.id}
+          className="flex flex-col justify-evenly min-h-[700px]"
+        >
+          <h3 className="text-center font-semibold mb-8">
+            {getRoundLabel(round.round_number)}
+          </h3>
 
-        return (
-          <div
-            key={round}
-            className="flex flex-col justify-evenly min-h-[700px]"
-          >
-            <h3 className="text-center font-semibold mb-8">
-              {getRoundLabel(Number(round))}
-            </h3>
+          {Object.values(
+            round.matches.reduce((acc: Record<string, BracketMatchView[]>, match) => {
+              const key = [match.team_home.id, match.team_away.id]
+                .sort()
+                .join('|');
 
-            {confrontos.map((c, idx) => (
-              <ConfrontoCard key={idx} matches={c} />
-            ))}
-          </div>
-        );
-      })}
+              if (!acc[key]) acc[key] = [];
+              acc[key].push(match);
+
+              return acc;
+            }, {})
+          ).map((matches, idx) => (
+            <ConfrontoCard key={idx} matches={matches} />
+          ))}
+
+        </div>
+      ))}
     </div>
   );
 }
