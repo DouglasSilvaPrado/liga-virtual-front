@@ -80,7 +80,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   const specific = competition.settings.specific ?? {};
 
-  const qtdPorGrupo = specific.qtd_classifica_por_grupo;
+  const qtdPorGrupo = specific.qtd_classifica_por_grupo ?? 2;
   const chaveAutomatica = specific.chave_automatica ?? 'aleatorio';
   const idaVolta = specific.mata_em_ida_e_volta ?? false;
 
@@ -99,7 +99,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Classificação vazia' }, { status: 400 });
   }
 
-  /* ───────── CLASSIFICADOS ───────── */
+  /* ───────── AGRUPA POR GRUPO ───────── */
 
   const porGrupo: Record<string, StandingRow[]> = {};
 
@@ -108,17 +108,56 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     porGrupo[s.group_id].push(s);
   }
 
-  let classificados: StandingRow[] = [];
+  const grupos = Object.values(porGrupo);
 
-  for (const g in porGrupo) {
-    classificados.push(...porGrupo[g].slice(0, qtdPorGrupo));
+  if (grupos.length < 2) {
+    return NextResponse.json({ error: 'Mata-mata exige no mínimo 2 grupos' }, { status: 400 });
   }
 
-  if (classificados.length < 2) {
-    return NextResponse.json({ error: 'Times insuficientes' }, { status: 400 });
+  /* ───────── GERA CONFRONTOS ───────── */
+
+  const confrontos: { a: StandingRow; b: StandingRow }[] = [];
+
+  if (chaveAutomatica === 'melhor_x_pior') {
+    const melhores = grupos.map((g) => g[0]);
+    const piores = grupos.map((g) => g[qtdPorGrupo - 1]).reverse();
+
+    for (let i = 0; i < melhores.length; i++) {
+      const a = melhores[i];
+      const b = piores[i];
+
+      if (!a || !b || a.group_id === b.group_id) {
+        return NextResponse.json(
+          { error: 'Erro ao gerar chaveamento melhor x pior' },
+          { status: 400 },
+        );
+      }
+
+      confrontos.push({ a, b });
+    }
+  } else {
+    // aleatório / padrão
+    let classificados: StandingRow[] = [];
+
+    for (const g of grupos) {
+      classificados.push(...g.slice(0, qtdPorGrupo));
+    }
+
+    classificados = shuffle(classificados);
+
+    for (let i = 0; i < classificados.length; i += 2) {
+      if (classificados[i + 1]) {
+        confrontos.push({
+          a: classificados[i],
+          b: classificados[i + 1],
+        });
+      }
+    }
   }
 
-  classificados = chaveAutomatica === 'aleatorio' ? shuffle(classificados) : classificados;
+  if (!confrontos.length) {
+    return NextResponse.json({ error: 'Nenhum confronto gerado' }, { status: 400 });
+  }
 
   /* ───────── COMPETITION ───────── */
 
@@ -133,10 +172,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Competição inválida' }, { status: 400 });
   }
 
-  const totalTeams = classificados.length;
+  const totalTeams = confrontos.length * 2;
   const roundNumber = getInitialRound(totalTeams);
 
-  /* ───────── 🔥 CRIA KNOCKOUT ROUND ───────── */
+  /* ───────── CRIA KNOCKOUT ROUND ───────── */
 
   const roundName =
     roundNumber === 1
@@ -167,15 +206,11 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Erro ao criar rodada' }, { status: 500 });
   }
 
-  /* ───────── MATCHES ───────── */
+  /* ───────── CRIA PARTIDAS ───────── */
 
   const matches = [];
 
-  for (let i = 0; i < classificados.length; i += 2) {
-    const a = classificados[i];
-    const b = classificados[i + 1];
-    if (!a || !b) continue;
-
+  for (const { a, b } of confrontos) {
     matches.push({
       competition_id: competitionId,
       championship_id: comp.championship_id,
@@ -212,6 +247,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   return NextResponse.json({
     success: true,
     fase_inicial: roundNumber,
+    confrontos: confrontos.length,
     jogos_criados: matches.length,
   });
 }
