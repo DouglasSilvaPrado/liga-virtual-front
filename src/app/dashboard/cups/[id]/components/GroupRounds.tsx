@@ -101,7 +101,6 @@ export default async function GroupRounds({
     }
   }
 
-  /* 📥 Query base (CORRIGIDA) */
   let query = supabase
     .from('matches')
     .select(`

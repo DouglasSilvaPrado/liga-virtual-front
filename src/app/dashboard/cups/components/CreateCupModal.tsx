@@ -73,10 +73,6 @@ export default function CreateCupModal() {
     Record<string, SelectedTeam>
   >({});
 
-  const selectedCompetition = useMemo(
-    () => competitions.find((c) => c.id === competitionId),
-    [competitions, competitionId]
-  );
 
   /* ------------------------------- LOADERS ------------------------------- */
 

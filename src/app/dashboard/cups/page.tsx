@@ -62,7 +62,7 @@ export default async function CupPage() {
       {competitionIds.length === 0 && (
         <div className="p-2">
           <p className="mt-2 text-muted-foreground">
-            Nenhuma copa iniciou a fase de grupos ainda.
+            Nenhuma copa iniciou a fase de grupos ou mata-mata ainda.
           </p>
         </div>
       )}
