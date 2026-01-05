@@ -4,7 +4,7 @@ import CreateCupModal from './components/CreateCupModal';
 export interface Cup {
   id: string
   name: string
-  type: "mata_mata" | "copa_grupo_mata"
+  type: "copa_grupo" | "mata_mata" | "copa_grupo_mata"
   created_at: string
   championships: {
     name: string
@@ -42,7 +42,7 @@ export default async function CupPage() {
     `)
     .eq('tenant_id', tenantId)
     .in('id', competitionIds)
-    .in('type', ['mata_mata', 'copa_grupo_mata'])
+    .in('type', ['copa_grupo', 'mata_mata', 'copa_grupo_mata'])
     .order('created_at', { ascending: false });
 
     const cups = data as Cup[] | null
@@ -82,9 +82,7 @@ export default async function CupPage() {
 
             <p className="mt-1 text-sm">
               Tipo:{' '}
-              {cup.type === 'mata_mata'
-                ? 'Mata-mata'
-                : 'Grupos + Mata-mata'}
+              {cup.type}
             </p>
 
             <p className="mt-1 text-xs text-muted-foreground">

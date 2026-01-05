@@ -45,6 +45,7 @@ interface SelectedTeam {
 const CUP_TYPES: { label: string; value: CompetitionType }[] = [
   { label: "Mata-mata", value: "mata_mata" },
   { label: "Copa (Grupos + Mata)", value: "copa_grupo_mata" },
+  { label: "Copa (Grupos)", value: "copa_grupo" },
 ];
 
 /* ------------------------------- COMPONENT ------------------------------ */
