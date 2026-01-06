@@ -1,7 +1,36 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CompetitionSettingsData } from '@/@types/competition';
 
-/* ───────────────────────── HELPERS ───────────────────────── */
+type MatchRow = {
+  id: string;
+  team_home: string;
+  team_away: string;
+  score_home: number | null;
+  score_away: number | null;
+  status: string;
+  leg: number | null;
+  penalties_home: number | null;
+  penalties_away: number | null;
+};
+
+type KnockoutRoundRow = {
+  id: string;
+  round_number: number;
+  is_current: boolean;
+  is_finished: boolean;
+  competition_id: string;
+  tenant_id: string;
+};
+
+type MatchInsert = {
+  competition_id: string;
+  tenant_id: string;
+  knockout_round_id: string;
+  team_home: string;
+  team_away: string;
+  leg: 1 | 2;
+  status: 'scheduled';
+};
 
 function getIdaVolta(settings: CompetitionSettingsData, roundNumber: number): boolean {
   const specific = settings?.specific as Partial<{
@@ -11,14 +40,13 @@ function getIdaVolta(settings: CompetitionSettingsData, roundNumber: number): bo
 
   if (!specific) return false;
 
-  if (roundNumber === 1) {
-    return specific.final_ida_volta === true;
-  }
-
+  if (roundNumber === 1) return specific.final_ida_volta === true;
   return specific.mata_em_ida_e_volta === true;
 }
 
-/* ───────────────────────── MAIN ───────────────────────── */
+function pairKey(a: string, b: string) {
+  return [a, b].sort().join('|');
+}
 
 export async function tryAdvanceKnockout({
   supabase,
@@ -31,82 +59,101 @@ export async function tryAdvanceKnockout({
   tenantId: string;
   settings: CompetitionSettingsData;
 }) {
-  /* 🔎 Rodada atual */
   const { data: round } = await supabase
     .from('knockout_rounds')
     .select('*')
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .eq('is_current', true)
-    .single();
+    .single<KnockoutRoundRow>();
 
   if (!round || round.is_finished) return;
 
-  const idaVolta = getIdaVolta(settings, round.round_number);
+  const idaVoltaCurrent = getIdaVolta(settings, round.round_number);
 
-  /* 🔎 Jogos da rodada */
   const { data: matches } = await supabase
     .from('matches')
-    .select('*')
+    .select(
+      `
+      id,
+      team_home,
+      team_away,
+      score_home,
+      score_away,
+      status,
+      leg,
+      penalties_home,
+      penalties_away
+    `,
+    )
     .eq('knockout_round_id', round.id)
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .returns<MatchRow[]>();
 
   if (!matches?.length) return;
 
-  /* ⛔ Ainda há jogos abertos */
   if (matches.some((m) => m.status !== 'finished')) return;
 
-  /* 🧮 Agrupar confrontos (ida/volta) */
-  const confrontos = new Map<string, typeof matches>();
-
+  const confrontos = new Map<string, MatchRow[]>();
   for (const m of matches) {
-    const key = [m.team_home, m.team_away].sort().join('|');
+    const key = pairKey(m.team_home, m.team_away);
     confrontos.set(key, [...(confrontos.get(key) ?? []), m]);
   }
 
-  /* ⛔ Se for ida/volta, garantir 2 jogos por confronto */
-  if (idaVolta) {
+  if (idaVoltaCurrent) {
     for (const jogos of confrontos.values()) {
-      if (jogos.length < 2) {
-        console.log('⛔ Ida/volta incompleto, aguardando volta');
-        return;
-      }
+      if (jogos.length < 2) return;
     }
   }
 
-  /* 🏆 Determinar vencedores */
   const winners: string[] = [];
 
   for (const jogos of confrontos.values()) {
-    const gols: Record<string, number> = {};
+    const teams = Array.from(new Set(jogos.flatMap((j) => [j.team_home, j.team_away])));
+    if (teams.length !== 2) return;
+
+    const [teamA, teamB] = teams;
+
+    let golsA = 0;
+    let golsB = 0;
 
     for (const j of jogos) {
-      gols[j.team_home] = (gols[j.team_home] ?? 0) + (j.score_home ?? 0);
-      gols[j.team_away] = (gols[j.team_away] ?? 0) + (j.score_away ?? 0);
+      if (j.score_home == null || j.score_away == null) return;
+
+      if (j.team_home === teamA) golsA += j.score_home;
+      if (j.team_away === teamA) golsA += j.score_away;
+
+      if (j.team_home === teamB) golsB += j.score_home;
+      if (j.team_away === teamB) golsB += j.score_away;
     }
 
-    const [[a, ga], [b, gb]] = Object.entries(gols);
-
-    if (ga > gb) {
-      winners.push(a);
-    } else if (gb > ga) {
-      winners.push(b);
-    } else {
-      const pen = jogos.find((j) => j.penalties_home != null);
-      if (!pen) return;
-
-      winners.push(pen.penalties_home > pen.penalties_away ? pen.team_home : pen.team_away);
+    if (golsA > golsB) {
+      winners.push(teamA);
+      continue;
     }
+
+    if (golsB > golsA) {
+      winners.push(teamB);
+      continue;
+    }
+
+    const penMatch =
+      jogos.find((j) => j.penalties_home != null && j.penalties_away != null) ??
+      [...jogos].sort((a, b) => (b.leg ?? 0) - (a.leg ?? 0))[0];
+
+    if (penMatch.penalties_home == null || penMatch.penalties_away == null) return;
+
+    winners.push(
+      penMatch.penalties_home > penMatch.penalties_away ? penMatch.team_home : penMatch.team_away,
+    );
   }
 
-  /* 🔒 Finaliza rodada atual */
   await supabase
     .from('knockout_rounds')
     .update({ is_current: false, is_finished: true })
     .eq('id', round.id)
     .eq('tenant_id', tenantId);
 
-  /* 🏆 Final do campeonato */
   if (winners.length === 1) {
     await supabase
       .from('competitions')
@@ -120,7 +167,6 @@ export async function tryAdvanceKnockout({
     return;
   }
 
-  /* ➕ Próxima rodada */
   const nextRoundNumber = round.round_number - 1;
 
   const roundName =
@@ -142,33 +188,36 @@ export async function tryAdvanceKnockout({
       name: roundName,
     })
     .select()
-    .single();
+    .single<{ id: string }>();
 
   if (!nextRound) return;
 
-  /* 🆕 Criar jogos da próxima rodada */
-  const inserts = [];
+  const idaVoltaNext = getIdaVolta(settings, nextRoundNumber);
+
+  const inserts: MatchInsert[] = [];
 
   for (let i = 0; i < winners.length; i += 2) {
-    if (!winners[i + 1]) continue;
+    const a = winners[i];
+    const b = winners[i + 1];
+    if (!a || !b) continue;
 
     inserts.push({
       competition_id: competitionId,
       tenant_id: tenantId,
       knockout_round_id: nextRound.id,
-      team_home: winners[i],
-      team_away: winners[i + 1],
+      team_home: a,
+      team_away: b,
       leg: 1,
       status: 'scheduled',
     });
 
-    if (idaVolta) {
+    if (idaVoltaNext) {
       inserts.push({
         competition_id: competitionId,
         tenant_id: tenantId,
         knockout_round_id: nextRound.id,
-        team_home: winners[i + 1],
-        team_away: winners[i],
+        team_home: b,
+        team_away: a,
         leg: 2,
         status: 'scheduled',
       });

@@ -14,12 +14,16 @@ export async function recalcStandingsFromGroup({
   competition_id,
   tenant_id,
   group_id,
+  points,
 }: {
   supabase: SupabaseClient;
   competition_id: string;
   tenant_id: string;
   group_id: string;
+  points?: { win: number; draw: number; loss: number };
 }) {
+  const pts = points ?? { win: 3, draw: 1, loss: 0 };
+
   // 1️⃣ Buscar partidas finalizadas
   const { data: matches, error } = await supabase
     .from('matches')
@@ -29,20 +33,24 @@ export async function recalcStandingsFromGroup({
     .eq('group_id', group_id)
     .eq('status', 'finished');
 
-  if (error || !matches || matches.length === 0) {
-    console.error('Sem partidas para recalcular', error);
+  if (error) {
+    console.error('Erro ao buscar partidas para recalcular standings', error);
     return;
   }
 
-  // 2️⃣ Limpar standings do grupo
-  await supabase
-    .from('standings')
-    .delete()
-    .eq('competition_id', competition_id)
-    .eq('tenant_id', tenant_id)
-    .eq('group_id', group_id);
+  // Se não tem jogos finalizados, zera standings desse grupo
+  if (!matches || matches.length === 0) {
+    await supabase
+      .from('standings')
+      .delete()
+      .eq('competition_id', competition_id)
+      .eq('tenant_id', tenant_id)
+      .eq('group_id', group_id);
 
-  // 3️⃣ Acumulador em memória
+    return;
+  }
+
+  // 2️⃣ Acumulador em memória
   const table: Record<string, Acc> = {};
 
   function ensure(teamId: string) {
@@ -59,8 +67,10 @@ export async function recalcStandingsFromGroup({
     return table[teamId];
   }
 
-  // 4️⃣ Processar jogos
+  // 3️⃣ Processar jogos
   for (const m of matches) {
+    if (m.score_home == null || m.score_away == null) continue;
+
     const draw = m.score_home === m.score_away;
 
     const home = ensure(m.team_home);
@@ -69,29 +79,60 @@ export async function recalcStandingsFromGroup({
     // 🏠 Casa
     home.goals_scored += m.score_home;
     home.goals_against += m.score_away;
-    home.wins += m.score_home > m.score_away ? 1 : 0;
-    home.draws += draw ? 1 : 0;
-    home.losses += m.score_home < m.score_away ? 1 : 0;
-    home.points += m.score_home > m.score_away ? 3 : draw ? 1 : 0;
+
+    if (m.score_home > m.score_away) {
+      home.wins += 1;
+      home.points += pts.win;
+    } else if (draw) {
+      home.draws += 1;
+      home.points += pts.draw;
+    } else {
+      home.losses += 1;
+      home.points += pts.loss;
+    }
 
     // ✈️ Visitante
     away.goals_scored += m.score_away;
     away.goals_against += m.score_home;
-    away.wins += m.score_away > m.score_home ? 1 : 0;
-    away.draws += draw ? 1 : 0;
-    away.losses += m.score_away < m.score_home ? 1 : 0;
-    away.points += m.score_away > m.score_home ? 3 : draw ? 1 : 0;
+
+    if (m.score_away > m.score_home) {
+      away.wins += 1;
+      away.points += pts.win;
+    } else if (draw) {
+      away.draws += 1;
+      away.points += pts.draw;
+    } else {
+      away.losses += 1;
+      away.points += pts.loss;
+    }
   }
 
-  // 5️⃣ Persistir standings
-  for (const [team_id, data] of Object.entries(table)) {
-    await supabase.from('standings').insert({
-      competition_id,
-      tenant_id,
-      group_id,
-      team_id,
-      ...data,
-      goal_diff: data.goals_scored - data.goals_against,
-    });
+  // 4️⃣ Montar rows e UPSERT
+  const rows = Object.entries(table).map(([team_id, data]) => ({
+    competition_id,
+    tenant_id,
+    group_id,
+    team_id,
+    ...data,
+    goal_diff: data.goals_scored - data.goals_against,
+  }));
+
+  // Recomendado ter UNIQUE (tenant_id, competition_id, group_id, team_id)
+  const { error: upsertErr } = await supabase.from('standings').upsert(rows, {
+    onConflict: 'tenant_id,competition_id,group_id,team_id',
+  });
+
+  if (upsertErr) {
+    // fallback seguro (se ainda não tiver UNIQUE no banco)
+    console.warn('Falha no upsert (talvez falte UNIQUE). Fazendo fallback...', upsertErr);
+
+    await supabase
+      .from('standings')
+      .delete()
+      .eq('competition_id', competition_id)
+      .eq('tenant_id', tenant_id)
+      .eq('group_id', group_id);
+
+    await supabase.from('standings').insert(rows);
   }
 }

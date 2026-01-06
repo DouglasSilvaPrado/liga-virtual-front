@@ -2,18 +2,60 @@ import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { recalcStandingsFromGroup } from '@/lib/standings/updateStandingsFromMatch';
 import { tryAdvanceKnockout } from '@/lib/tryAdvanceKnockout';
+import { normalizeCompetitionSettings } from '@/lib/competitionSettings';
+import type { CompetitionSettingsData } from '@/@types/competition';
+
+type MatchPoints = { win: number; draw: number; loss: number };
+
+// ✅ Tipagem sem any: match_settings “pode existir” e ter os campos de pontos
+type MatchSettingsPoints = Partial<{
+  pontos_vitoria: number;
+  pontos_empate: number;
+  pontos_derrota: number;
+}>;
+
+function getMatchPoints(settings: CompetitionSettingsData | null): MatchPoints {
+  // Aqui a gente acessa pelo tipo “seguro” sem any:
+  const ms: MatchSettingsPoints | undefined =
+    settings && 'match_settings' in settings
+      ? (settings as CompetitionSettingsData & { match_settings?: MatchSettingsPoints })
+          .match_settings
+      : undefined;
+
+  return {
+    win: typeof ms?.pontos_vitoria === 'number' ? ms.pontos_vitoria : 3,
+    draw: typeof ms?.pontos_empate === 'number' ? ms.pontos_empate : 1,
+    loss: typeof ms?.pontos_derrota === 'number' ? ms.pontos_derrota : 0,
+  };
+}
 
 export async function POST(req: Request) {
-  const { match_id, score_home, score_away, penalties_home, penalties_away } = await req.json();
+  const body = await req.json();
+  const { match_id, score_home, score_away, penalties_home, penalties_away } = body as {
+    match_id?: string;
+    score_home?: number;
+    score_away?: number;
+    penalties_home?: number | null;
+    penalties_away?: number | null;
+  };
 
   /* -------------------------------------------------- */
   /* 0️⃣ Validação básica                               */
   /* -------------------------------------------------- */
-  if (
-    !match_id ||
-    (score_home === undefined && (penalties_home === undefined || penalties_away === undefined))
-  ) {
+  const isSavingPenalties = penalties_home != null || penalties_away != null;
+
+  if (!match_id) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
+  }
+
+  if (isSavingPenalties) {
+    if (penalties_home == null || penalties_away == null) {
+      return NextResponse.json({ error: 'Pênaltis incompletos' }, { status: 400 });
+    }
+  } else {
+    if (score_home === undefined || score_away === undefined) {
+      return NextResponse.json({ error: 'Placar inválido' }, { status: 400 });
+    }
   }
 
   const { supabase, tenantId } = await createServerSupabase();
@@ -61,13 +103,31 @@ export async function POST(req: Request) {
       status,
       is_locked,
       round,
+      leg,
       team_home,
-      team_away
+      team_away,
+      score_home,
+      score_away
     `,
     )
     .eq('id', match_id)
     .eq('tenant_id', tenantId)
-    .single();
+    .single<{
+      id: string;
+      competition_id: string;
+      tenant_id: string;
+      group_id: string | null;
+      group_round_id: string | null;
+      knockout_round_id: string | null;
+      status: 'scheduled' | 'in_progress' | 'finished' | 'canceled' | string;
+      is_locked: boolean | null;
+      round: number | null;
+      leg: number | null;
+      team_home: string;
+      team_away: string;
+      score_home: number | null;
+      score_away: number | null;
+    }>();
 
   if (matchErr || !match) {
     return NextResponse.json({ error: 'Partida não encontrada' }, { status: 404 });
@@ -88,7 +148,7 @@ export async function POST(req: Request) {
       .from('group_rounds')
       .select('is_open')
       .eq('id', match.group_round_id)
-      .single();
+      .single<{ is_open: boolean }>();
 
     if (!round?.is_open && !isAdminOrOwner) {
       return NextResponse.json({ error: 'Rodada fechada para edição' }, { status: 403 });
@@ -96,21 +156,40 @@ export async function POST(req: Request) {
   }
 
   /* -------------------------------------------------- */
-  /* 6️⃣ SALVA PÊNALTIS (agregado)                       */
+  /* 6️⃣ Buscar settings (normalizado)                  */
+  /* -------------------------------------------------- */
+  const { data: competitionRow } = await supabase
+    .from('competitions_with_settings')
+    .select('settings')
+    .eq('id', match.competition_id)
+    .eq('tenant_id', tenantId)
+    .single<{ settings: unknown }>();
+
+  const settings = normalizeCompetitionSettings(competitionRow?.settings);
+  const pts = getMatchPoints(settings);
+
+  /* -------------------------------------------------- */
+  /* 7️⃣ SALVA PÊNALTIS                                 */
   /* -------------------------------------------------- */
   if (penalties_home != null && penalties_away != null) {
-    // 🔎 Buscar todos os jogos do confronto (ida/volta)
+    if (!match.knockout_round_id) {
+      return NextResponse.json({ error: 'Pênaltis só no mata-mata' }, { status: 400 });
+    }
+
     const { data: confrontos, error: confErr } = await supabase
       .from('matches')
       .select(
         `
-    id,
-    team_home,
-    team_away,
-    score_home,
-    score_away,
-    leg
-  `,
+        id,
+        team_home,
+        team_away,
+        score_home,
+        score_away,
+        status,
+        leg,
+        penalties_home,
+        penalties_away
+      `,
       )
       .eq('knockout_round_id', match.knockout_round_id)
       .eq('tenant_id', tenantId)
@@ -121,31 +200,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Confronto não encontrado' }, { status: 404 });
     }
 
-    // 🧮 Calcula agregado
+    // ✅ Garantir que os jogos tenham terminado
+    if (confrontos.some((m) => m.status !== 'finished' && m.id !== match.id)) {
+      return NextResponse.json(
+        { error: 'Finalize todos os jogos do confronto antes dos pênaltis' },
+        { status: 400 },
+      );
+    }
+
+    const teamA = match.team_home;
+    const teamB = match.team_away;
+
     let golsA = 0;
     let golsB = 0;
 
     for (const m of confrontos) {
       if (m.score_home == null || m.score_away == null) continue;
 
-      if (m.team_home === match.team_home) {
-        golsA += m.score_home;
-        golsB += m.score_away;
-      } else {
-        golsA += m.score_away;
-        golsB += m.score_home;
-      }
+      if (m.team_home === teamA) golsA += m.score_home;
+      if (m.team_away === teamA) golsA += m.score_away;
+
+      if (m.team_home === teamB) golsB += m.score_home;
+      if (m.team_away === teamB) golsB += m.score_away;
     }
 
-    // ❌ NÃO é empate no agregado
     if (golsA !== golsB) {
       return NextResponse.json(
-        { error: 'Pênaltis só permitidos em caso de empate no agregado' },
+        { error: 'Pênaltis só permitidos em caso de empate (no jogo ou no agregado)' },
         { status: 400 },
       );
     }
 
-    // ✅ Salva pênaltis e trava edição
+    const hasLeg2 = confrontos.some((m) => m.leg === 2);
+    if (hasLeg2 && match.leg !== 2 && !isAdminOrOwner) {
+      return NextResponse.json(
+        { error: 'Pênaltis devem ser lançados no jogo de volta (leg 2)' },
+        { status: 400 },
+      );
+    }
+
     const { error: penErr } = await supabase
       .from('matches')
       .update({
@@ -162,20 +255,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Erro ao salvar pênaltis' }, { status: 500 });
     }
 
-    // 🔴 Avança mata-mata
-    const { data: competition } = await supabase
-      .from('competitions_with_settings')
-      .select('settings')
-      .eq('id', match.competition_id)
-      .eq('tenant_id', tenantId)
-      .single();
-
-    if (competition?.settings) {
+    if (settings) {
       await tryAdvanceKnockout({
         supabase,
         competitionId: match.competition_id,
         tenantId,
-        settings: competition.settings,
+        settings,
       });
     }
 
@@ -183,7 +268,7 @@ export async function POST(req: Request) {
   }
 
   /* -------------------------------------------------- */
-  /* 7️⃣ SALVA PLACAR NORMAL                            */
+  /* 8️⃣ SALVA PLACAR NORMAL                            */
   /* -------------------------------------------------- */
   const { error: scoreErr } = await supabase
     .from('matches')
@@ -201,31 +286,23 @@ export async function POST(req: Request) {
   }
 
   /* -------------------------------------------------- */
-  /* 8️⃣ Pós-processamento                              */
+  /* 9️⃣ Pós-processamento                              */
   /* -------------------------------------------------- */
   if (match.group_id) {
-    // 🔵 Fase de grupos
     await recalcStandingsFromGroup({
       supabase,
       competition_id: match.competition_id,
       tenant_id: tenantId,
       group_id: match.group_id,
+      points: pts,
     });
   } else {
-    // 🔴 Mata-mata
-    const { data: competition } = await supabase
-      .from('competitions_with_settings')
-      .select('settings')
-      .eq('id', match.competition_id)
-      .eq('tenant_id', tenantId)
-      .single();
-
-    if (competition?.settings) {
+    if (settings) {
       await tryAdvanceKnockout({
         supabase,
         competitionId: match.competition_id,
         tenantId,
-        settings: competition.settings,
+        settings,
       });
     }
   }
