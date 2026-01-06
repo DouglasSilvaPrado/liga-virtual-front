@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CompetitionSettingsData } from '@/@types/competition';
+import { finalizeCompetitionRewards } from './awards/finalizeCompetitionRewards';
 
 type MatchRow = {
   id: string;
@@ -155,14 +156,25 @@ export async function tryAdvanceKnockout({
     .eq('tenant_id', tenantId);
 
   if (winners.length === 1) {
+    const championTeamId = winners[0];
+
     await supabase
       .from('competitions')
       .update({
         status: 'finished',
-        champion_team_id: winners[0],
+        champion_team_id: championTeamId,
       })
       .eq('id', competitionId)
       .eq('tenant_id', tenantId);
+
+    // ✅ premiação + pontos + troféu
+    await finalizeCompetitionRewards({
+      supabase,
+      tenantId,
+      competitionId,
+      championTeamId,
+      settings,
+    });
 
     return;
   }
