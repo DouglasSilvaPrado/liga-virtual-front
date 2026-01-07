@@ -36,12 +36,9 @@ export default async function CupPage() {
       name,
       type,
       created_at,
-      championships (
-        name
-      )
+      championships ( name )
     `)
     .eq('tenant_id', tenantId)
-    .in('id', competitionIds)
     .in('type', ['copa_grupo', 'mata_mata', 'copa_grupo_mata'])
     .order('created_at', { ascending: false });
 
@@ -59,14 +56,13 @@ export default async function CupPage() {
       </div>
 
 
-      {competitionIds.length === 0 && (
+      {(!cups || cups.length === 0) && (
         <div className="p-2">
           <p className="mt-2 text-muted-foreground">
-            Nenhuma copa iniciou a fase de grupos ou mata-mata ainda.
+            Nenhuma copa encontrada ainda.
           </p>
         </div>
       )}
-  
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cups?.map((cup) => (
