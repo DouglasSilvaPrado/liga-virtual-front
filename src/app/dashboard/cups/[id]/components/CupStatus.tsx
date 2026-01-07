@@ -1,7 +1,7 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import GenerateKnockoutButton from './GenerateKnockoutButton';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { Button } from '@/components/ui/button';
+import FinalizeGroupsButton from './FinalizeGroupsButton';
 
 export default async function CupStatus({
   competitionId,
@@ -32,7 +32,7 @@ export default async function CupStatus({
   /* ✅ Pega o TIPO da competição (isso faltava) */
   const { data: competition } = await supabase
     .from('competitions')
-    .select('type, status')
+    .select('type, status, champion_team_id')
     .eq('id', competitionId)
     .eq('tenant_id', tenantId)
     .single<{
@@ -43,10 +43,25 @@ export default async function CupStatus({
         | 'copa_grupo_mata'
         | 'mata_mata';
       status: 'active' | 'finished';
+      champion_team_id: string | null;
     }>();
 
   const competitionType = competition?.type ?? 'copa_grupo';
   const competitionStatus = competition?.status ?? 'active';
+
+  let championName: string | null = null;
+
+  if (competitionStatus === 'finished' && competition?.champion_team_id) {
+    const { data: championTeam } = await supabase
+      .from('teams')
+      .select('name')
+      .eq('id', competition.champion_team_id)
+      .eq('tenant_id', tenantId)
+      .single<{ name: string }>();
+
+    championName = championTeam?.name ?? null;
+  }
+
 
   /* 📊 Contadores */
   const [
@@ -118,6 +133,12 @@ export default async function CupStatus({
           ({competitionType})
         </span>
 
+        {competitionStatus === 'finished' && championName && (
+          <div className="mt-1 text-xs text-muted-foreground">
+            <strong>Campeão:</strong> {championName}
+          </div>
+        )}
+
         {!groupFinished && competitionStatus !== 'finished' && (
           <span className="ml-2 text-xs text-muted-foreground">
             (aguardando término da fase de grupos)
@@ -131,12 +152,9 @@ export default async function CupStatus({
         )}
 
         {canFinalizeGroupsOnly && (
-          <form action={`/api/competitions/${competitionId}/finalize-groups`} method="post">
-            <Button variant="default" size="sm" type="submit">
-              Finalizar competição
-            </Button>
-          </form>
+          <FinalizeGroupsButton competitionId={competitionId} />
         )}
+
       </div>
     </div>
   );
