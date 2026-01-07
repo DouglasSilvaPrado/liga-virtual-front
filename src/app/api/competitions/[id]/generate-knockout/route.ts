@@ -1,5 +1,7 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { normalizeCompetitionSettings } from '@/lib/competitionSettings';
+import type { CompetitionSettingsData } from '@/@types/competition';
 
 type StandingRow = {
   team_id: string;
@@ -9,8 +11,6 @@ type StandingRow = {
   goals_scored: number;
 };
 
-/* ───────────────────────── HELPERS ───────────────────────── */
-
 function shuffle<T>(array: T[]) {
   return [...array].sort(() => Math.random() - 0.5);
 }
@@ -19,24 +19,18 @@ function getInitialRound(totalTeams: number): number {
   return Math.log2(totalTeams);
 }
 
-/* ───────────────────────── API ───────────────────────── */
-
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id: competitionId } = await context.params;
   const { supabase, tenantId } = await createServerSupabase();
 
   /* ───────── AUTH ───────── */
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   /* ───────── ROLE ───────── */
-
   const { data: member } = await supabase
     .from('tenant_members')
     .select('role')
@@ -48,8 +42,30 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Permissão negada' }, { status: 403 });
   }
 
-  /* ───────── VERIFICA GRUPOS ───────── */
+  /* ✅ VERIFICA TIPO DA COMPETIÇÃO */
+  const { data: compTypeRow } = await supabase
+    .from('competitions')
+    .select('type, status')
+    .eq('id', competitionId)
+    .eq('tenant_id', tenantId)
+    .single<{ type: string; status: string }>();
 
+  if (!compTypeRow) {
+    return NextResponse.json({ error: 'Competição inválida' }, { status: 400 });
+  }
+
+  if (compTypeRow.status === 'finished') {
+    return NextResponse.json({ error: 'Competição já finalizada' }, { status: 409 });
+  }
+
+  if (compTypeRow.type !== 'copa_grupo_mata') {
+    return NextResponse.json(
+      { error: 'Mata-mata só pode ser gerado para competições do tipo copa_grupo_mata' },
+      { status: 400 },
+    );
+  }
+
+  /* ───────── VERIFICA GRUPOS ───────── */
   const { count: openGroupMatches } = await supabase
     .from('matches')
     .select('id', { count: 'exact', head: true })
@@ -66,26 +82,32 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   }
 
   /* ───────── SETTINGS ───────── */
-
   const { data: competition } = await supabase
     .from('competitions_with_settings')
     .select('settings')
     .eq('id', competitionId)
     .eq('tenant_id', tenantId)
-    .single();
+    .single<{ settings: unknown }>();
 
-  if (!competition?.settings) {
+  const settings = normalizeCompetitionSettings(competition?.settings);
+
+  if (!settings) {
     return NextResponse.json({ error: 'Configurações não encontradas' }, { status: 400 });
   }
 
-  const specific = competition.settings.specific ?? {};
+  const specific = settings.specific ?? ({} as CompetitionSettingsData['specific']);
 
-  const qtdPorGrupo = specific.qtd_classifica_por_grupo ?? 2;
-  const chaveAutomatica = specific.chave_automatica ?? 'aleatorio';
-  const idaVolta = specific.mata_em_ida_e_volta ?? false;
+  const qtdPorGrupo =
+    typeof (specific as { qtd_classifica_por_grupo?: number }).qtd_classifica_por_grupo === 'number'
+      ? (specific as { qtd_classifica_por_grupo: number }).qtd_classifica_por_grupo
+      : 2;
+
+  const chaveAutomatica =
+    (specific as { chave_automatica?: string }).chave_automatica ?? 'aleatorio';
+
+  const idaVolta = (specific as { mata_em_ida_e_volta?: boolean }).mata_em_ida_e_volta === true;
 
   /* ───────── CLASSIFICAÇÃO ───────── */
-
   const { data: standings } = await supabase
     .from('standings')
     .select('team_id, group_id, points, goal_diff, goals_scored')
@@ -93,16 +115,15 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     .eq('tenant_id', tenantId)
     .order('points', { ascending: false })
     .order('goal_diff', { ascending: false })
-    .order('goals_scored', { ascending: false });
+    .order('goals_scored', { ascending: false })
+    .returns<StandingRow[]>();
 
   if (!standings?.length) {
     return NextResponse.json({ error: 'Classificação vazia' }, { status: 400 });
   }
 
   /* ───────── AGRUPA POR GRUPO ───────── */
-
   const porGrupo: Record<string, StandingRow[]> = {};
-
   for (const s of standings) {
     porGrupo[s.group_id] ??= [];
     porGrupo[s.group_id].push(s);
@@ -115,7 +136,6 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   }
 
   /* ───────── GERA CONFRONTOS ───────── */
-
   const confrontos: { a: StandingRow; b: StandingRow }[] = [];
 
   if (chaveAutomatica === 'melhor_x_pior') {
@@ -136,22 +156,12 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       confrontos.push({ a, b });
     }
   } else {
-    // aleatório / padrão
     let classificados: StandingRow[] = [];
-
-    for (const g of grupos) {
-      classificados.push(...g.slice(0, qtdPorGrupo));
-    }
-
+    for (const g of grupos) classificados.push(...g.slice(0, qtdPorGrupo));
     classificados = shuffle(classificados);
 
     for (let i = 0; i < classificados.length; i += 2) {
-      if (classificados[i + 1]) {
-        confrontos.push({
-          a: classificados[i],
-          b: classificados[i + 1],
-        });
-      }
+      if (classificados[i + 1]) confrontos.push({ a: classificados[i], b: classificados[i + 1] });
     }
   }
 
@@ -160,13 +170,12 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   }
 
   /* ───────── COMPETITION ───────── */
-
   const { data: comp } = await supabase
     .from('competitions')
     .select('championship_id')
     .eq('id', competitionId)
     .eq('tenant_id', tenantId)
-    .single();
+    .single<{ championship_id: string }>();
 
   if (!comp) {
     return NextResponse.json({ error: 'Competição inválida' }, { status: 400 });
@@ -176,7 +185,6 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   const roundNumber = getInitialRound(totalTeams);
 
   /* ───────── CRIA KNOCKOUT ROUND ───────── */
-
   const roundName =
     roundNumber === 1
       ? 'Final'
@@ -199,7 +207,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       is_finished: false,
     })
     .select()
-    .single();
+    .single<{ id: string }>();
 
   if (roundError || !round) {
     console.error(roundError);
@@ -207,11 +215,20 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   }
 
   /* ───────── CRIA PARTIDAS ───────── */
-
-  const matches = [];
+  const matchesToInsert: Array<{
+    competition_id: string;
+    championship_id: string;
+    tenant_id: string;
+    knockout_round_id: string;
+    team_home: string;
+    team_away: string;
+    round: number;
+    leg: 1 | 2;
+    status: 'scheduled';
+  }> = [];
 
   for (const { a, b } of confrontos) {
-    matches.push({
+    matchesToInsert.push({
       competition_id: competitionId,
       championship_id: comp.championship_id,
       tenant_id: tenantId,
@@ -224,7 +241,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     });
 
     if (idaVolta) {
-      matches.push({
+      matchesToInsert.push({
         competition_id: competitionId,
         championship_id: comp.championship_id,
         tenant_id: tenantId,
@@ -238,7 +255,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     }
   }
 
-  const { error: matchError } = await supabase.from('matches').insert(matches);
+  const { error: matchError } = await supabase.from('matches').insert(matchesToInsert);
 
   if (matchError) {
     return NextResponse.json({ error: 'Erro ao criar jogos' }, { status: 500 });
@@ -248,6 +265,6 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     success: true,
     fase_inicial: roundNumber,
     confrontos: confrontos.length,
-    jogos_criados: matches.length,
+    jogos_criados: matchesToInsert.length,
   });
 }

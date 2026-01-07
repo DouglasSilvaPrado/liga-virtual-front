@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import GenerateKnockoutButton from './GenerateKnockoutButton';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { Button } from '@/components/ui/button';
 
 export default async function CupStatus({
   competitionId,
@@ -25,9 +26,27 @@ export default async function CupStatus({
       .eq('user_id', user.id)
       .single();
 
-    isAdminOrOwner =
-      member?.role === 'admin' || member?.role === 'owner';
+    isAdminOrOwner = member?.role === 'admin' || member?.role === 'owner';
   }
+
+  /* ✅ Pega o TIPO da competição (isso faltava) */
+  const { data: competition } = await supabase
+    .from('competitions')
+    .select('type, status')
+    .eq('id', competitionId)
+    .eq('tenant_id', tenantId)
+    .single<{
+      type:
+        | 'divisao'
+        | 'divisao_mata'
+        | 'copa_grupo'
+        | 'copa_grupo_mata'
+        | 'mata_mata';
+      status: 'active' | 'finished';
+    }>();
+
+  const competitionType = competition?.type ?? 'copa_grupo';
+  const competitionStatus = competition?.status ?? 'active';
 
   /* 📊 Contadores */
   const [
@@ -36,14 +55,12 @@ export default async function CupStatus({
     { count: knockoutMatches },
     { count: openGroupMatches },
   ] = await Promise.all([
-    // Times
     supabase
       .from('competition_teams')
       .select('*', { count: 'exact', head: true })
       .eq('competition_id', competitionId)
       .eq('tenant_id', tenantId),
 
-    // Jogos da fase de grupos
     supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
@@ -51,7 +68,6 @@ export default async function CupStatus({
       .eq('tenant_id', tenantId)
       .not('group_id', 'is', null),
 
-    // Jogos do mata-mata
     supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
@@ -59,7 +75,6 @@ export default async function CupStatus({
       .eq('tenant_id', tenantId)
       .is('group_id', null),
 
-    // Jogos de grupo NÃO finalizados
     supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
@@ -70,20 +85,27 @@ export default async function CupStatus({
   ]);
 
   /* 🧠 Status */
-  let status = 'Aguardando times';
+  let statusLabel = 'Aguardando times';
 
-  if ((teams ?? 0) > 0) {
-    status = 'Fase de grupos';
-  }
-
-  if ((knockoutMatches ?? 0) > 0) {
-    status = 'Mata-mata';
-  }
+  if ((teams ?? 0) > 0) statusLabel = 'Fase de grupos';
+  if ((knockoutMatches ?? 0) > 0) statusLabel = 'Mata-mata';
+  if (competitionStatus === 'finished') statusLabel = 'Finalizada';
 
   const groupFinished = (openGroupMatches ?? 0) === 0;
 
   const canGenerateKnockout =
     isAdminOrOwner &&
+    competitionStatus !== 'finished' &&
+    competitionType === 'copa_grupo_mata' &&
+    groupFinished &&
+    (groupMatches ?? 0) > 0 &&
+    (knockoutMatches ?? 0) === 0;
+
+
+  const canFinalizeGroupsOnly =
+    isAdminOrOwner &&
+    competitionStatus !== 'finished' &&
+    competitionType === 'copa_grupo' &&
     groupFinished &&
     (groupMatches ?? 0) > 0 &&
     (knockoutMatches ?? 0) === 0;
@@ -91,17 +113,31 @@ export default async function CupStatus({
   return (
     <div className="flex items-center justify-between rounded border bg-muted p-3 text-sm">
       <div>
-        <strong>Status:</strong> {status}
-        {!groupFinished && (
+        <strong>Status:</strong> {statusLabel}{' '}
+        <span className="ml-2 text-xs text-muted-foreground">
+          ({competitionType})
+        </span>
+
+        {!groupFinished && competitionStatus !== 'finished' && (
           <span className="ml-2 text-xs text-muted-foreground">
             (aguardando término da fase de grupos)
           </span>
         )}
       </div>
 
-      {canGenerateKnockout && (
-        <GenerateKnockoutButton competitionId={competitionId} />
-      )}
+      <div className="flex gap-2">
+        {canGenerateKnockout && (
+          <GenerateKnockoutButton competitionId={competitionId} />
+        )}
+
+        {canFinalizeGroupsOnly && (
+          <form action={`/api/competitions/${competitionId}/finalize-groups`} method="post">
+            <Button variant="default" size="sm" type="submit">
+              Finalizar competição
+            </Button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
