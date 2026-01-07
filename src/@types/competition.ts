@@ -49,7 +49,10 @@ export interface CopaGrupoSpecific {
 }
 
 export interface MataMataSpecific {
-  jogos_ida_volta: boolean;
+  mata_em_ida_e_volta?: boolean;
+  final_ida_volta?: boolean;
+  criterio_mata_mata?: string;
+  disputa_terceiro_quarto?: boolean;
 }
 
 export interface DivisaoSpecific {
