@@ -36,9 +36,10 @@ export default function EditCompetitionModal({
 }) {
   const router = useRouter();
 
-  const [divisionCompetitions, setDivisionCompetitions] = useState<{ id: number; name: string }[]>(
-    [],
-  );
+  const [divisionCompetitions, setDivisionCompetitions] = useState<
+    { id: string; name: string; type: 'divisao' | 'divisao_mata' }[]
+  >([]);
+
 
   const { register, handleSubmit, reset, watch, setValue, control } = useForm<CompetitionForm>({
     defaultValues: {
@@ -55,14 +56,28 @@ export default function EditCompetitionModal({
   const qtdRebaixados = watch('settings.specific.qtd_rebaixados');
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.from('competitions').select('id, name').eq('type', 'divisao');
+  const load = async () => {
+    const { data, error } = await supabase
+      .from('competitions')
+      .select('id, name, type')
+      .in('type', ['divisao', 'divisao_mata'])
+      .eq('tenant_id', competition.tenant_id);
 
-      setDivisionCompetitions(data || []);
-    };
+    if (error) {
+      console.error(error);
+      setDivisionCompetitions([]);
+      return;
+    }
 
-    load();
-  }, []);
+    // ✅ remove a competição que está sendo editada
+    const filtered = (data ?? []).filter((c) => c.id !== competition.id);
+
+    setDivisionCompetitions(filtered);
+  };
+
+  if (open) load(); // carrega quando abrir (pra sempre vir atualizado)
+}, [open, competition.id, competition.tenant_id]);
+
 
   useEffect(() => {
     if (open) {

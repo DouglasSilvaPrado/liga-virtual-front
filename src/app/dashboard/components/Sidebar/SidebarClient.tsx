@@ -16,6 +16,10 @@ const cupMenu = [
   { href: "/dashboard/cups", label: "Copas" },
 ]
 
+const leagueMenu = [
+  { href: "/dashboard/leagues", label: "Ligas" },
+]
+
 export default function SidebarClient({
   onNavigate,
 }: {
@@ -26,6 +30,7 @@ export default function SidebarClient({
   const autoOpenCup = pathname.startsWith("/dashboard/cup");
   const [isOpen, setIsOpen] = useState(autoOpen);
   const [isOpenCup, setIsOpenCup] = useState(autoOpenCup);
+  const [isLeagueOpen, setIsLeagueOpen] = useState(false);
 
   useEffect(() => {
     setIsOpen(autoOpen);
@@ -92,6 +97,36 @@ export default function SidebarClient({
           {isOpenCup && (
             <div className="mt-2 ml-4 space-y-1">
               {cupMenu.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={handleNavigate}
+                  className={cn(
+                    "block rounded px-3 py-2 text-sm hover:bg-gray-100",
+                    pathname === item.href &&
+                      "bg-gray-200 font-medium"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ligas */}
+        <div>
+          <button
+            onClick={() => setIsLeagueOpen(!isLeagueOpen)}
+            className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
+          >
+            <span>Ligas</span>
+            <span className="text-sm">{isLeagueOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {isLeagueOpen && (
+            <div className="mt-2 ml-4 space-y-1">
+              {leagueMenu.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
