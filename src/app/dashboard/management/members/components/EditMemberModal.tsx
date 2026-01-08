@@ -23,7 +23,6 @@ type FormState = {
   active: boolean;
 };
 
-
 export default function EditMemberModal({
   member,
   open,
@@ -50,14 +49,9 @@ export default function EditMemberModal({
     active: member.active ?? false,
   });
 
-
-  const updateField = <K extends keyof FormState>(
-    key: K,
-    value: FormState[K]
-  ) => {
+  const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
-
 
   async function onSave() {
     setLoading(true);
@@ -86,7 +80,7 @@ export default function EditMemberModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {' '}
-      <DialogContent className="max-h-[85vh] sm:max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
         {' '}
         <DialogHeader>
           {' '}
@@ -167,9 +161,7 @@ export default function EditMemberModal({
               }`}
               value={String(form.active)}
               disabled={!IsOwnerOrAdmin}
-              onChange={(e) =>
-                updateField('active', e.target.value === 'true')
-              }
+              onChange={(e) => updateField('active', e.target.value === 'true')}
             >
               <option value="true">Ativo</option>
               <option value="false">Inativo</option>

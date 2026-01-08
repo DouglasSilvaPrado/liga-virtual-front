@@ -6,7 +6,7 @@ interface ToggleRoundButtonProps {
   competitionId: string;
   groupId: string;
   round: number;
-  isOpen: boolean
+  isOpen: boolean;
 }
 
 export default function ToggleRoundButton({
@@ -33,10 +33,7 @@ export default function ToggleRoundButton({
   }
 
   return (
-    <button
-      onClick={toggle}
-      className="text-xs text-blue-600 underline cursor-pointer"
-    >
+    <button onClick={toggle} className="cursor-pointer text-xs text-blue-600 underline">
       {isOpen ? 'Fechar rodada' : 'Abrir rodada'}
     </button>
   );

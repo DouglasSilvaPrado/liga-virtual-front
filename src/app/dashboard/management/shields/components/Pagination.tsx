@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Pagination as ShadPagination,
@@ -8,17 +8,16 @@ import {
   PaginationNext,
   PaginationPrevious,
   PaginationEllipsis,
-} from "@/components/ui/pagination";
+} from '@/components/ui/pagination';
 
 function getPages(current: number, total: number) {
   const pages: (number | string)[] = [];
 
-  if (total <= 7)
-    return Array.from({ length: total }, (_, i) => i + 1);
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
 
   pages.push(1);
 
-  if (current > 3) pages.push("ellipsis-start");
+  if (current > 3) pages.push('ellipsis-start');
 
   const start = Math.max(2, current - 2);
   const end = Math.min(total - 1, current + 2);
@@ -27,7 +26,7 @@ function getPages(current: number, total: number) {
     pages.push(i);
   }
 
-  if (current < total - 2) pages.push("ellipsis-end");
+  if (current < total - 2) pages.push('ellipsis-end');
 
   pages.push(total);
 
@@ -51,10 +50,10 @@ export default function Pagination({ page, totalPages }: { page: number; totalPa
 
         {pages.map((p, i) => (
           <PaginationItem key={i}>
-            {p === "ellipsis-start" || p === "ellipsis-end" ? (
+            {p === 'ellipsis-start' || p === 'ellipsis-end' ? (
               <PaginationEllipsis />
             ) : (
-              <PaginationLink href={`?page=${p}`} isActive={page === p}  size="sm">
+              <PaginationLink href={`?page=${p}`} isActive={page === p} size="sm">
                 {p}
               </PaginationLink>
             )}
@@ -62,7 +61,7 @@ export default function Pagination({ page, totalPages }: { page: number; totalPa
         ))}
 
         <PaginationItem>
-          <PaginationNext href={`?page=${next}`}  size="sm" />
+          <PaginationNext href={`?page=${next}`} size="sm" />
         </PaginationItem>
       </PaginationContent>
     </ShadPagination>

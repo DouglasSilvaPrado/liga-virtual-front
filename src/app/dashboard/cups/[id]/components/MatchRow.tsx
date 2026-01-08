@@ -28,17 +28,11 @@ type MatchRowProps = {
 export default function MatchRow({ match }: MatchRowProps) {
   const router = useRouter();
 
-  const [homeGoals, setHomeGoals] = useState<string | number>(
-    match.score_home ?? ''
-  );
-  const [awayGoals, setAwayGoals] = useState<string | number>(
-    match.score_away ?? ''
-  );
+  const [homeGoals, setHomeGoals] = useState<string | number>(match.score_home ?? '');
+  const [awayGoals, setAwayGoals] = useState<string | number>(match.score_away ?? '');
   const [loading, setLoading] = useState(false);
 
-  const canEdit =
-    match.round_info.is_open &&
-    match.status !== 'finished';
+  const canEdit = match.round_info.is_open && match.status !== 'finished';
 
   async function save() {
     if (!canEdit) return;
@@ -61,9 +55,7 @@ export default function MatchRow({ match }: MatchRowProps) {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="w-32 text-right">
-        {match.home_team.name}
-      </span>
+      <span className="w-32 text-right">{match.home_team.name}</span>
 
       <Input
         type="number"
@@ -83,22 +75,16 @@ export default function MatchRow({ match }: MatchRowProps) {
         onChange={(e) => setAwayGoals(e.target.value)}
       />
 
-      <span className="w-32">
-        {match.away_team.name}
-      </span>
+      <span className="w-32">{match.away_team.name}</span>
 
-      <Button
-        size="sm"
-        onClick={save}
-        disabled={!canEdit || loading}
-      >
+      <Button size="sm" onClick={save} disabled={!canEdit || loading}>
         {match.status === 'finished'
           ? 'Finalizado'
           : !match.round_info.is_open
-          ? 'Rodada bloqueada'
-          : loading
-          ? 'Salvando...'
-          : 'Salvar'}
+            ? 'Rodada bloqueada'
+            : loading
+              ? 'Salvando...'
+              : 'Salvar'}
       </Button>
     </div>
   );

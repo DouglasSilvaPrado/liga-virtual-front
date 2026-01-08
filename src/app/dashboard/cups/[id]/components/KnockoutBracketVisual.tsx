@@ -25,12 +25,10 @@ function getRoundLabel(round: number) {
 
 export function KnockoutBracketVisual({ rounds }: KnockoutBracketVisualProps) {
   return (
-    <div className="flex gap-32 items-stretch min-h-[700px]">
+    <div className="flex min-h-[700px] items-stretch gap-32">
       {rounds.map((round) => (
-        <div key={round.id} className="flex flex-col justify-evenly min-h-[700px]">
-          <h3 className="text-center font-semibold mb-8">
-            {getRoundLabel(round.round_number)}
-          </h3>
+        <div key={round.id} className="flex min-h-[700px] flex-col justify-evenly">
+          <h3 className="mb-8 text-center font-semibold">{getRoundLabel(round.round_number)}</h3>
 
           {Object.values(
             round.matches.reduce((acc: Record<string, BracketMatchView[]>, match) => {

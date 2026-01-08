@@ -7,23 +7,21 @@ import KnockoutBracket from './components/KnockoutBracket';
 import GroupRounds from './components/GroupRounds';
 import { CompetitionWithSettings } from '@/@types/competition';
 
-export default async function CupDetailsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function CupDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, tenantId } = await createServerSupabase();
 
   const { data: cup } = await supabase
     .from('competitions_with_settings')
-    .select(`
+    .select(
+      `
       id,
       name,
       type,
       settings,
       championships ( name )
-    `)
+    `,
+    )
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single<CompetitionWithSettings>();
@@ -57,12 +55,7 @@ export default async function CupDetailsPage({
       )}
 
       {/* 🔴 MATA-MATA */}
-      {hasKnockout && (
-        <KnockoutBracket
-          competitionId={cup.id}
-          settings={cup.settings}
-        />
-      )}
+      {hasKnockout && <KnockoutBracket competitionId={cup.id} settings={cup.settings} />}
     </div>
   );
 }

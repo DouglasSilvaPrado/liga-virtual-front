@@ -20,7 +20,7 @@ export function ConfrontoCard({
 
   function gols(match: BracketMatchView | undefined, teamName: string) {
     if (!match) return 0;
-    return match.team_home.name === teamName ? match.score_home ?? 0 : match.score_away ?? 0;
+    return match.team_home.name === teamName ? (match.score_home ?? 0) : (match.score_away ?? 0);
   }
 
   const golsA = gols(ida, teamA.name) + gols(volta, teamA.name);
@@ -55,7 +55,11 @@ export function ConfrontoCard({
         {ida && <MatchCard match={ida} idaVolta />}
         {volta && <MatchCard match={volta} idaVolta />}
 
-        {finished && <div className="text-center text-sm font-medium">Agregado: {golsA} x {golsB}</div>}
+        {finished && (
+          <div className="text-center text-sm font-medium">
+            Agregado: {golsA} x {golsB}
+          </div>
+        )}
 
         {empate && ida && (
           <>
@@ -73,7 +77,7 @@ export function ConfrontoCard({
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center text-green-600 font-semibold"
+            className="text-center font-semibold text-green-600"
           >
             {winnerLabel}: {winner}
           </motion.div>

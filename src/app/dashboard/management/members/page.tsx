@@ -19,8 +19,7 @@ export default async function MembersPage() {
     .eq('tenant_id', tenantId)
     .order('user_id', { ascending: false });
 
-  const currentUserRole =
-    members?.find((m) => m.user_id === user.id)?.role ?? 'member';
+  const currentUserRole = members?.find((m) => m.user_id === user.id)?.role ?? 'member';
 
   const isOwner = currentUserRole === 'owner';
   const isAdmin = currentUserRole === 'admin';

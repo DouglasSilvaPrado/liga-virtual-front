@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Shield } from "@/@types/shield";
-import { Team } from "@/@types/team";
-import { Card, CardContent } from "@/components/ui/card";
-import Image from "next/image";
-import { Shirt, MapPin, Flag } from "lucide-react";
-import { isSofifa } from "@/util/isSofifa";
+import { Shield } from '@/@types/shield';
+import { Team } from '@/@types/team';
+import { Card, CardContent } from '@/components/ui/card';
+import Image from 'next/image';
+import { Shirt, MapPin, Flag } from 'lucide-react';
+import { isSofifa } from '@/util/isSofifa';
 import EditTeamModal from './EditTeamModal';
 
 interface Props {
@@ -14,19 +14,19 @@ interface Props {
 }
 
 export default function MyTeamCard({ team, shield }: Props) {
-  const defaultShieldUrl = "/image/shieldDefault.png";
-  const defaultUniformUrl = "/image/uniformDefault.jpg";
+  const defaultShieldUrl = '/image/shieldDefault.png';
+  const defaultUniformUrl = '/image/uniformDefault.jpg';
 
   const fixUrl = (fallback: string, url?: string | null) => {
-    if (!url || url.trim() === "") return fallback;
+    if (!url || url.trim() === '') return fallback;
     return url;
   };
 
   const shieldUrl = fixUrl(defaultShieldUrl, shield?.shield_url);
 
   return (
-    <Card className="overflow-hidden shadow-lg border border-border/50 bg-linear-to-b from-muted/60 to-background rounded-2xl">
-      <CardContent className="p-6 space-y-6">
+    <Card className="border-border/50 from-muted/60 to-background overflow-hidden rounded-2xl border bg-linear-to-b shadow-lg">
+      <CardContent className="space-y-6 p-6">
         <EditTeamModal
           team={team}
           shield={shield}
@@ -36,7 +36,7 @@ export default function MyTeamCard({ team, shield }: Props) {
 
         {/* HEADER */}
         <div className="flex items-center gap-4">
-          <div className="relative w-20 h-20">
+          <div className="relative h-20 w-20">
             {isSofifa(shieldUrl) ? (
               <Image
                 src={shieldUrl}
@@ -47,7 +47,7 @@ export default function MyTeamCard({ team, shield }: Props) {
             ) : (
               <img
                 src={shieldUrl}
-                alt={shield?.name || "Escudo do time"}
+                alt={shield?.name || 'Escudo do time'}
                 className="h-full w-full rounded-md object-cover"
               />
             )}
@@ -56,7 +56,8 @@ export default function MyTeamCard({ team, shield }: Props) {
           <div>
             <h2 className="text-2xl font-bold">{team.name}</h2>
             <p className="text-muted-foreground text-sm">
-              {shield?.abbreviation ? shield?.abbreviation : "N/A"} • {shield?.country ? shield?.country : "N/A"}
+              {shield?.abbreviation ? shield?.abbreviation : 'N/A'} •{' '}
+              {shield?.country ? shield?.country : 'N/A'}
             </p>
           </div>
         </div>
@@ -65,8 +66,8 @@ export default function MyTeamCard({ team, shield }: Props) {
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">Cor principal:</span>
           <div
-            className="w-6 h-6 rounded-full border"
-            style={{ background: shield?.main_color || "#ccc" }}
+            className="h-6 w-6 rounded-full border"
+            style={{ background: shield?.main_color || '#ccc' }}
           ></div>
         </div>
 
@@ -74,18 +75,22 @@ export default function MyTeamCard({ team, shield }: Props) {
         <div className="space-y-3 text-sm">
           <div className="flex items-center gap-2">
             <MapPin size={16} className="text-muted-foreground" />
-            <span><strong>Estádio:</strong> {shield?.stadium ? shield.stadium : "Não informado"}</span>
+            <span>
+              <strong>Estádio:</strong> {shield?.stadium ? shield.stadium : 'Não informado'}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <Flag size={16} className="text-muted-foreground" />
-            <span><strong>País:</strong> {shield?.country ? shield?.country : "N/A"}</span>
+            <span>
+              <strong>País:</strong> {shield?.country ? shield?.country : 'N/A'}
+            </span>
           </div>
         </div>
 
         {/* UNIFORMS */}
         <div>
-          <h3 className="font-semibold mb-2 flex items-center gap-2">
+          <h3 className="mb-2 flex items-center gap-2 font-semibold">
             <Shirt size={18} /> Uniformes
           </h3>
 
@@ -95,7 +100,7 @@ export default function MyTeamCard({ team, shield }: Props) {
                 const u = fixUrl(defaultUniformUrl, url);
 
                 return (
-                  <div key={idx} className="relative w-full h-24">
+                  <div key={idx} className="relative h-24 w-full">
                     {isSofifa(u) ? (
                       <Image
                         src={u}
@@ -112,7 +117,7 @@ export default function MyTeamCard({ team, shield }: Props) {
                     )}
                   </div>
                 );
-              }
+              },
             )}
           </div>
         </div>

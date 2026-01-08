@@ -1,33 +1,25 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 const managementMenu = [
-  { href: "/dashboard/management/members", label: "Membros" },
-  { href: "/dashboard/management/championships", label: "Campeonatos" },
-  { href: "/dashboard/management/shields", label: "Escudos" },
-  { href: "/dashboard/management/my-team", label: "Meu Time" },
+  { href: '/dashboard/management/members', label: 'Membros' },
+  { href: '/dashboard/management/championships', label: 'Campeonatos' },
+  { href: '/dashboard/management/shields', label: 'Escudos' },
+  { href: '/dashboard/management/my-team', label: 'Meu Time' },
 ];
 
-const cupMenu = [
-  { href: "/dashboard/cups", label: "Copas" },
-]
+const cupMenu = [{ href: '/dashboard/cups', label: 'Copas' }];
 
-const leagueMenu = [
-  { href: "/dashboard/leagues", label: "Ligas" },
-]
+const leagueMenu = [{ href: '/dashboard/leagues', label: 'Ligas' }];
 
-export default function SidebarClient({
-  onNavigate,
-}: {
-  onNavigate?: () => void;
-}) {
+export default function SidebarClient({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const autoOpen = pathname.startsWith("/dashboard/management");
-  const autoOpenCup = pathname.startsWith("/dashboard/cup");
+  const autoOpen = pathname.startsWith('/dashboard/management');
+  const autoOpenCup = pathname.startsWith('/dashboard/cup');
   const [isOpen, setIsOpen] = useState(autoOpen);
   const [isOpenCup, setIsOpenCup] = useState(autoOpenCup);
   const [isLeagueOpen, setIsLeagueOpen] = useState(false);
@@ -47,8 +39,8 @@ export default function SidebarClient({
           href="/dashboard"
           onClick={handleNavigate}
           className={cn(
-            "block rounded px-3 py-2 hover:bg-gray-100",
-            pathname === "/dashboard" && "bg-gray-200 font-medium"
+            'block rounded px-3 py-2 hover:bg-gray-100',
+            pathname === '/dashboard' && 'bg-gray-200 font-medium',
           )}
         >
           Início
@@ -61,7 +53,7 @@ export default function SidebarClient({
             className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
           >
             <span>Gerenciamento</span>
-            <span className="text-sm">{isOpen ? "▲" : "▼"}</span>
+            <span className="text-sm">{isOpen ? '▲' : '▼'}</span>
           </button>
 
           {isOpen && (
@@ -72,9 +64,8 @@ export default function SidebarClient({
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    "block rounded px-3 py-2 text-sm hover:bg-gray-100",
-                    pathname === item.href &&
-                      "bg-gray-200 font-medium"
+                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    pathname === item.href && 'bg-gray-200 font-medium',
                   )}
                 >
                   {item.label}
@@ -91,7 +82,7 @@ export default function SidebarClient({
             className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
           >
             <span>Copas</span>
-            <span className="text-sm">{isOpenCup ? "▲" : "▼"}</span>
+            <span className="text-sm">{isOpenCup ? '▲' : '▼'}</span>
           </button>
 
           {isOpenCup && (
@@ -102,9 +93,8 @@ export default function SidebarClient({
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    "block rounded px-3 py-2 text-sm hover:bg-gray-100",
-                    pathname === item.href &&
-                      "bg-gray-200 font-medium"
+                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    pathname === item.href && 'bg-gray-200 font-medium',
                   )}
                 >
                   {item.label}
@@ -121,7 +111,7 @@ export default function SidebarClient({
             className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
           >
             <span>Ligas</span>
-            <span className="text-sm">{isLeagueOpen ? "▲" : "▼"}</span>
+            <span className="text-sm">{isLeagueOpen ? '▲' : '▼'}</span>
           </button>
 
           {isLeagueOpen && (
@@ -132,9 +122,8 @@ export default function SidebarClient({
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    "block rounded px-3 py-2 text-sm hover:bg-gray-100",
-                    pathname === item.href &&
-                      "bg-gray-200 font-medium"
+                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    pathname === item.href && 'bg-gray-200 font-medium',
                   )}
                 >
                   {item.label}

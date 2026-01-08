@@ -1,4 +1,4 @@
-import TopbarClient from "./TopbarClient";
+import TopbarClient from './TopbarClient';
 
 export default function Topbar() {
   return <TopbarClient />;

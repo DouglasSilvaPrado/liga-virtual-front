@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Shield } from "@/@types/shield";
-import Image from "next/image";
+import { Shield } from '@/@types/shield';
+import Image from 'next/image';
 import {
   Table,
   TableBody,
@@ -9,8 +9,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import ShieldStatusBadge from "./ShieldStatusBadge";
+} from '@/components/ui/table';
+import ShieldStatusBadge from './ShieldStatusBadge';
 import EditShieldModal from './EditShieldModal';
 import DeleteShieldModal from './DeleteShieldModal';
 import { isSofifa } from '@/util/isSofifa';
@@ -18,16 +18,14 @@ import { isSofifa } from '@/util/isSofifa';
 export default function ShieldsTable({
   shields,
   tenant_member_id,
-  tenant_member_role
+  tenant_member_role,
 }: {
   shields: Shield[];
   tenant_member_id: string;
   tenant_member_role: string;
 }) {
-  
-
   return (
-    <div className="overflow-x-auto w-full">
+    <div className="w-full overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -43,8 +41,8 @@ export default function ShieldsTable({
           {shields.map((s) => {
             const canEdit = s.tenant_member_id === tenant_member_id;
             const canDelete =
-              s.tenant_id !== null && 
-              (s.tenant_member_id === tenant_member_id || tenant_member_role === "owner");
+              s.tenant_id !== null &&
+              (s.tenant_member_id === tenant_member_id || tenant_member_role === 'owner');
 
             return (
               <TableRow key={s.id}>
@@ -76,17 +74,10 @@ export default function ShieldsTable({
 
                 <TableCell className="flex gap-2">
                   {canEdit && (
-                    <EditShieldModal
-                      shield={s}
-                      tenant_member_role={tenant_member_role}
-                    />
+                    <EditShieldModal shield={s} tenant_member_role={tenant_member_role} />
                   )}
 
-                  {canDelete && (
-                    <DeleteShieldModal
-                      shield={s}
-                    />
-                  )}
+                  {canDelete && <DeleteShieldModal shield={s} />}
                 </TableCell>
               </TableRow>
             );

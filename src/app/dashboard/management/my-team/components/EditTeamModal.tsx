@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Pencil } from "lucide-react";
-import { Team } from "@/@types/team";
-import { Shield } from "@/@types/shield";
-import { useRouter } from "next/navigation";
-import { AvatarPreview } from "@/components/image/avatarPreview";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Pencil } from 'lucide-react';
+import { Team } from '@/@types/team';
+import { Shield } from '@/@types/shield';
+import { useRouter } from 'next/navigation';
+import { AvatarPreview } from '@/components/image/avatarPreview';
 
 interface Props {
   team: Team;
@@ -24,12 +24,7 @@ interface Props {
   tenantMemberId: string;
 }
 
-export default function EditTeamModal({
-  team,
-  shield,
-  tenantId,
-  tenantMemberId,
-}: Props) {
+export default function EditTeamModal({ team, shield, tenantId, tenantMemberId }: Props) {
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
@@ -37,22 +32,18 @@ export default function EditTeamModal({
 
   // Team
   const [name, setName] = useState(team.name);
-  const [shieldId, setShieldId] = useState<string | undefined>(
-    team.shield_id
-  );
+  const [shieldId, setShieldId] = useState<string | undefined>(team.shield_id);
 
   // Shield selecionado
-  const [selectedShield, setSelectedShield] = useState<Shield | null>(
-    shield ?? null
-  );
+  const [selectedShield, setSelectedShield] = useState<Shield | null>(shield ?? null);
 
   // Campos editáveis do escudo
-  const [stadium, setStadium] = useState(shield?.stadium ?? "");
-  const [country, setCountry] = useState(shield?.country ?? "");
-  const [shieldUrl, setShieldUrl] = useState(shield?.shield_url ?? "");
-  const [uniform1Url, setUniform1Url] = useState(shield?.uniform_1_url ?? "");
-  const [uniform2Url, setUniform2Url] = useState(shield?.uniform_2_url ?? "");
-  const [uniformGkUrl, setUniformGkUrl] = useState(shield?.uniform_gk_url ?? "");
+  const [stadium, setStadium] = useState(shield?.stadium ?? '');
+  const [country, setCountry] = useState(shield?.country ?? '');
+  const [shieldUrl, setShieldUrl] = useState(shield?.shield_url ?? '');
+  const [uniform1Url, setUniform1Url] = useState(shield?.uniform_1_url ?? '');
+  const [uniform2Url, setUniform2Url] = useState(shield?.uniform_2_url ?? '');
+  const [uniformGkUrl, setUniformGkUrl] = useState(shield?.uniform_gk_url ?? '');
 
   // Lista de escudos
   const [shields, setShields] = useState<Shield[]>([]);
@@ -62,23 +53,22 @@ export default function EditTeamModal({
   async function loadShields(pageToLoad: number) {
     if (!hasMore) return;
 
-    const res = await fetch(`/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${pageToLoad}`);
+    const res = await fetch(
+      `/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${pageToLoad}`,
+    );
     const json: { data: Shield[] } = await res.json();
 
     if (json.data.length < 20) setHasMore(false);
 
     setShields((prev) => {
-      const map = new Map(
-        [...prev, ...json.data].map((s) => [s.id, s])
-      );
+      const map = new Map([...prev, ...json.data].map((s) => [s.id, s]));
       return Array.from(map.values());
     });
   }
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
-    const bottom =
-      el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+    const bottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
 
     if (bottom && hasMore) {
       const next = page + 1;
@@ -92,12 +82,12 @@ export default function EditTeamModal({
     setSelectedShield(s);
 
     // Preenche os campos automaticamente
-    setStadium(s.stadium ?? "");
-    setCountry(s.country ?? "");
-    setShieldUrl(s.shield_url ?? "");
-    setUniform1Url(s.uniform_1_url ?? "");
-    setUniform2Url(s.uniform_2_url ?? "");
-    setUniformGkUrl(s.uniform_gk_url ?? "");
+    setStadium(s.stadium ?? '');
+    setCountry(s.country ?? '');
+    setShieldUrl(s.shield_url ?? '');
+    setUniform1Url(s.uniform_1_url ?? '');
+    setUniform2Url(s.uniform_2_url ?? '');
+    setUniformGkUrl(s.uniform_gk_url ?? '');
   }
 
   function handleOpenChange(value: boolean) {
@@ -114,9 +104,9 @@ export default function EditTeamModal({
     e.preventDefault();
     setLoading(true);
 
-    const res = await fetch("/api/teams/update", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/teams/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         team_id: team.id,
         name,
@@ -137,7 +127,7 @@ export default function EditTeamModal({
       setOpen(false);
       router.refresh();
     } else {
-      alert("Erro ao atualizar time");
+      alert('Erro ao atualizar time');
     }
   }
 
@@ -167,15 +157,13 @@ export default function EditTeamModal({
             <Label>Escudo</Label>
             <div
               onScroll={handleScroll}
-              className="border rounded-md max-h-52 overflow-y-auto p-2 space-y-1"
+              className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2"
             >
               {shields.map((s) => (
                 <div
                   key={s.id}
-                  className={`p-2 cursor-pointer rounded ${
-                    shieldId === s.id
-                      ? "bg-muted"
-                      : "hover:bg-muted/50"
+                  className={`cursor-pointer rounded p-2 ${
+                    shieldId === s.id ? 'bg-muted' : 'hover:bg-muted/50'
                   }`}
                   onClick={() => handleSelectShield(s)}
                 >
@@ -191,37 +179,61 @@ export default function EditTeamModal({
           {/* URLs */}
           <div>
             <Label>URL do Escudo</Label>
-            <Input value={shieldUrl} onChange={(e) => setShieldUrl(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
+            <Input
+              value={shieldUrl}
+              onChange={(e) => setShieldUrl(e.target.value)}
+              disabled={selectedShield?.tenant_member_id !== tenantMemberId}
+            />
           </div>
 
           <div>
             <Label>URL Uniforme 1</Label>
-            <Input value={uniform1Url} onChange={(e) => setUniform1Url(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
+            <Input
+              value={uniform1Url}
+              onChange={(e) => setUniform1Url(e.target.value)}
+              disabled={selectedShield?.tenant_member_id !== tenantMemberId}
+            />
           </div>
 
           <div>
             <Label>URL Uniforme 2</Label>
-            <Input value={uniform2Url} onChange={(e) => setUniform2Url(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
+            <Input
+              value={uniform2Url}
+              onChange={(e) => setUniform2Url(e.target.value)}
+              disabled={selectedShield?.tenant_member_id !== tenantMemberId}
+            />
           </div>
 
           <div>
             <Label>URL Uniforme Goleiro</Label>
-            <Input value={uniformGkUrl} onChange={(e) => setUniformGkUrl(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
+            <Input
+              value={uniformGkUrl}
+              onChange={(e) => setUniformGkUrl(e.target.value)}
+              disabled={selectedShield?.tenant_member_id !== tenantMemberId}
+            />
           </div>
 
           {/* Localização */}
           <div>
             <Label>Estádio</Label>
-            <Input value={stadium} onChange={(e) => setStadium(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
+            <Input
+              value={stadium}
+              onChange={(e) => setStadium(e.target.value)}
+              disabled={selectedShield?.tenant_member_id !== tenantMemberId}
+            />
           </div>
 
           <div>
             <Label>País</Label>
-            <Input value={country} onChange={(e) => setCountry(e.target.value)} disabled={selectedShield?.tenant_member_id !== tenantMemberId} />
+            <Input
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              disabled={selectedShield?.tenant_member_id !== tenantMemberId}
+            />
           </div>
 
           <Button className="w-full" disabled={loading}>
-            {loading ? "Salvando..." : "Salvar alterações"}
+            {loading ? 'Salvando...' : 'Salvar alterações'}
           </Button>
         </form>
       </DialogContent>

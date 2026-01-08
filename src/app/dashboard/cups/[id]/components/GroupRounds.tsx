@@ -51,21 +51,12 @@ type GroupedRounds = Record<
 /* ───────────────────────── HELPERS ───────────────────────── */
 
 function isCompleteMatch(m: MatchFromDB): m is MatchWithTeamName {
-  return (
-    m.group !== null &&
-    m.home_team !== null &&
-    m.away_team !== null &&
-    m.round_info !== null
-  );
+  return m.group !== null && m.home_team !== null && m.away_team !== null && m.round_info !== null;
 }
 
 /* ───────────────────────── COMPONENT ───────────────────────── */
 
-export default async function GroupRounds({
-  competitionId,
-}: {
-  competitionId: string;
-}) {
+export default async function GroupRounds({ competitionId }: { competitionId: string }) {
   const { supabase, tenantId } = await createServerSupabase();
   const supabaseAuth = await createSupabaseServerClient();
 
@@ -86,8 +77,7 @@ export default async function GroupRounds({
       .eq('user_id', user.id)
       .single();
 
-    isAdminOrOwner =
-      member?.role === 'admin' || member?.role === 'owner';
+    isAdminOrOwner = member?.role === 'admin' || member?.role === 'owner';
 
     if (member?.role === 'member') {
       const { data: team } = await supabase
@@ -103,7 +93,8 @@ export default async function GroupRounds({
 
   let query = supabase
     .from('matches')
-    .select(`
+    .select(
+      `
       id,
       score_home,
       score_away,
@@ -125,7 +116,8 @@ export default async function GroupRounds({
         id,
         name
       )
-    `)
+    `,
+    )
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .order('round', {
@@ -136,9 +128,7 @@ export default async function GroupRounds({
   /* 🔒 Filtro para MEMBER */
   if (!isAdminOrOwner && memberTeamId) {
     query = query
-      .or(
-        `team_home.eq.${memberTeamId},team_away.eq.${memberTeamId}`
-      )
+      .or(`team_home.eq.${memberTeamId},team_away.eq.${memberTeamId}`)
       .eq('round_info.is_open', true);
   }
 
@@ -181,23 +171,16 @@ export default async function GroupRounds({
 
       {Object.values(grouped).map((group) => (
         <div key={group.groupCode} className="space-y-4">
-          <h2 className="text-lg font-semibold">
-            {group.groupName}
-          </h2>
+          <h2 className="text-lg font-semibold">{group.groupName}</h2>
 
           {Object.entries(group.rounds).map(([round, matches]) => {
             const isOpen = matches[0].round_info.is_open;
             const groupId = matches[0].group.id;
 
             return (
-              <div
-                key={round}
-                className="rounded border p-4 space-y-2"
-              >
+              <div key={round} className="space-y-2 rounded border p-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium">
-                    Rodada {round}
-                  </h3>
+                  <h3 className="font-medium">Rodada {round}</h3>
 
                   {isAdminOrOwner && (
                     <ToggleRoundButton

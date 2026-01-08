@@ -3,39 +3,24 @@ import { Standing } from '@/@types/standing';
 import { Team } from '@/@types/team';
 import { createServerSupabase } from '@/lib/supabaseServer';
 
-
 export type StandingWithTeam = Pick<
   Standing,
-  | 'id'
-  | 'points'
-  | 'wins'
-  | 'draws'
-  | 'losses'
-  | 'goals_scored'
-  | 'goals_against'
-  | 'goal_diff'
+  'id' | 'points' | 'wins' | 'draws' | 'losses' | 'goals_scored' | 'goals_against' | 'goal_diff'
 > & {
   teams: Pick<Team, 'name'> | null;
 };
 
-export type CompetitionGroupWithStandings = Pick<
-  CompetitionGroup,
-  'id' | 'name' | 'code'
-> & {
+export type CompetitionGroupWithStandings = Pick<CompetitionGroup, 'id' | 'name' | 'code'> & {
   standings: StandingWithTeam[] | null;
 };
 
-
-export default async function GroupsStandings({
-  competitionId,
-}: {
-  competitionId: string;
-}) {
+export default async function GroupsStandings({ competitionId }: { competitionId: string }) {
   const { supabase, tenantId } = await createServerSupabase();
 
   const { data } = await supabase
     .from('competition_groups')
-    .select(`
+    .select(
+      `
       id,
       name,
       code,
@@ -50,7 +35,8 @@ export default async function GroupsStandings({
         goal_diff,
         teams ( name )
       )
-    `)
+    `,
+    )
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .order('code');
@@ -66,8 +52,8 @@ export default async function GroupsStandings({
       {groups.map((group) => {
         return (
           <div key={group.id} className="rounded border p-3">
-            <h3 className="font-medium mb-2">{group.name}</h3>
-  
+            <h3 className="mb-2 font-medium">{group.name}</h3>
+
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left">

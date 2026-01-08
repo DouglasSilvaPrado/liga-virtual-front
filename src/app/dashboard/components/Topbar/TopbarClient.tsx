@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 import SidebarClient from '../Sidebar/SidebarClient';
 
 export default function TopbarClient() {
@@ -11,7 +11,7 @@ export default function TopbarClient() {
 
   async function logout() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push('/login');
   }
 
   return (
@@ -20,10 +20,7 @@ export default function TopbarClient() {
       <header className="flex items-center justify-between border-b bg-white px-4 py-3 md:px-6">
         <div className="flex items-center gap-3">
           {/* Botão menu mobile */}
-          <button
-            onClick={() => setOpen(true)}
-            className="md:hidden rounded p-2 hover:bg-gray-100"
-          >
+          <button onClick={() => setOpen(true)} className="rounded p-2 hover:bg-gray-100 md:hidden">
             ☰
           </button>
 
@@ -42,10 +39,7 @@ export default function TopbarClient() {
       {open && (
         <div className="fixed inset-0 z-50 flex">
           {/* backdrop */}
-          <div
-            className="flex-1 bg-black/40"
-            onClick={() => setOpen(false)}
-          />
+          <div className="flex-1 bg-black/40" onClick={() => setOpen(false)} />
 
           {/* drawer */}
           <div className="w-64 bg-white">

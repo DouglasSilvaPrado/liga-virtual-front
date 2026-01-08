@@ -4,17 +4,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
-export default function GenerateKnockoutButton({
-  competitionId,
-}: {
-  competitionId: string;
-}) {
+export default function GenerateKnockoutButton({ competitionId }: { competitionId: string }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleGenerate() {
     const confirm = window.confirm(
-      'Tem certeza que deseja gerar o mata-mata? Esta ação não pode ser desfeita.'
+      'Tem certeza que deseja gerar o mata-mata? Esta ação não pode ser desfeita.',
     );
 
     if (!confirm) return;
@@ -22,12 +18,9 @@ export default function GenerateKnockoutButton({
     try {
       setLoading(true);
 
-      const res = await fetch(
-        `/api/competitions/${competitionId}/generate-knockout`,
-        {
-          method: 'POST',
-        }
-      );
+      const res = await fetch(`/api/competitions/${competitionId}/generate-knockout`, {
+        method: 'POST',
+      });
 
       if (!res.ok) {
         const body = await res.json();
@@ -46,12 +39,7 @@ export default function GenerateKnockoutButton({
   }
 
   return (
-    <Button
-      onClick={handleGenerate}
-      disabled={loading}
-      variant="destructive"
-      size="sm"
-    >
+    <Button onClick={handleGenerate} disabled={loading} variant="destructive" size="sm">
       {loading ? 'Gerando...' : 'Gerar mata-mata'}
     </Button>
   );

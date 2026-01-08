@@ -1,26 +1,39 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Shield } from "@/@types/shield";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Shield } from '@/@types/shield';
 import { AvatarPreview } from '@/components/image/avatarPreview';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-export default function EditShieldModal({ shield, tenant_member_role }: { shield: Shield, tenant_member_role: string }) {
+export default function EditShieldModal({
+  shield,
+  tenant_member_role,
+}: {
+  shield: Shield;
+  tenant_member_role: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [shieldUrl, setShieldUrl] = useState(shield.shield_url || "");
+  const [shieldUrl, setShieldUrl] = useState(shield.shield_url || '');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,9 +47,9 @@ export default function EditShieldModal({ shield, tenant_member_role }: { shield
       ...body,
     };
 
-    const res = await fetch("/api/shields/update", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/shields/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
@@ -77,7 +90,7 @@ export default function EditShieldModal({ shield, tenant_member_role }: { shield
             <Input name="abbreviation" defaultValue={shield.abbreviation} />
           </div>
 
-          {(tenant_member_role === "owner" || tenant_member_role === "admin") && (
+          {(tenant_member_role === 'owner' || tenant_member_role === 'admin') && (
             <div>
               <Label>Status</Label>
               <Select name="status" defaultValue={shield.status}>
@@ -95,8 +108,7 @@ export default function EditShieldModal({ shield, tenant_member_role }: { shield
             </div>
           )}
 
-
-           <div>
+          <div>
             <Label>País</Label>
             <Input name="country" defaultValue={shield.country} />
           </div>
@@ -137,7 +149,7 @@ export default function EditShieldModal({ shield, tenant_member_role }: { shield
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Salvando..." : "Salvar"}
+            {loading ? 'Salvando...' : 'Salvar'}
           </Button>
         </form>
       </DialogContent>

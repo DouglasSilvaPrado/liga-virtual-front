@@ -4,17 +4,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
-export default function FinalizeGroupsButton({
-  competitionId,
-}: {
-  competitionId: string;
-}) {
+export default function FinalizeGroupsButton({ competitionId }: { competitionId: string }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleFinalize() {
     const confirm = window.confirm(
-      'Tem certeza que deseja finalizar a competição? Esta ação não pode ser desfeita.'
+      'Tem certeza que deseja finalizar a competição? Esta ação não pode ser desfeita.',
     );
     if (!confirm) return;
 

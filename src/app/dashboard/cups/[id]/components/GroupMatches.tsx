@@ -13,32 +13,27 @@ export type MatchGroupRow = {
   } | null;
 };
 
-
-
-export default async function GroupMatches({
-  competitionId,
-}: {
-  competitionId: string;
-}) {
+export default async function GroupMatches({ competitionId }: { competitionId: string }) {
   const { supabase, tenantId } = await createServerSupabase();
 
   const { data } = await supabase
     .from('matches')
-    .select(`
+    .select(
+      `
       id,
       round,
       home_goals,
       away_goals,
       home_team:teams!home_team_id(name),
       away_team:teams!away_team_id(name)
-    `)
+    `,
+    )
     .eq('competition_id', competitionId)
     .eq('tenant_id', tenantId)
     .eq('stage', 'group')
     .order('round');
 
   const matches = data as MatchGroupRow[] | null;
-
 
   if (!matches || matches.length === 0) return null;
 

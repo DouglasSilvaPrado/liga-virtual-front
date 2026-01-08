@@ -11,7 +11,7 @@ import EditMemberModal from './EditMemberModal';
 export default function MemberItem({
   member,
   currentUserRole,
-  currentUserId
+  currentUserId,
 }: {
   member: MemberProfile;
   currentUserRole: string;
@@ -19,31 +19,22 @@ export default function MemberItem({
 }) {
   const [open, setOpen] = useState(false);
 
-  const IsOwnerOrAdmin =
-    currentUserRole === 'owner' ||
-    currentUserRole === 'admin'
+  const IsOwnerOrAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
 
   return (
     <>
       <Card className="rounded-xl shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          
           {/* Esquerda */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex min-w-0 items-center gap-3">
             <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage src={member.avatar_url || undefined} />
-              <AvatarFallback>
-                {member.email?.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
+              <AvatarFallback>{member.email?.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
 
             <div className="min-w-0">
-              <p className="font-medium truncate">
-                {member.full_name || member.email}
-              </p>
-              <p className="text-sm text-muted-foreground truncate">
-                {member.email}
-              </p>
+              <p className="truncate font-medium">{member.full_name || member.email}</p>
+              <p className="text-muted-foreground truncate text-sm">{member.email}</p>
 
               <Badge variant="secondary" className="mt-1">
                 {member.role}
@@ -54,16 +45,20 @@ export default function MemberItem({
           {/* Ações */}
           {(member.user_id === currentUserId || IsOwnerOrAdmin) && (
             <Pencil
-              className="h-5 w-5 cursor-pointer text-muted-foreground hover:text-primary self-end sm:self-auto"
+              className="text-muted-foreground hover:text-primary h-5 w-5 cursor-pointer self-end sm:self-auto"
               onClick={() => setOpen(true)}
             />
           )}
         </CardHeader>
       </Card>
 
-
       {/* Modal */}
-      <EditMemberModal member={member} open={open} onOpenChange={setOpen} IsOwnerOrAdmin={IsOwnerOrAdmin} />
+      <EditMemberModal
+        member={member}
+        open={open}
+        onOpenChange={setOpen}
+        IsOwnerOrAdmin={IsOwnerOrAdmin}
+      />
     </>
   );
 }

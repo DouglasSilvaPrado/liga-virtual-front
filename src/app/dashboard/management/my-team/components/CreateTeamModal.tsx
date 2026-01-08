@@ -1,11 +1,17 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 import { Shield } from '@/@types/shield';
 
 interface Props {
@@ -18,7 +24,7 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [shieldId, setShieldId] = useState<string | undefined>();
-  const [name, setName] = useState("");
+  const [name, setName] = useState('');
 
   const [page, setPage] = useState(1);
   const [shields, setShields] = useState<Shield[]>([]);
@@ -39,7 +45,7 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
 
     setShields((prev) => {
       const merged = [...prev, ...json.data];
-      const unique = Array.from(new Map(merged.map(s => [s.id, s])).values());
+      const unique = Array.from(new Map(merged.map((s) => [s.id, s])).values());
       return unique;
     });
 
@@ -54,11 +60,13 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
     async function fetchShields() {
       setLoadingShields(true);
 
-      const res = await fetch(`/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${page}`);
+      const res = await fetch(
+        `/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${page}`,
+      );
       const json: { data: Shield[] } = await res.json();
 
       if (!ignore) {
-        setShields(Array.from(new Map(json.data.map(s => [s.id, s])).values()));
+        setShields(Array.from(new Map(json.data.map((s) => [s.id, s])).values()));
         setHasMore(json.data.length === 20);
       }
 
@@ -75,8 +83,7 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const target = e.currentTarget;
 
-    const bottom =
-      target.scrollTop + target.clientHeight >= target.scrollHeight - 50;
+    const bottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 50;
 
     if (bottom && !loadingShields) {
       setPage((p) => p + 1);
@@ -89,14 +96,14 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
     setLoading(true);
 
     if (!shieldId) {
-      alert("Selecione um escudo!");
+      alert('Selecione um escudo!');
       setLoading(false);
       return;
     }
 
-    const res = await fetch("/api/teams/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/teams/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         tenant_id: tenantId,
         tenant_member_id: tenantMemberId,
@@ -112,7 +119,7 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
       setOpen(false);
       router.refresh();
     } else {
-      alert("Erro ao criar time");
+      alert('Erro ao criar time');
     }
   }
 
@@ -128,28 +135,20 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
           <div>
             <Label>Nome do Time</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
 
           <div>
             <Label>Escudo</Label>
 
-            <div
-              onScroll={handleScroll}
-              className="border rounded-md max-h-60 overflow-y-auto p-2"
-            >
+            <div onScroll={handleScroll} className="max-h-60 overflow-y-auto rounded-md border p-2">
               {shields.map((s) => (
                 <div
                   key={s.id}
-                  className={`p-2 cursor-pointer rounded hover:bg-muted ${
-                    shieldId === s.id ? "bg-muted" : ""
+                  className={`hover:bg-muted cursor-pointer rounded p-2 ${
+                    shieldId === s.id ? 'bg-muted' : ''
                   }`}
                   onClick={() => setShieldId(s.id)}
                 >
@@ -158,15 +157,13 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
               ))}
 
               {loadingShields && (
-                <p className="text-center py-2 text-sm text-muted-foreground">
-                  Carregando...
-                </p>
+                <p className="text-muted-foreground py-2 text-center text-sm">Carregando...</p>
               )}
             </div>
           </div>
 
           <Button className="w-full" type="submit" disabled={loading}>
-            {loading ? "Criando..." : "Criar Time"}
+            {loading ? 'Criando...' : 'Criar Time'}
           </Button>
         </form>
       </DialogContent>

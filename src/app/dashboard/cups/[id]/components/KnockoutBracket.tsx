@@ -15,29 +15,19 @@ interface KnockoutBracketProps {
 
 /* ───────── TYPE GUARD ───────── */
 
-function hasJogosIdaVolta(
-  specific: CompetitionSpecific
-): specific is MataMataSpecific {
-  return (
-    typeof specific === 'object' &&
-    specific !== null &&
-    'jogos_ida_volta' in specific
-  );
+function hasJogosIdaVolta(specific: CompetitionSpecific): specific is MataMataSpecific {
+  return typeof specific === 'object' && specific !== null && 'jogos_ida_volta' in specific;
 }
 
-export default async function KnockoutBracket({
-  competitionId,
-  settings,
-}: KnockoutBracketProps) {
+export default async function KnockoutBracket({ competitionId, settings }: KnockoutBracketProps) {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const idaVolta = hasJogosIdaVolta(settings.specific)
-    ? settings.specific.jogos_ida_volta
-    : false;
+  const idaVolta = hasJogosIdaVolta(settings.specific) ? settings.specific.jogos_ida_volta : false;
 
   const { data, error } = await supabase
-  .from('knockout_rounds')
-  .select(`
+    .from('knockout_rounds')
+    .select(
+      `
     id,
     round_number,
     name,
@@ -58,11 +48,11 @@ export default async function KnockoutBracket({
         name
       )
     )
-  `)
-  .eq('competition_id', competitionId)
-  .eq('tenant_id', tenantId)
-  .order('round_number', { ascending: false });
-
+  `,
+    )
+    .eq('competition_id', competitionId)
+    .eq('tenant_id', tenantId)
+    .order('round_number', { ascending: false });
 
   if (error) {
     console.error('Erro knockout:', error);
@@ -70,33 +60,28 @@ export default async function KnockoutBracket({
   }
 
   if (!data?.length) {
-    return (
-      <p className="text-muted-foreground">
-        Nenhuma rodada de mata-mata encontrada
-      </p>
-    );
+    return <p className="text-muted-foreground">Nenhuma rodada de mata-mata encontrada</p>;
   }
 
   const dataView = data as unknown as KnockoutRoundView[];
 
- const safeRounds: KnockoutRoundView[] =
-  dataView?.map((round) => ({
-    id: round.id,
-    round_number: round.round_number,
-    matches: round.matches.map((m) => ({
-      id: m.id,
-      leg: m.leg,
-      score_home: m.score_home,
-      score_away: m.score_away,
-      penalties_home: m.penalties_home,
-      penalties_away: m.penalties_away,
-      status: m.status,
-      team_home: m.team_home ?? { id: '—', name: '—' },
-      team_away: m.team_away ?? { id: '—', name: '—' },
-      competition_id: competitionId,
-    }))
-  })) ?? [];
-
+  const safeRounds: KnockoutRoundView[] =
+    dataView?.map((round) => ({
+      id: round.id,
+      round_number: round.round_number,
+      matches: round.matches.map((m) => ({
+        id: m.id,
+        leg: m.leg,
+        score_home: m.score_home,
+        score_away: m.score_away,
+        penalties_home: m.penalties_home,
+        penalties_away: m.penalties_away,
+        status: m.status,
+        team_home: m.team_home ?? { id: '—', name: '—' },
+        team_away: m.team_away ?? { id: '—', name: '—' },
+        competition_id: competitionId,
+      })),
+    })) ?? [];
 
   return (
     <div className="space-y-6">

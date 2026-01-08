@@ -15,10 +15,10 @@ export function MatchCard({
   isPenalties?: boolean;
 }) {
   const [home, setHome] = useState(
-    isPenalties ? match.penalties_home ?? '' : match.score_home ?? ''
+    isPenalties ? (match.penalties_home ?? '') : (match.score_home ?? ''),
   );
   const [away, setAway] = useState(
-    isPenalties ? match.penalties_away ?? '' : match.score_away ?? ''
+    isPenalties ? (match.penalties_away ?? '') : (match.score_away ?? ''),
   );
 
   const [loading, setLoading] = useState(false);
@@ -51,41 +51,34 @@ export function MatchCard({
     else alert('Erro ao salvar');
   }
 
-  const locked = isPenalties
-  ? match.is_locked
-  : match.is_locked || match.status === 'finished';
+  const locked = isPenalties ? match.is_locked : match.is_locked || match.status === 'finished';
 
   return (
     <Card className={isPenalties ? 'border-dashed border-yellow-500' : ''}>
-      <CardContent className="p-4 space-y-2">
-        <div className="flex justify-between text-sm items-center">
+      <CardContent className="space-y-2 p-4">
+        <div className="flex items-center justify-between text-sm">
           <span>{match.team_home.name}</span>
 
-          <div className="flex gap-1 items-center">
+          <div className="flex items-center gap-1">
             <input
               className="w-10 border text-center"
               type="number"
               value={home}
-              onChange={e => setHome(e.target.value)}
+              onChange={(e) => setHome(e.target.value)}
             />
             <span>{isPenalties ? 'p' : 'x'}</span>
             <input
               className="w-10 border text-center"
               type="number"
               value={away}
-              onChange={e => setAway(e.target.value)}
+              onChange={(e) => setAway(e.target.value)}
             />
           </div>
 
           <span>{match.team_away.name}</span>
         </div>
 
-        <Button
-          size="sm"
-          className="w-full"
-          onClick={saveScore}
-          disabled={locked || loading}
-        >
+        <Button size="sm" className="w-full" onClick={saveScore} disabled={locked || loading}>
           {isPenalties ? 'Salvar pênaltis' : 'Salvar placar'}
         </Button>
       </CardContent>

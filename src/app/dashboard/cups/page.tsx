@@ -2,13 +2,13 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 import CreateCupModal from './components/CreateCupModal';
 
 export interface Cup {
-  id: string
-  name: string
-  type: "copa_grupo" | "mata_mata" | "copa_grupo_mata"
-  created_at: string
+  id: string;
+  name: string;
+  type: 'copa_grupo' | 'mata_mata' | 'copa_grupo_mata';
+  created_at: string;
   championships: {
-    name: string
-  }
+    name: string;
+  };
 }
 
 export default async function CupPage() {
@@ -22,28 +22,27 @@ export default async function CupPage() {
     .select('competition_id')
     .eq('tenant_id', tenantId);
 
-  const competitionIds =
-    standings?.map((s) => s.competition_id) ?? [];
-
+  const competitionIds = standings?.map((s) => s.competition_id) ?? [];
 
   /* -------------------------------------------------- */
   /* 2️⃣ Busca apenas as copas válidas                  */
   /* -------------------------------------------------- */
   const { data } = await supabase
     .from('competitions_with_settings')
-    .select(`
+    .select(
+      `
       id,
       name,
       type,
       created_at,
       championships ( name )
-    `)
+    `,
+    )
     .eq('tenant_id', tenantId)
     .in('type', ['copa_grupo', 'mata_mata', 'copa_grupo_mata'])
     .order('created_at', { ascending: false });
 
-    const cups = data as Cup[] | null
-    
+  const cups = data as Cup[] | null;
 
   /* -------------------------------------------------- */
   /* 3️⃣ Render                                         */
@@ -55,35 +54,25 @@ export default async function CupPage() {
         <CreateCupModal />
       </div>
 
-
       {(!cups || cups.length === 0) && (
         <div className="p-2">
-          <p className="mt-2 text-muted-foreground">
-            Nenhuma copa encontrada ainda.
-          </p>
+          <p className="text-muted-foreground mt-2">Nenhuma copa encontrada ainda.</p>
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cups?.map((cup) => (
-          <div
-            key={cup.id}
-            className="rounded-lg border bg-white p-4 shadow-sm"
-          >
+          <div key={cup.id} className="rounded-lg border bg-white p-4 shadow-sm">
             <h2 className="text-lg font-semibold">{cup.name}</h2>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Campeonato: {cup.championships?.name ?? '—'}
             </p>
 
-            <p className="mt-1 text-sm">
-              Tipo:{' '}
-              {cup.type}
-            </p>
+            <p className="mt-1 text-sm">Tipo: {cup.type}</p>
 
-            <p className="mt-1 text-xs text-muted-foreground">
-              Criado em:{' '}
-              {new Date(cup.created_at).toLocaleDateString('pt-BR')}
+            <p className="text-muted-foreground mt-1 text-xs">
+              Criado em: {new Date(cup.created_at).toLocaleDateString('pt-BR')}
             </p>
 
             <div className="mt-4 flex gap-2">

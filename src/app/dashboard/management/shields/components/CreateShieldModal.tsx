@@ -1,25 +1,31 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { AvatarPreview } from '@/components/image/avatarPreview';
 
-export default function CreateShieldModal({ tenantId, tenant_member_id }: { tenantId: string; tenant_member_id: string }) {
+export default function CreateShieldModal({
+  tenantId,
+  tenant_member_id,
+}: {
+  tenantId: string;
+  tenant_member_id: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [shieldUrl, setShieldUrl] = useState("");
+  const [shieldUrl, setShieldUrl] = useState('');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,22 +34,22 @@ export default function CreateShieldModal({ tenantId, tenant_member_id }: { tena
     const form = new FormData(e.currentTarget);
 
     const body = {
-      name: form.get("name"),
-      abbreviation: form.get("abbreviation"),
-      stadium: form.get("stadium"),
-      country: form.get("country"),
-      status: "pending",
-      main_color: form.get("main_color"),
-      shield_url: form.get("shield_url"),
-      uniform_1_url: form.get("uniform_1_url"),
-      uniform_2_url: form.get("uniform_2_url"),
-      uniform_gk_url: form.get("uniform_gk_url"),
+      name: form.get('name'),
+      abbreviation: form.get('abbreviation'),
+      stadium: form.get('stadium'),
+      country: form.get('country'),
+      status: 'pending',
+      main_color: form.get('main_color'),
+      shield_url: form.get('shield_url'),
+      uniform_1_url: form.get('uniform_1_url'),
+      uniform_2_url: form.get('uniform_2_url'),
+      uniform_gk_url: form.get('uniform_gk_url'),
       tenant_id: tenantId,
       tenant_member_id: tenant_member_id,
     };
 
-    const res = await fetch("/api/shields/create", {
-      method: "POST",
+    const res = await fetch('/api/shields/create', {
+      method: 'POST',
       body: JSON.stringify(body),
     });
 
@@ -70,7 +76,6 @@ export default function CreateShieldModal({ tenantId, tenant_member_id }: { tena
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
           <AvatarPreview avatarPreview={shieldUrl} />
 
           <div>
@@ -100,11 +105,7 @@ export default function CreateShieldModal({ tenantId, tenant_member_id }: { tena
 
           <div>
             <Label>URL do Escudo</Label>
-            <Input
-              name="shield_url"
-              required
-              onChange={(e) => setShieldUrl(e.target.value)}
-            />
+            <Input name="shield_url" required onChange={(e) => setShieldUrl(e.target.value)} />
           </div>
 
           <div>
@@ -123,7 +124,7 @@ export default function CreateShieldModal({ tenantId, tenant_member_id }: { tena
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Salvando..." : "Salvar"}
+            {loading ? 'Salvando...' : 'Salvar'}
           </Button>
         </form>
       </DialogContent>

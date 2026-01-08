@@ -72,7 +72,6 @@ export default function CreateCupModal() {
 
   const groupsForUI = isGroupCompetition ? groups : [];
 
-
   /* ------------------------------- LOADERS ------------------------------- */
 
   // Abriu modal -> carrega campeonatos
@@ -117,7 +116,6 @@ export default function CreateCupModal() {
       cancelled = true;
     };
   }, [championshipId, cupType]);
-
 
   // Entrou no step 2 -> carrega times
   useEffect(() => {
@@ -167,8 +165,6 @@ export default function CreateCupModal() {
       cancelled = true;
     };
   }, [open, step, competitionId, isGroupCompetition]);
-
- 
 
   /* ------------------------------- ACTIONS ------------------------------- */
 
@@ -266,7 +262,6 @@ export default function CreateCupModal() {
                   setGroups([]);
                 }}
               >
-
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -333,10 +328,7 @@ export default function CreateCupModal() {
                 const checked = !!selectedTeams[team.id];
 
                 return (
-                  <div
-                    key={team.id}
-                    className="flex items-center justify-between border-b py-2"
-                  >
+                  <div key={team.id} className="flex items-center justify-between border-b py-2">
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={checked}
@@ -348,9 +340,7 @@ export default function CreateCupModal() {
                     {checked && isGroupCompetition && groupsForUI.length > 0 && (
                       <Select
                         value={selectedTeams[team.id].group_id ?? 'random'}
-                        onValueChange={(v) =>
-                          setTeamGroup(team.id, v === 'random' ? null : v)
-                        }
+                        onValueChange={(v) => setTeamGroup(team.id, v === 'random' ? null : v)}
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />

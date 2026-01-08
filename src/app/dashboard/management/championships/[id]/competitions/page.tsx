@@ -67,7 +67,10 @@ export default async function ChampionshipCompetitionsPage(props: {
                 <div className="flex shrink-0 flex-row items-center space-x-2">
                   <EditCompetitionButton competition={comp} />
                   <DeleteCompetitionButton competitionId={comp.id} />
-                  <CompetitionTrophiesButton championshipId={championshipId} competitionId={comp.id} />
+                  <CompetitionTrophiesButton
+                    championshipId={championshipId}
+                    competitionId={comp.id}
+                  />
                 </div>
               </CardHeader>
             </Card>

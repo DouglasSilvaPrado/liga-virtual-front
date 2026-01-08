@@ -6,7 +6,7 @@ import { MemberProfile } from '@/@types/memberProfile';
 export default function MembersList({
   members,
   currentUserRole,
-  currentUserId
+  currentUserId,
 }: {
   members: MemberProfile[];
   currentUserRole: string;
@@ -17,9 +17,14 @@ export default function MembersList({
   }
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {members.map((m) => (
-        <MemberItem key={m.id} member={m} currentUserRole={currentUserRole} currentUserId={currentUserId} />
+        <MemberItem
+          key={m.id}
+          member={m}
+          currentUserRole={currentUserRole}
+          currentUserId={currentUserId}
+        />
       ))}
     </div>
   );
