@@ -12,6 +12,25 @@ export interface League {
 export default async function LeaguePage() {
   const { supabase, tenantId } = await createServerSupabase();
 
+  /* -------------------------------------------------- */
+  /* 1️⃣ Busca competições que têm times cadastrados     */
+  /* -------------------------------------------------- */
+  const { data: compTeams, error: ctErr } = await supabase
+    .from('competition_teams')
+    .select('competition_id')
+    .eq('tenant_id', tenantId);
+
+  if (ctErr) {
+    return <div className="p-6">Erro ao carregar ligas</div>;
+  }
+
+  const competitionIds = Array.from(
+    new Set((compTeams ?? []).map((x) => x.competition_id).filter(Boolean)),
+  );
+
+  /* -------------------------------------------------- */
+  /* 2️⃣ Busca apenas LIGAS válidas (divisao/divisao_mata) */
+  /* -------------------------------------------------- */
   const { data, error } = await supabase
     .from('competitions_with_settings')
     .select(
@@ -24,6 +43,7 @@ export default async function LeaguePage() {
     `,
     )
     .eq('tenant_id', tenantId)
+    .in('id', competitionIds.length ? competitionIds : ['00000000-0000-0000-0000-000000000000'])
     .in('type', ['divisao', 'divisao_mata'])
     .order('created_at', { ascending: false });
 
@@ -40,14 +60,14 @@ export default async function LeaguePage() {
         <CreateLeagueModal />
       </div>
 
-      {leagues.length === 0 && (
+      {competitionIds.length === 0 && (
         <div className="rounded border bg-muted p-4 text-sm text-muted-foreground">
-          Nenhuma liga cadastrada ainda (tipo divisao/divisao_mata).
+          Nenhuma liga iniciou ainda (sem times cadastrados).
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {leagues.map((l) => (
+        {leagues?.map((l) => (
           <div key={l.id} className="rounded-lg border bg-white p-4 shadow-sm">
             <h2 className="text-lg font-semibold">{l.name}</h2>
 
