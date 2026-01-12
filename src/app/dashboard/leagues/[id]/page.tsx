@@ -43,10 +43,6 @@ export default async function LeagueDetailsPage({ params }: { params: Promise<{ 
           <LeagueStandings competitionId={league.id} settings={league.settings} />
           <LeagueMatches competitionId={league.id} />
         </div>
-
-        <div className="space-y-6">
-          <LeagueTeams competitionId={league.id} />
-        </div>
       </div>
     </div>
   );
