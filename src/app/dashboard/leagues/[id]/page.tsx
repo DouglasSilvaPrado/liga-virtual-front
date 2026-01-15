@@ -4,15 +4,12 @@ import type { CompetitionWithSettings } from '@/@types/competition';
 import LeagueStatus from './components/LeagueStatus';
 import LeagueStandings from './components/LeagueStandings';
 import LeagueMatches from './components/LeagueMatches';
-import LeagueTeams from './components/LeagueTeams';
 
 export default async function LeagueDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  console.log("🚀 ~ LeagueDetailsPage ~ id:", id)
   const { supabase, tenantId } = await createServerSupabase();
-  console.log("🚀 ~ LeagueDetailsPage ~ tenantId:", tenantId)
 
-  const { data: league, error: leagueError } = await supabase
+  const { data: league} = await supabase
     .from('competitions_with_settings')
     .select(
       `
