@@ -3,7 +3,7 @@ import LeagueHeader from './components/LeagueHeader';
 import type { CompetitionWithSettings } from '@/@types/competition';
 import LeagueStatus from './components/LeagueStatus';
 import LeagueStandings from './components/LeagueStandings';
-import LeagueMatches from './components/LeagueMatches';
+import LeagueRounds from './components/LeagueRounds';
 
 export default async function LeagueDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,7 +38,7 @@ export default async function LeagueDetailsPage({ params }: { params: Promise<{ 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <LeagueStandings competitionId={league.id} settings={league.settings} />
-          <LeagueMatches competitionId={league.id} />
+          <LeagueRounds competitionId={league.id} />
         </div>
       </div>
     </div>

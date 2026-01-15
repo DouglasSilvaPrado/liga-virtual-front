@@ -1,11 +1,14 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import GenerateLeagueCalendarButton from './GenerateLeagueCalendarButton';
 
 export default async function LeagueStatus({ competitionId }: { competitionId: string }) {
   const { supabase, tenantId } = await createServerSupabase();
   const supabaseAuth = await createSupabaseServerClient();
 
-  const { data: { user } } = await supabaseAuth.auth.getUser();
+  const {
+    data: { user },
+  } = await supabaseAuth.auth.getUser();
 
   let isAdminOrOwner = false;
 
@@ -41,28 +44,32 @@ export default async function LeagueStatus({ competitionId }: { competitionId: s
       .eq('status', 'finished'),
   ]);
 
+  const teamsCount = teams ?? 0;
+  const matchesCount = matches ?? 0;
+  const finishedCount = finishedMatches ?? 0;
+
   const label =
-    (teams ?? 0) === 0
+    teamsCount === 0
       ? 'Aguardando times'
-      : (matches ?? 0) === 0
+      : matchesCount === 0
         ? 'Pronta para gerar partidas'
-        : (finishedMatches ?? 0) === (matches ?? 0)
+        : finishedCount === matchesCount
           ? 'Todas partidas finalizadas'
           : 'Em andamento';
+
+  const canGenerate = isAdminOrOwner && teamsCount >= 2 && matchesCount === 0;
 
   return (
     <div className="flex items-center justify-between rounded border bg-muted p-3 text-sm">
       <div>
         <strong>Status:</strong> {label}
         <span className="ml-2 text-xs text-muted-foreground">
-          (times: {teams ?? 0} • jogos: {matches ?? 0} • finalizados: {finishedMatches ?? 0})
+          (times: {teamsCount} • jogos: {matchesCount} • finalizados: {finishedCount})
         </span>
       </div>
 
       {isAdminOrOwner && (
-        <div className="text-xs text-muted-foreground">
-          Próximo: adicionar botão “Gerar calendário”
-        </div>
+        <GenerateLeagueCalendarButton competitionId={competitionId} disabled={!canGenerate} />
       )}
     </div>
   );

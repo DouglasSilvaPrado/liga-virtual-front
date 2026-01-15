@@ -73,28 +73,72 @@ export async function generateLeagueMatches({
   // embaralha pra não ficar sempre igual
   const shuffled = shuffle(uniqueTeams);
 
-  const rounds = buildRoundRobinPairs(shuffled);
+  const roundsPairs = buildRoundRobinPairs(shuffled);
 
+  const totalRounds = idaVolta ? roundsPairs.length * 2 : roundsPairs.length;
+
+  /**
+   * 1) Cria/Garante league_rounds (1..totalRounds)
+   * - is_open default false (ou você pode optar por abrir a 1ª rodada)
+   */
+  const leagueRoundsPayload = Array.from({ length: totalRounds }, (_, i) => ({
+    tenant_id: tenantId,
+    competition_id: competitionId,
+    round: i + 1,
+    // is_open: i === 0 ? true : false, // se quiser abrir a primeira automaticamente
+  }));
+
+  // upsert para não duplicar se clicar “Gerar calendário” de novo
+  const { data: leagueRounds, error: lrError } = await supabase
+    .from('league_rounds')
+    .upsert(leagueRoundsPayload, {
+      onConflict: 'tenant_id,competition_id,round',
+    })
+    .select('id, round');
+
+  if (lrError) throw new Error(lrError.message);
+  if (!leagueRounds || leagueRounds.length === 0) {
+    throw new Error('Falha ao criar league_rounds');
+  }
+
+  // roundNumber -> league_round_id
+  const roundIdByNumber = new Map<number, string>();
+  for (const r of leagueRounds as Array<{ id: string; round: number }>) {
+    roundIdByNumber.set(r.round, r.id);
+  }
+
+  /**
+   * 2) Monta inserts em matches já com league_round_id
+   */
   type MatchInsert = {
     competition_id: string;
     championship_id: string;
     tenant_id: string;
+
     team_home: string;
     team_away: string;
+
     round: number;
     leg: number | null;
+
     status: 'scheduled';
+
     group_id: null;
     group_round_id: null;
     knockout_round_id: null;
+
+    league_round_id: string; // ✅ novo
   };
 
   const inserts: MatchInsert[] = [];
 
   // turno 1
-  for (let r = 0; r < rounds.length; r++) {
-    const pairs = rounds[r];
+  for (let r = 0; r < roundsPairs.length; r++) {
+    const pairs = roundsPairs[r];
     const roundNumber = r + 1;
+
+    const leagueRoundId = roundIdByNumber.get(roundNumber);
+    if (!leagueRoundId) throw new Error(`league_round_id não encontrado para round ${roundNumber}`);
 
     for (const p of pairs) {
       inserts.push({
@@ -109,17 +153,22 @@ export async function generateLeagueMatches({
         group_id: null,
         group_round_id: null,
         knockout_round_id: null,
+        league_round_id: leagueRoundId,
       });
     }
   }
 
   // turno 2 (inverte mando)
   if (idaVolta) {
-    const offset = rounds.length;
+    const offset = roundsPairs.length;
 
-    for (let r = 0; r < rounds.length; r++) {
-      const pairs = rounds[r];
+    for (let r = 0; r < roundsPairs.length; r++) {
+      const pairs = roundsPairs[r];
       const roundNumber = offset + r + 1;
+
+      const leagueRoundId = roundIdByNumber.get(roundNumber);
+      if (!leagueRoundId)
+        throw new Error(`league_round_id não encontrado para round ${roundNumber}`);
 
       for (const p of pairs) {
         inserts.push({
@@ -134,17 +183,22 @@ export async function generateLeagueMatches({
           group_id: null,
           group_round_id: null,
           knockout_round_id: null,
+          league_round_id: leagueRoundId,
         });
       }
     }
   }
 
-  // insere
+  /**
+   * 3) Insere matches
+   * (Opcional) você pode impedir duplicação removendo matches existentes antes
+   * ou usando uma constraint unique e upsert. Aqui mantive como insert simples.
+   */
   const { error } = await supabase.from('matches').insert(inserts);
   if (error) throw new Error(error.message);
 
   return {
-    rounds: idaVolta ? rounds.length * 2 : rounds.length,
+    rounds: totalRounds,
     matches: inserts.length,
   };
 }
