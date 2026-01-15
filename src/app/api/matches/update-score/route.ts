@@ -4,6 +4,7 @@ import { recalcStandingsFromGroup } from '@/lib/standings/updateStandingsFromMat
 import { tryAdvanceKnockout } from '@/lib/tryAdvanceKnockout';
 import { normalizeCompetitionSettings } from '@/lib/competitionSettings';
 import type { CompetitionSettingsData } from '@/@types/competition';
+import { recalcStandingsFromLeague } from '@/lib/standings/recalcStandingsFromLeague';
 
 type MatchPoints = { win: number; draw: number; loss: number };
 
@@ -107,7 +108,8 @@ export async function POST(req: Request) {
       team_home,
       team_away,
       score_home,
-      score_away
+      score_away,
+      league_round_id
     `,
     )
     .eq('id', match_id)
@@ -127,6 +129,7 @@ export async function POST(req: Request) {
       team_away: string;
       score_home: number | null;
       score_away: number | null;
+      league_round_id: string | null;
     }>();
 
   if (matchErr || !match) {
@@ -152,6 +155,21 @@ export async function POST(req: Request) {
 
     if (!round?.is_open && !isAdminOrOwner) {
       return NextResponse.json({ error: 'Rodada fechada para edição' }, { status: 403 });
+    }
+  }
+
+  /* -------------------------------------------------- */
+  /* 5️⃣b Verifica rodada aberta (liga)                 */
+  /* -------------------------------------------------- */
+  if (match.league_round_id) {
+    const { data: round } = await supabase
+      .from('league_rounds')
+      .select('is_open')
+      .eq('id', match.league_round_id)
+      .single<{ is_open: boolean }>();
+
+    if (!round?.is_open && !isAdminOrOwner) {
+      return NextResponse.json({ error: 'Rodada da liga fechada para edição' }, { status: 403 });
     }
   }
 
@@ -296,7 +314,16 @@ export async function POST(req: Request) {
       group_id: match.group_id,
       points: pts,
     });
+  } else if (match.league_round_id) {
+    // ✅ LIGA
+    await recalcStandingsFromLeague({
+      supabase,
+      competition_id: match.competition_id,
+      tenant_id: tenantId,
+      points: pts,
+    });
   } else {
+    // ✅ MATA-MATA (ou outros)
     if (settings) {
       await tryAdvanceKnockout({
         supabase,
