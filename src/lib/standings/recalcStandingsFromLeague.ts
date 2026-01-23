@@ -34,7 +34,7 @@ export async function recalcStandingsFromLeague({
   tenant_id: string;
   points: MatchPoints;
 }) {
-  // Times da competição (para garantir linha no standings mesmo com 0 jogos)
+  // 1) Times da competição
   const { data: cTeams, error: ctErr } = await supabase
     .from('competition_teams')
     .select('team_id')
@@ -45,7 +45,7 @@ export async function recalcStandingsFromLeague({
 
   const teamIds = (cTeams ?? []).map((t) => t.team_id).filter(Boolean);
 
-  // Partidas finalizadas com placar
+  // 2) Partidas finalizadas com placar
   const { data: matches, error: mErr } = await supabase
     .from('matches')
     .select('team_home, team_away, score_home, score_away, status')
@@ -53,10 +53,12 @@ export async function recalcStandingsFromLeague({
     .eq('competition_id', competition_id)
     .eq('status', 'finished')
     .not('score_home', 'is', null)
-    .not('score_away', 'is', null);
+    .not('score_away', 'is', null)
+    .neq('status', 'canceled');
 
   if (mErr) throw new Error(mErr.message);
 
+  // 3) Agregação
   const agg = new Map<string, StandingAgg>();
   for (const id of teamIds) agg.set(id, blank());
 
@@ -105,50 +107,19 @@ export async function recalcStandingsFromLeague({
     goal_diff: s.goals_scored - s.goals_against,
   }));
 
-  // 1) Atualiza linhas existentes (group_id null)
-  // Observação: a lib do supabase não faz bulk update com chaves diferentes facilmente,
-  // então fazemos 2 passos: buscar existentes e depois separar inserts.
-  const { data: existing, error: exErr } = await supabase
+  // ✅ 4) Zera standings "nogroup" e recria
+  const { error: delErr } = await supabase
     .from('standings')
-    .select('id, team_id')
+    .delete()
     .eq('tenant_id', tenant_id)
     .eq('competition_id', competition_id)
     .is('group_id', null);
 
-  if (exErr) throw new Error(exErr.message);
+  if (delErr) throw new Error(delErr.message);
 
-  const existingByTeam = new Map<string, string>();
-  for (const row of (existing ?? []) as Array<{ id: string; team_id: string }>) {
-    existingByTeam.set(row.team_id, row.id);
-  }
-
-  const toUpdate = payload.filter((p) => existingByTeam.has(p.team_id));
-  const toInsert = payload.filter((p) => !existingByTeam.has(p.team_id));
-
-  // 2) Updates (um a um, mas seguro e simples)
-  for (const row of toUpdate) {
-    const id = existingByTeam.get(row.team_id)!;
-
-    const { error: uErr } = await supabase
-      .from('standings')
-      .update({
-        points: row.points,
-        wins: row.wins,
-        draws: row.draws,
-        losses: row.losses,
-        goals_scored: row.goals_scored,
-        goals_against: row.goals_against,
-        goal_diff: row.goal_diff,
-      })
-      .eq('id', id)
-      .eq('tenant_id', tenant_id);
-
-    if (uErr) throw new Error(uErr.message);
-  }
-
-  // 3) Inserts (só os que não existem)
-  if (toInsert.length > 0) {
-    const { error: iErr } = await supabase.from('standings').insert(toInsert);
-    if (iErr) throw new Error(iErr.message);
+  // Insere novamente (uma linha por time)
+  if (payload.length > 0) {
+    const { error: insErr } = await supabase.from('standings').insert(payload);
+    if (insErr) throw new Error(insErr.message);
   }
 }

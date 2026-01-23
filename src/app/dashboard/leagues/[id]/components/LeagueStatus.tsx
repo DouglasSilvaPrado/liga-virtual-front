@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import GenerateLeagueCalendarButton from './GenerateLeagueCalendarButton';
+import GenerateKnockoutFromLeagueButton from './GenerateKnockoutFromLeagueButton';
 
 export default async function LeagueStatus({ competitionId }: { competitionId: string }) {
   const { supabase, tenantId } = await createServerSupabase();
@@ -23,7 +24,12 @@ export default async function LeagueStatus({ competitionId }: { competitionId: s
     isAdminOrOwner = member?.role === 'admin' || member?.role === 'owner';
   }
 
-  const [{ count: teams }, { count: matches }, { count: finishedMatches }] = await Promise.all([
+  const [
+    { count: teams },
+    { count: matches },
+    { count: finishedMatches },
+    { count: knockoutMatches },
+  ] = await Promise.all([
     supabase
       .from('competition_teams')
       .select('*', { count: 'exact', head: true })
@@ -42,11 +48,19 @@ export default async function LeagueStatus({ competitionId }: { competitionId: s
       .eq('competition_id', competitionId)
       .eq('tenant_id', tenantId)
       .eq('status', 'finished'),
+
+    supabase
+      .from('matches')
+      .select('*', { count: 'exact', head: true })
+      .eq('competition_id', competitionId)
+      .eq('tenant_id', tenantId)
+      .not('knockout_round_id', 'is', null),
   ]);
 
   const teamsCount = teams ?? 0;
   const matchesCount = matches ?? 0;
   const finishedCount = finishedMatches ?? 0;
+  const knockoutCount = knockoutMatches ?? 0;
 
   const label =
     teamsCount === 0
@@ -57,7 +71,13 @@ export default async function LeagueStatus({ competitionId }: { competitionId: s
           ? 'Todas partidas finalizadas'
           : 'Em andamento';
 
-  const canGenerate = isAdminOrOwner && teamsCount >= 2 && matchesCount === 0;
+  const canGenerateCalendar = isAdminOrOwner && teamsCount >= 2 && matchesCount === 0;
+
+  const canGenerateKnockout =
+    isAdminOrOwner &&
+    matchesCount > 0 &&
+    finishedCount === matchesCount &&
+    knockoutCount === 0;
 
   return (
     <div className="flex items-center justify-between rounded border bg-muted p-3 text-sm">
@@ -65,11 +85,21 @@ export default async function LeagueStatus({ competitionId }: { competitionId: s
         <strong>Status:</strong> {label}
         <span className="ml-2 text-xs text-muted-foreground">
           (times: {teamsCount} • jogos: {matchesCount} • finalizados: {finishedCount})
+          {knockoutCount > 0 && <span className="ml-2">(mata-mata: {knockoutCount} jogos)</span>}
         </span>
       </div>
 
       {isAdminOrOwner && (
-        <GenerateLeagueCalendarButton competitionId={competitionId} disabled={!canGenerate} />
+        <div className="flex gap-2">
+          {matchesCount === 0 ? (
+            <GenerateLeagueCalendarButton competitionId={competitionId} disabled={!canGenerateCalendar} />
+          ) : finishedCount === matchesCount ? (
+            <GenerateKnockoutFromLeagueButton
+              competitionId={competitionId}
+              disabled={!canGenerateKnockout}
+            />
+          ) : null}
+        </div>
       )}
     </div>
   );
