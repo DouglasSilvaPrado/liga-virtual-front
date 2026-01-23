@@ -109,7 +109,7 @@ export default async function HirePlayerPage({
       </div>
 
       <div className="rounded-lg border bg-white p-4 shadow-sm">
-        <HirePlayerFilters />
+        <HirePlayerFilters value={sp} />
       </div>
 
       <div className="flex items-center justify-between text-sm">
