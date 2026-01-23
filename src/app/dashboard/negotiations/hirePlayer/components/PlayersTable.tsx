@@ -19,7 +19,7 @@ export default function PlayersTable({ players }: { players: PlayerRow[] }) {
             <tr key={p.id} className="border-b last:border-b-0">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
-                  {p.club_img ? <img src={p.club_img} alt="" className="h-6 w-6" /> : null}
+                  {p.player_img ? <img src={p.player_img} alt="" className="h-6 w-6" /> : null}
                   <div>
                     <div className="font-medium">{p.name ?? '—'}</div>
                     <div className="text-xs text-muted-foreground">ID: {p.id}</div>
@@ -37,7 +37,7 @@ export default function PlayersTable({ players }: { players: PlayerRow[] }) {
               </td>
 
               <td className="px-4 py-3">{p.position ?? '—'}</td>
-              <td className="px-4 py-3 text-muted-foreground">—</td>
+              <td className="px-4 py-3 text-muted-foreground">{p.club_img ? <img src={p.club_img} alt="" className="h-6 w-6" /> : null}</td>
 
               <td className="px-4 py-3">{p.price ?? '—'}</td>
 

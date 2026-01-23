@@ -19,6 +19,7 @@ export interface PlayerRow {
   rating: number | null;
   position: string | null;
   price: string | null;
+  player_img: string | null;
   nation_img: string | null;
   club_img: string | null;
 }
@@ -71,7 +72,7 @@ export default async function HirePlayerPage({
 
   let query = supabase
     .from('players')
-    .select('id,name,rating,position,price,nation_img,club_img', { count: 'exact' });
+    .select('id,name,rating,position,price,player_img,nation_img,club_img', { count: 'exact' });
 
   // filtros
   if (q) query = query.ilike('name', `%${q}%`);
