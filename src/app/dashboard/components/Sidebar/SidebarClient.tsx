@@ -16,6 +16,10 @@ const cupMenu = [{ href: '/dashboard/cups', label: 'Copas' }];
 
 const leagueMenu = [{ href: '/dashboard/leagues', label: 'Ligas' }];
 
+const negotiationsMenu = [
+  { href: '/dashboard/negotiations/hirePlayer', label: 'Contratar Jogador' },
+];
+
 export default function SidebarClient({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const autoOpen = pathname.startsWith('/dashboard/management');
@@ -23,6 +27,7 @@ export default function SidebarClient({ onNavigate }: { onNavigate?: () => void 
   const [isOpen, setIsOpen] = useState(autoOpen);
   const [isOpenCup, setIsOpenCup] = useState(autoOpenCup);
   const [isLeagueOpen, setIsLeagueOpen] = useState(false);
+  const [isNegotiationsOpen, setIsNegotiationsOpen] = useState(false);
 
   useEffect(() => {
     setIsOpen(autoOpen);
@@ -117,6 +122,36 @@ export default function SidebarClient({ onNavigate }: { onNavigate?: () => void 
           {isLeagueOpen && (
             <div className="mt-2 ml-4 space-y-1">
               {leagueMenu.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={handleNavigate}
+                  className={cn(
+                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    pathname === item.href && 'bg-gray-200 font-medium',
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )}
+          
+        </div>
+
+        {/* Negociações */}
+        <div>
+          <button
+            onClick={() => setIsNegotiationsOpen(!isNegotiationsOpen)}
+            className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
+          >
+            <span>Negociações</span>
+            <span className="text-sm">{isNegotiationsOpen ? '▲' : '▼'}</span>
+          </button>
+
+          {isNegotiationsOpen && (
+            <div className="mt-2 ml-4 space-y-1">
+              {negotiationsMenu.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
