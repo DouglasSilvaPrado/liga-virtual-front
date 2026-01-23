@@ -322,6 +322,98 @@ export async function POST(req: Request) {
       tenant_id: tenantId,
       points: pts,
     });
+
+    // ✅ Se for DIVISÃO e acabou tudo (somente jogos da liga), define campeão e finaliza competição
+    const { data: compInfo, error: compInfoErr } = await supabase
+      .from('competitions')
+      .select('type, status')
+      .eq('id', match.competition_id)
+      .eq('tenant_id', tenantId)
+      .single<{ type: string; status: string }>();
+
+    if (compInfoErr) {
+      console.error('Erro lendo competitions:', compInfoErr);
+      return NextResponse.json({ error: 'Erro lendo competição' }, { status: 500 });
+    }
+
+    if (compInfo?.type === 'divisao') {
+      const [{ count: totalLeague, error: totalErr }, { count: finishedLeague, error: finErr }] =
+        await Promise.all([
+          supabase
+            .from('matches')
+            .select('id', { count: 'exact', head: true })
+            .eq('competition_id', match.competition_id)
+            .eq('tenant_id', tenantId)
+            .is('knockout_round_id', null)
+            .is('group_round_id', null)
+            .is('group_id', null),
+
+          supabase
+            .from('matches')
+            .select('id', { count: 'exact', head: true })
+            .eq('competition_id', match.competition_id)
+            .eq('tenant_id', tenantId)
+            .is('knockout_round_id', null)
+            .is('group_round_id', null)
+            .is('group_id', null)
+            .eq('status', 'finished'),
+        ]);
+
+      if (totalErr || finErr) {
+        console.error('Erro contando matches da liga:', { totalErr, finErr });
+        return NextResponse.json({ error: 'Erro contando jogos da liga' }, { status: 500 });
+      }
+
+      console.log('Finalização divisão - contagem:', { totalLeague, finishedLeague });
+
+      if ((totalLeague ?? 0) > 0 && (finishedLeague ?? 0) === (totalLeague ?? 0)) {
+        const { data: top, error: topErr } = await supabase
+          .from('standings')
+          .select('team_id, points, goal_diff, goals_scored')
+          .eq('competition_id', match.competition_id)
+          .eq('tenant_id', tenantId)
+          .is('group_id', null)
+          .order('points', { ascending: false })
+          .order('goal_diff', { ascending: false })
+          .order('goals_scored', { ascending: false })
+          .limit(1)
+          .maybeSingle<{
+            team_id: string;
+            points: number;
+            goal_diff: number;
+            goals_scored: number;
+          }>();
+
+        if (topErr) {
+          console.error('Erro pegando líder standings:', topErr);
+          return NextResponse.json(
+            { error: 'Erro pegando líder da classificação' },
+            { status: 500 },
+          );
+        }
+
+        console.log('Líder detectado:', top);
+
+        if (top?.team_id) {
+          const { error: updErr } = await supabase
+            .from('competitions')
+            .update({
+              champion_team_id: top.team_id,
+              status: 'finished',
+            })
+            .eq('id', match.competition_id)
+            .eq('tenant_id', tenantId);
+
+          if (updErr) {
+            console.error('Erro atualizando campeão/status na competitions:', updErr);
+            return NextResponse.json(
+              { error: `Não foi possível finalizar competição: ${updErr.message}` },
+              { status: 500 },
+            );
+          }
+        }
+      }
+    }
   } else {
     // ✅ MATA-MATA (ou outros)
     if (settings) {

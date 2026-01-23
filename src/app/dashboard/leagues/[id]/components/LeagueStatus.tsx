@@ -3,7 +3,13 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import GenerateLeagueCalendarButton from './GenerateLeagueCalendarButton';
 import GenerateKnockoutFromLeagueButton from './GenerateKnockoutFromLeagueButton';
 
-export default async function LeagueStatus({ competitionId }: { competitionId: string }) {
+export default async function LeagueStatus({
+  competitionId,
+  leagueType,
+}: {
+  competitionId: string;
+  leagueType: string;
+}) {
   const { supabase, tenantId } = await createServerSupabase();
   const supabaseAuth = await createSupabaseServerClient();
 
@@ -74,6 +80,7 @@ export default async function LeagueStatus({ competitionId }: { competitionId: s
   const canGenerateCalendar = isAdminOrOwner && teamsCount >= 2 && matchesCount === 0;
 
   const canGenerateKnockout =
+    leagueType === 'divisao_mata' &&
     isAdminOrOwner &&
     matchesCount > 0 &&
     finishedCount === matchesCount &&
@@ -92,8 +99,11 @@ export default async function LeagueStatus({ competitionId }: { competitionId: s
       {isAdminOrOwner && (
         <div className="flex gap-2">
           {matchesCount === 0 ? (
-            <GenerateLeagueCalendarButton competitionId={competitionId} disabled={!canGenerateCalendar} />
-          ) : finishedCount === matchesCount ? (
+            <GenerateLeagueCalendarButton
+              competitionId={competitionId}
+              disabled={!canGenerateCalendar}
+            />
+          ) : finishedCount === matchesCount && leagueType === 'divisao_mata' ? (
             <GenerateKnockoutFromLeagueButton
               competitionId={competitionId}
               disabled={!canGenerateKnockout}

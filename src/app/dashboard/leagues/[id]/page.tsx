@@ -12,20 +12,24 @@ export default async function LeagueDetailsPage({ params }: { params: Promise<{ 
 
   const { data: league } = await supabase
     .from('competitions_with_settings')
-    .select(
-      `
+    .select(`
       id,
       name,
       type,
       status,
       champion_team_id,
+      champion_team:teams!competitions_champion_team_id_fkey ( name ),
       settings,
       championships ( name )
-    `,
-    )
+    `)
     .eq('id', id)
     .eq('tenant_id', tenantId)
-    .single<CompetitionWithSettings & { status: 'active' | 'finished' }>();
+    .single<
+    CompetitionWithSettings & {
+      status: 'active' | 'finished';
+      champion_team?: { name: string } | null;
+    }
+  >();
 
   if (!league) {
     return <div className="p-6">Liga não encontrada</div>;
@@ -49,7 +53,7 @@ export default async function LeagueDetailsPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-6 p-6">
       <LeagueHeader league={league} />
-      <LeagueStatus competitionId={league.id} />
+      <LeagueStatus competitionId={league.id} leagueType={league.type} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
