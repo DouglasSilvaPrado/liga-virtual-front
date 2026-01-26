@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { PlayerRow } from '../page';
 import { hirePlayerAction } from '../actions';
+import PlayerDetailsModal from './PlayerDetailsModal';
 
 type Props = {
   players: PlayerRow[];
@@ -33,26 +34,41 @@ function money(n: number) {
 }
 
 export default function PlayersTable({ players, returnTo, walletBalance }: Props) {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<PlayerRow | null>(null);
+  // modal contratação
+  const [openHire, setOpenHire] = useState(false);
+  const [selectedHire, setSelectedHire] = useState<PlayerRow | null>(null);
+
+  // modal detalhes
+  const [openDetails, setOpenDetails] = useState(false);
+  const [detailsId, setDetailsId] = useState<number | null>(null);
 
   const selectedPrice = useMemo(() => {
-    if (!selected) return 0;
-    return parsePriceToNumber(selected.price);
-  }, [selected]);
+    if (!selectedHire) return 0;
+    return parsePriceToNumber(selectedHire.price);
+  }, [selectedHire]);
 
   const before = walletBalance ?? 0;
   const after = Math.max(0, before - selectedPrice);
-  const diff = after - before; // negativo quando compra
+  const diff = after - before;
 
-  function openModal(p: PlayerRow) {
-    setSelected(p);
-    setOpen(true);
+  function openHireModal(p: PlayerRow) {
+    setSelectedHire(p);
+    setOpenHire(true);
   }
 
-  function closeModal() {
-    setOpen(false);
-    setSelected(null);
+  function closeHireModal() {
+    setOpenHire(false);
+    setSelectedHire(null);
+  }
+
+  function openDetailsModal(playerId: number) {
+    setDetailsId(playerId);
+    setOpenDetails(true);
+  }
+
+  function closeDetailsModal() {
+    setOpenDetails(false);
+    setDetailsId(null);
   }
 
   return (
@@ -71,12 +87,28 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
 
           <tbody>
             {players.map((p) => (
-              <tr key={p.id} className="border-b last:border-b-0">
+              <tr
+                key={p.id}
+                className="border-b last:border-b-0 cursor-pointer hover:bg-gray-50"
+                onClick={() => openDetailsModal(p.id)}
+                title="Ver detalhes"
+              >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    {p.player_img ? <img src={p.player_img} alt="" className="h-6 w-6" /> : null}
+                    {p.player_img ? <img src={p.player_img} alt="" className="h-7 w-7" /> : null}
+
                     <div>
-                      <div className="font-medium">{p.name ?? '—'}</div>
+                      <button
+                        type="button"
+                        className="cursor-pointer text-left font-medium hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDetailsModal(p.id);
+                        }}
+                      >
+                        {p.name ?? '—'}
+                      </button>
+
                       <div className="text-xs text-muted-foreground">ID: {p.id}</div>
                     </div>
                   </div>
@@ -86,7 +118,9 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
 
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    {p.nation_img ? <img src={p.nation_img} alt="" className="h-4 w-6 object-contain" /> : null}
+                    {p.nation_img ? (
+                      <img src={p.nation_img} alt="" className="h-4 w-6 object-contain" />
+                    ) : null}
                     <span className="text-muted-foreground">{p.nation_img ? '' : '—'}</span>
                   </div>
                 </td>
@@ -97,13 +131,15 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
                   {p.current_team_name ?? 'Sem contrato'}
                 </td>
 
-
                 <td className="px-4 py-3">{p.price ?? '—'}</td>
 
                 <td className="px-4 py-3 text-right">
                   <button
                     type="button"
-                    onClick={() => openModal(p)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openHireModal(p);
+                    }}
                     className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50"
                   >
                     Contratar
@@ -123,15 +159,18 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
         </table>
       </div>
 
-      {/* MODAL */}
-      {open && selected && (
+      {/* MODAL DETALHES (separado) */}
+      <PlayerDetailsModal open={openDetails} playerId={detailsId} onClose={closeDetailsModal} />
+
+      {/* MODAL CONTRATAÇÃO */}
+      {openHire && selectedHire && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
             <div className="flex items-center justify-between border-b p-4">
               <div className="font-semibold">Confirmar contratação</div>
               <button
                 type="button"
-                onClick={closeModal}
+                onClick={closeHireModal}
                 className="cursor-pointer rounded px-2 py-1 text-sm hover:bg-gray-100"
               >
                 ✕
@@ -140,13 +179,14 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
 
             <div className="space-y-4 p-4">
               <div className="flex items-center gap-3">
-                {selected.player_img ? (
-                  <img src={selected.player_img} alt="" className="h-10 w-10" />
+                {selectedHire.player_img ? (
+                  <img src={selectedHire.player_img} alt="" className="h-10 w-10" />
                 ) : null}
                 <div>
-                  <div className="font-medium">{selected.name ?? '—'}</div>
+                  <div className="font-medium">{selectedHire.name ?? '—'}</div>
                   <div className="text-xs text-muted-foreground">
-                    {selected.position ?? '—'} • Overall {selected.rating ?? '—'} • ID {selected.id}
+                    {selectedHire.position ?? '—'} • Overall {selectedHire.rating ?? '—'} • ID{' '}
+                    {selectedHire.id}
                   </div>
                 </div>
               </div>
@@ -187,14 +227,20 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
             <div className="flex items-center justify-end gap-2 border-t p-4">
               <button
                 type="button"
-                onClick={closeModal}
+                onClick={closeHireModal}
                 className="cursor-pointer rounded border px-4 py-2 text-sm hover:bg-gray-50"
               >
                 Cancelar
               </button>
 
-              <form action={hirePlayerAction}>
-                <input type="hidden" name="player_id" value={String(selected.id)} />
+              <form
+                action={hirePlayerAction}
+                onSubmit={() => {
+                  // fecha o modal assim que enviar (o redirect virá na sequência)
+                  closeHireModal();
+                }}
+              >
+                <input type="hidden" name="player_id" value={String(selectedHire.id)} />
                 <input type="hidden" name="return_to" value={returnTo} />
 
                 <button
