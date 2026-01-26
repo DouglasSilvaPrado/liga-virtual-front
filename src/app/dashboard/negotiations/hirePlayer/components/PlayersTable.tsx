@@ -1,6 +1,14 @@
 import type { PlayerRow } from '../page';
 
-export default function PlayersTable({ players }: { players: PlayerRow[] }) {
+export default function PlayersTable({
+  players,
+  hireAction,
+  returnTo,
+}: {
+  players: PlayerRow[];
+  hireAction: (formData: FormData) => Promise<void>;
+  returnTo: string;
+}) {
   return (
     <div className="overflow-x-auto rounded-lg border bg-white">
       <table className="w-full border-collapse text-sm">
@@ -37,12 +45,19 @@ export default function PlayersTable({ players }: { players: PlayerRow[] }) {
               </td>
 
               <td className="px-4 py-3">{p.position ?? '—'}</td>
-              <td className="px-4 py-3 text-muted-foreground">{p.club_img ? <img src={p.club_img} alt="" className="h-6 w-6" /> : null}</td>
+
+              <td className="px-4 py-3 text-muted-foreground">
+                {p.club_img ? <img src={p.club_img} alt="" className="h-6 w-6" /> : '—'}
+              </td>
 
               <td className="px-4 py-3">{p.price ?? '—'}</td>
 
               <td className="px-4 py-3 text-right">
-                <button className="rounded border px-3 py-1 text-sm">Contratar</button>
+                <form action={hireAction}>
+                  <input type="hidden" name="player_id" value={String(p.id)} />
+                  <input type="hidden" name="return_to" value={returnTo} />
+                  <button className="rounded border px-3 py-1 text-sm">Contratar</button>
+                </form>
               </td>
             </tr>
           ))}
