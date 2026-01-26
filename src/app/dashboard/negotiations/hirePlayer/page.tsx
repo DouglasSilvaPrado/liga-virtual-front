@@ -1,8 +1,6 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import HirePlayerFilters from './components/HirePlayerFilters';
 import PlayersTable from './components/PlayersTable';
-import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
 
 export type HireSearchParams = {
   q?: string;
@@ -26,7 +24,18 @@ export interface PlayerRow {
   player_img: string | null;
   nation_img: string | null;
   club_img: string | null;
+
+  // ✅ time que contratou (no tenant/campeonato atual); null => Sem contrato
+  current_team_name: string | null;
 }
+
+type TeamPlayerJoinRow = {
+  player_id: number | null;
+  teams: { name: string | null } | null;
+};
+
+type WalletRow = { id: string; balance: number | string | null };
+type TeamRow = { id: string; championship_id: string | null };
 
 function safeInt(v: string | undefined, fallback: number) {
   const n = Number(v);
@@ -46,35 +55,31 @@ function buildQueryString(sp: HireSearchParams, override: Partial<HireSearchPara
   return params.toString();
 }
 
-/**
- * Adds/overwrites one search param in a (possibly relative) path+query string safely.
- * Example: withParam('/a?x=1', 'err', 'no_team') => '/a?x=1&err=no_team'
- */
-function withParam(url: string, key: string, value: string) {
-  const u = new URL(url, 'http://local'); // base fake só pra parsear
-  u.searchParams.set(key, value);
-  return u.pathname + u.search;
+function normalizeBalance(v: WalletRow['balance']): number {
+  const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : 0;
+  return Number.isFinite(n) ? n : 0;
 }
 
-function parsePriceToNumber(priceText: string | null | undefined): number {
-  if (!priceText) return 0;
+function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: string } | null {
+  if (sp.ok === 'hired') return { type: 'success', text: 'Jogador contratado com sucesso!' };
+  if (!sp.err) return null;
 
-  const raw = priceText.toString().trim().toUpperCase();
+  const map: Record<string, string> = {
+    player_invalid: 'Jogador inválido.',
+    not_logged: 'Você precisa estar logado.',
+    no_tenant_member: 'Seu usuário não pertence a este tenant.',
+    no_team: 'Você ainda não tem time criado.',
+    no_championship: 'Seu time não está vinculado a um campeonato.',
+    player_not_found: 'Jogador não encontrado.',
+    invalid_price: 'Preço do jogador inválido.',
+    wallet_read: 'Erro ao ler sua carteira.',
+    wallet_create: 'Erro ao criar sua carteira.',
+    insufficient_funds: 'Saldo insuficiente.',
+    already_hired: 'Esse jogador já está no seu time.',
+    wallet_debit: 'Erro ao debitar a carteira.',
+  };
 
-  // tenta lidar com "1.2M", "850K", "1000000", "R$ 1.000.000"
-  const cleaned = raw
-    .replaceAll('R$', '')
-    .replaceAll(' ', '')
-    .replaceAll('.', '')
-    .replaceAll(',', '.');
-
-  const mult = cleaned.endsWith('M') ? 1_000_000 : cleaned.endsWith('K') ? 1_000 : 1;
-  const numeric = cleaned.replace(/[MK]$/g, '');
-
-  const n = Number(numeric);
-  if (!Number.isFinite(n)) return 0;
-
-  return Math.round(n * mult);
+  return { type: 'error', text: map[sp.err] ?? `Erro: ${sp.err}` };
 }
 
 export default async function HirePlayerPage({
@@ -100,161 +105,49 @@ export default async function HirePlayerPage({
 
   const { supabase, tenantId } = await createServerSupabase();
 
-  // ✅ URL de retorno ABSOLUTA (path + query). Nunca use somente "?..."
+  // returnTo absoluto (pra action)
   const basePath = '/dashboard/negotiations/hirePlayer';
-  const qs = buildQueryString(sp);
+  const qs = buildQueryString(sp, { ok: '', err: '' });
   const returnTo = qs ? `${basePath}?${qs}` : basePath;
 
-  // ✅ server action
-  async function hirePlayerAction(formData: FormData) {
-    'use server';
+  // -------------------- Descobrir contexto do usuário (time/campeonato e saldo) --------------------
+  let walletBalance: number | null = null;
+  let activeChampionshipId: string | null = null;
 
-    const playerId = Number(formData.get('player_id'));
-    const returnToRaw = String(formData.get('return_to') || basePath);
-    const returnTo = returnToRaw.startsWith('/') ? returnToRaw : basePath; // sanity
+  const { data: userRes } = await supabase.auth.getUser();
+  const userId = userRes?.user?.id ?? null;
 
-    if (!Number.isFinite(playerId) || playerId <= 0) {
-      redirect(withParam(returnTo, 'err', 'player_invalid'));
-    }
-
-    const { supabase, tenantId } = await createServerSupabase();
-
-    // user
-    const { data: userRes, error: userErr } = await supabase.auth.getUser();
-    const userId = userRes?.user?.id;
-
-    if (userErr || !userId) {
-      redirect(withParam(returnTo, 'err', 'not_logged'));
-    }
-
-    // tenant_member
-    const { data: tm, error: tmErr } = await supabase
+  if (userId) {
+    const { data: tm } = await supabase
       .from('tenant_members')
       .select('id')
       .eq('tenant_id', tenantId)
       .eq('user_id', userId)
-      .maybeSingle();
+      .maybeSingle<{ id: string }>();
 
-    if (tmErr || !tm?.id) {
-      redirect(withParam(returnTo, 'err', 'no_tenant_member'));
-    }
+    if (tm?.id) {
+      const { data: team } = await supabase
+        .from('teams')
+        .select('id, championship_id')
+        .eq('tenant_id', tenantId)
+        .eq('tenant_member_id', tm.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<TeamRow>();
 
-    // team do usuário (mais recente)
-    const { data: team, error: teamErr } = await supabase
-      .from('teams')
-      .select('id, championship_id')
-      .eq('tenant_id', tenantId)
-      .eq('tenant_member_id', tm.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      activeChampionshipId = team?.championship_id ?? null;
 
-    if (teamErr || !team?.id) {
-      redirect(withParam(returnTo, 'err', 'no_team'));
-    }
-    if (!team.championship_id) {
-      redirect(withParam(returnTo, 'err', 'no_championship'));
-    }
+      if (activeChampionshipId) {
+        const { data: wallet } = await supabase
+          .from('championship_wallet')
+          .select('id, balance')
+          .eq('tenant_member_id', tm.id)
+          .eq('championship_id', activeChampionshipId)
+          .maybeSingle<WalletRow>();
 
-    // player
-    const { data: player, error: playerErr } = await supabase
-      .from('players')
-      .select('id, position, price, price_value')
-      .eq('id', playerId)
-      .single();
-
-    if (playerErr || !player?.id) {
-      redirect(withParam(returnTo, 'err', 'player_not_found'));
-    }
-
-    const price =
-      (player as any).price_value != null
-        ? Number((player as any).price_value)
-        : parsePriceToNumber((player as any).price);
-
-    if (!Number.isFinite(price) || price < 0) {
-      redirect(withParam(returnTo, 'err', 'invalid_price'));
-    }
-
-    // wallet (cria se não existir)
-    const { data: walletFound, error: walletErr } = await supabase
-      .from('championship_wallet')
-      .select('id, balance')
-      .eq('tenant_member_id', tm.id)
-      .eq('championship_id', team.championship_id)
-      .maybeSingle();
-
-    if (walletErr) {
-      redirect(withParam(returnTo, 'err', 'wallet_read'));
-    }
-
-    let walletId = walletFound?.id ?? null;
-    let walletBalance = Number(walletFound?.balance ?? 0);
-
-    if (!walletId) {
-      const { data: createdWallet, error: createWalletErr } = await supabase
-        .from('championship_wallet')
-        .insert({
-          tenant_member_id: tm.id,
-          championship_id: team.championship_id,
-          balance: 0,
-        })
-        .select('id, balance')
-        .single();
-
-      if (createWalletErr || !createdWallet?.id) {
-        redirect(withParam(returnTo, 'err', 'wallet_create'));
+        if (wallet) walletBalance = normalizeBalance(wallet.balance);
       }
-
-      walletId = createdWallet.id;
-      walletBalance = Number(createdWallet.balance ?? 0);
     }
-
-    // saldo suficiente?
-    if (walletBalance < price) {
-      redirect(withParam(returnTo, 'err', 'insufficient_funds'));
-    }
-
-    // insere jogador no time (evita duplicado pelo unique index que você deve criar)
-    const { error: tpErr } = await supabase.from('team_players').insert({
-      team_id: team.id,
-      player_id: player.id,
-      position: (player as any).position,
-      championship_id: team.championship_id,
-      tenant_id: tenantId,
-    });
-
-    if (tpErr) {
-      redirect(withParam(returnTo, 'err', 'already_hired'));
-    }
-
-    // debita wallet com proteção: só atualiza se balance >= price
-    const { data: updatedWallet, error: updErr } = await supabase
-      .from('championship_wallet')
-      .update({ balance: walletBalance - price })
-      .eq('id', walletId)
-      .gte('balance', price)
-      .select('balance')
-      .maybeSingle();
-
-    if (updErr || !updatedWallet) {
-      redirect(withParam(returnTo, 'err', 'wallet_debit'));
-    }
-
-    // registra transação (opcional, se a tabela existir)
-    await supabase.from('wallet_transactions').insert({
-      tenant_id: tenantId,
-      championship_id: team.championship_id,
-      tenant_member_id: tm.id,
-      team_id: team.id,
-      player_id: player.id,
-      amount: price,
-      kind: 'hire_player',
-      metadata: { source: 'hire_player_page' },
-    });
-
-    revalidatePath(basePath);
-    redirect(withParam(returnTo, 'ok', 'hired'));
   }
 
   // -------------------- LISTAGEM --------------------
@@ -262,37 +155,72 @@ export default async function HirePlayerPage({
     .from('players')
     .select('id,name,rating,position,price,player_img,nation_img,club_img', { count: 'exact' });
 
-  // filtros
   if (q) query = query.ilike('name', `%${q}%`);
   if (pos) query = query.eq('position', pos);
   if (Number.isFinite(min)) query = query.gte('rating', min);
   if (Number.isFinite(max)) query = query.lte('rating', max);
 
-  // ordenação
   if (sort === 'name') {
     query = query.order('name', { ascending: dir === 'asc', nullsFirst: true });
   } else {
     query = query.order('rating', { ascending: dir === 'asc', nullsFirst: false });
   }
 
-  // paginação
   query = query.range(from, to);
 
   const { data, count, error } = await query;
+  if (error) return <div className="p-6">Erro ao carregar jogadores</div>;
 
-  if (error) {
-    return <div className="p-6">Erro ao carregar jogadores</div>;
-  }
-
-  const players = (data ?? []) as PlayerRow[];
+  const playersBase = (data ?? []) as Omit<PlayerRow, 'current_team_name'>[];
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / size));
+  const feedback = feedbackText(sp);
+
+  // -------------------- Resolver "Time" (quem contratou) --------------------
+  let players: PlayerRow[] = playersBase.map((p) => ({ ...p, current_team_name: null }));
+
+  if (activeChampionshipId && playersBase.length > 0) {
+    const ids = playersBase.map((p) => p.id);
+
+    const { data: tpRows } = await supabase
+      .from('team_players')
+      .select('player_id, teams(name)')
+      .eq('tenant_id', tenantId)
+      .eq('championship_id', activeChampionshipId)
+      .in('player_id', ids);
+
+    const map = new Map<number, string>();
+
+    (tpRows as TeamPlayerJoinRow[] | null)?.forEach((r) => {
+      if (r.player_id == null) return;
+      const teamName = r.teams?.name ?? null;
+      if (!teamName) return;
+      map.set(r.player_id, teamName);
+    });
+
+    players = playersBase.map((p) => ({
+      ...p,
+      current_team_name: map.get(p.id) ?? null,
+    }));
+  }
 
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Contratar Jogadores</h1>
       </div>
+
+      {feedback && (
+        <div
+          className={`rounded border p-3 text-sm ${
+            feedback.type === 'error'
+              ? 'border-red-300 bg-red-50 text-red-700'
+              : 'border-green-300 bg-green-50 text-green-700'
+          }`}
+        >
+          {feedback.text}
+        </div>
+      )}
 
       <div className="rounded-lg border bg-white p-4 shadow-sm">
         <HirePlayerFilters value={sp} />
@@ -320,7 +248,7 @@ export default async function HirePlayerPage({
         </div>
       </div>
 
-      <PlayersTable players={players} hireAction={hirePlayerAction} returnTo={returnTo} />
+      <PlayersTable players={players} returnTo={returnTo} walletBalance={walletBalance} />
     </div>
   );
 }

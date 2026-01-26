@@ -1,76 +1,213 @@
+'use client';
+
+import { useMemo, useState } from 'react';
 import type { PlayerRow } from '../page';
+import { hirePlayerAction } from '../actions';
 
-export default function PlayersTable({
-  players,
-  hireAction,
-  returnTo,
-}: {
+type Props = {
   players: PlayerRow[];
-  hireAction: (formData: FormData) => Promise<void>;
   returnTo: string;
-}) {
-  return (
-    <div className="overflow-x-auto rounded-lg border bg-white">
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b">
-            {['Jogador', 'Overall', 'Nacionalidade', 'Posição', 'Time', 'Valor', ''].map((h) => (
-              <th key={h} className="px-4 py-3 text-left font-semibold">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
+  walletBalance: number | null;
+};
 
-        <tbody>
-          {players.map((p) => (
-            <tr key={p.id} className="border-b last:border-b-0">
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  {p.player_img ? <img src={p.player_img} alt="" className="h-6 w-6" /> : null}
-                  <div>
-                    <div className="font-medium">{p.name ?? '—'}</div>
-                    <div className="text-xs text-muted-foreground">ID: {p.id}</div>
+function parsePriceToNumber(priceText: string | null | undefined): number {
+  if (!priceText) return 0;
+
+  const raw = priceText.toString().trim().toUpperCase();
+  const cleaned = raw
+    .replaceAll('R$', '')
+    .replaceAll(' ', '')
+    .replaceAll('.', '')
+    .replaceAll(',', '.');
+
+  const mult = cleaned.endsWith('M') ? 1_000_000 : cleaned.endsWith('K') ? 1_000 : 1;
+  const numeric = cleaned.replace(/[MK]$/g, '');
+
+  const n = Number(numeric);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * mult);
+}
+
+function money(n: number) {
+  return n.toLocaleString('pt-BR');
+}
+
+export default function PlayersTable({ players, returnTo, walletBalance }: Props) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<PlayerRow | null>(null);
+
+  const selectedPrice = useMemo(() => {
+    if (!selected) return 0;
+    return parsePriceToNumber(selected.price);
+  }, [selected]);
+
+  const before = walletBalance ?? 0;
+  const after = Math.max(0, before - selectedPrice);
+  const diff = after - before; // negativo quando compra
+
+  function openModal(p: PlayerRow) {
+    setSelected(p);
+    setOpen(true);
+  }
+
+  function closeModal() {
+    setOpen(false);
+    setSelected(null);
+  }
+
+  return (
+    <>
+      <div className="overflow-x-auto rounded-lg border bg-white">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b">
+              {['Jogador', 'Overall', 'Nacionalidade', 'Posição', 'Time', 'Valor', ''].map((h) => (
+                <th key={h} className="px-4 py-3 text-left font-semibold">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {players.map((p) => (
+              <tr key={p.id} className="border-b last:border-b-0">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    {p.player_img ? <img src={p.player_img} alt="" className="h-6 w-6" /> : null}
+                    <div>
+                      <div className="font-medium">{p.name ?? '—'}</div>
+                      <div className="text-xs text-muted-foreground">ID: {p.id}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <td className="px-4 py-3">{p.rating ?? '—'}</td>
+
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    {p.nation_img ? <img src={p.nation_img} alt="" className="h-4 w-6 object-contain" /> : null}
+                    <span className="text-muted-foreground">{p.nation_img ? '' : '—'}</span>
+                  </div>
+                </td>
+
+                <td className="px-4 py-3">{p.position ?? '—'}</td>
+
+                <td className="px-4 py-3 text-muted-foreground">
+                  {p.current_team_name ?? 'Sem contrato'}
+                </td>
+
+
+                <td className="px-4 py-3">{p.price ?? '—'}</td>
+
+                <td className="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => openModal(p)}
+                    className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50"
+                  >
+                    Contratar
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {players.length === 0 ? (
+              <tr>
+                <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
+                  Nenhum jogador encontrado.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      {/* MODAL */}
+      {open && selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
+            <div className="flex items-center justify-between border-b p-4">
+              <div className="font-semibold">Confirmar contratação</div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="cursor-pointer rounded px-2 py-1 text-sm hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 p-4">
+              <div className="flex items-center gap-3">
+                {selected.player_img ? (
+                  <img src={selected.player_img} alt="" className="h-10 w-10" />
+                ) : null}
+                <div>
+                  <div className="font-medium">{selected.name ?? '—'}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {selected.position ?? '—'} • Overall {selected.rating ?? '—'} • ID {selected.id}
                   </div>
                 </div>
-              </td>
+              </div>
 
-              <td className="px-4 py-3">{p.rating ?? '—'}</td>
-
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  {p.nation_img ? <img src={p.nation_img} alt="" className="h-4 w-6 object-contain" /> : null}
-                  <span className="text-muted-foreground">{p.nation_img ? '' : '—'}</span>
+              <div className="rounded border p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Saldo atual</span>
+                  <span className="font-medium">
+                    {walletBalance == null ? '—' : `R$ ${money(before)}`}
+                  </span>
                 </div>
-              </td>
 
-              <td className="px-4 py-3">{p.position ?? '—'}</td>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-muted-foreground">Valor do jogador</span>
+                  <span className="font-medium">R$ {money(selectedPrice)}</span>
+                </div>
 
-              <td className="px-4 py-3 text-muted-foreground">
-                {p.club_img ? <img src={p.club_img} alt="" className="h-6 w-6" /> : '—'}
-              </td>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-muted-foreground">Saldo após compra</span>
+                  <span className="font-semibold">R$ {money(after)}</span>
+                </div>
 
-              <td className="px-4 py-3">{p.price ?? '—'}</td>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-muted-foreground">Diferença</span>
+                  <span className={`font-medium ${diff < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {diff < 0 ? '-' : '+'}R$ {money(Math.abs(diff))}
+                  </span>
+                </div>
+              </div>
 
-              <td className="px-4 py-3 text-right">
-                <form action={hireAction}>
-                  <input type="hidden" name="player_id" value={String(p.id)} />
-                  <input type="hidden" name="return_to" value={returnTo} />
-                  <button className="rounded border px-3 py-1 text-sm">Contratar</button>
-                </form>
-              </td>
-            </tr>
-          ))}
+              {walletBalance != null && before < selectedPrice && (
+                <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                  Saldo insuficiente para contratar esse jogador.
+                </div>
+              )}
+            </div>
 
-          {players.length === 0 ? (
-            <tr>
-              <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
-                Nenhum jogador encontrado.
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
+            <div className="flex items-center justify-end gap-2 border-t p-4">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="cursor-pointer rounded border px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+
+              <form action={hirePlayerAction}>
+                <input type="hidden" name="player_id" value={String(selected.id)} />
+                <input type="hidden" name="return_to" value={returnTo} />
+
+                <button
+                  className="cursor-pointer rounded bg-black px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={walletBalance != null && before < selectedPrice}
+                >
+                  Confirmar contratação
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
