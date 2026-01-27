@@ -15,19 +15,30 @@ function parsePriceToNumber(priceText: string | null | undefined): number {
   if (!priceText) return 0;
 
   const raw = priceText.toString().trim().toUpperCase();
-  const cleaned = raw
-    .replaceAll('R$', '')
-    .replaceAll(' ', '')
-    .replaceAll('.', '')
-    .replaceAll(',', '.');
 
-  const mult = cleaned.endsWith('M') ? 1_000_000 : cleaned.endsWith('K') ? 1_000 : 1;
-  const numeric = cleaned.replace(/[MK]$/g, '');
+  // mantém só dígitos + separadores + sufixo K/M
+  const m = raw.replace(/\s/g, '').match(/^R?\$?([\d.,]+)([KM])?$/i);
+  if (!m) return 0;
 
-  const n = Number(numeric);
+  let numPart = m[1];              // ex: "30.75" ou "1.51" ou "667"
+  const suffix = (m[2] ?? '').toUpperCase(); // "K" | "M" | ""
+
+  // Se tiver '.' e ',', assumimos formato pt-BR: 1.234,56
+  // Se tiver só ',', tratamos como decimal: 30,75
+  // Se tiver só '.', tratamos como decimal: 30.75
+  if (numPart.includes('.') && numPart.includes(',')) {
+    numPart = numPart.replace(/\./g, '').replace(',', '.');
+  } else if (numPart.includes(',')) {
+    numPart = numPart.replace(',', '.');
+  }
+
+  const n = Number(numPart);
   if (!Number.isFinite(n)) return 0;
+
+  const mult = suffix === 'M' ? 1_000_000 : suffix === 'K' ? 1_000 : 1;
   return Math.round(n * mult);
 }
+
 
 function money(n: number) {
   return n.toLocaleString('pt-BR');
