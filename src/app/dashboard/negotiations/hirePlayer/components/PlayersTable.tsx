@@ -101,7 +101,11 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
           </thead>
 
           <tbody>
-            {players.map((p) => (
+            {players.map((p) => {
+            const isFreeAgent = !p.current_team_name;
+
+            return (
+              
               <tr
                 key={p.id}
                 className="border-b last:border-b-0 cursor-pointer hover:bg-gray-50"
@@ -172,13 +176,17 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
                       e.stopPropagation();
                       openHireModal(p);
                     }}
-                    className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50"
+                    className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!isFreeAgent}
+                    title={!isFreeAgent ? 'Jogador já pertence a um time' : 'Contratar'}
                   >
-                    Contratar
+                    {isFreeAgent ? 'Contratar' : 'Indisponível'}
                   </button>
                 </td>
+
               </tr>
-            ))}
+            )
+            })}
 
             {players.length === 0 ? (
               <tr>
