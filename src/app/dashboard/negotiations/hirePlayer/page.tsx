@@ -25,14 +25,18 @@ export interface PlayerRow {
   nation_img: string | null;
   club_img: string | null;
 
-  // ✅ time que contratou (no tenant/campeonato atual); null => Sem contrato
   current_team_name: string | null;
+  current_team_shield: string | null;
 }
 
 type TeamPlayerJoinRow = {
   player_id: number | null;
-  teams: { name: string | null } | null;
+  teams: {
+    name: string | null;
+    shields?: { shield_url: string | null } | null;
+  } | null;
 };
+
 
 type WalletRow = { id: string; balance: number | string | null };
 type TeamRow = { id: string; championship_id: string | null };
@@ -177,31 +181,51 @@ export default async function HirePlayerPage({
   const feedback = feedbackText(sp);
 
   // -------------------- Resolver "Time" (quem contratou) --------------------
-  let players: PlayerRow[] = playersBase.map((p) => ({ ...p, current_team_name: null }));
+  let players: PlayerRow[] = playersBase.map((p) => ({
+    ...p,
+    current_team_name: null,
+    current_team_shield: null,
+  }));
+
 
   if (activeChampionshipId && playersBase.length > 0) {
     const ids = playersBase.map((p) => p.id);
 
     const { data: tpRows } = await supabase
       .from('team_players')
-      .select('player_id, teams(name)')
+      .select(`
+        player_id,
+        teams (
+          name,
+          shields ( shield_url )
+        )
+      `)
       .eq('tenant_id', tenantId)
       .eq('championship_id', activeChampionshipId)
       .in('player_id', ids);
 
-    const map = new Map<number, string>();
+    const map = new Map<number, { name: string; shield: string | null }>();
 
     (tpRows as TeamPlayerJoinRow[] | null)?.forEach((r) => {
       if (r.player_id == null) return;
-      const teamName = r.teams?.name ?? null;
-      if (!teamName) return;
-      map.set(r.player_id, teamName);
+
+      const name = r.teams?.name ?? null;
+      if (!name) return;
+
+      const shield = r.teams?.shields?.shield_url ?? null;
+
+      map.set(r.player_id, { name, shield });
     });
 
-    players = playersBase.map((p) => ({
-      ...p,
-      current_team_name: map.get(p.id) ?? null,
-    }));
+    players = playersBase.map((p) => {
+      const team = map.get(p.id) ?? null;
+      return {
+        ...p,
+        current_team_name: team?.name ?? null,
+        current_team_shield: team?.shield ?? null,
+      };
+    });
+
   }
 
   return (

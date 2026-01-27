@@ -71,6 +71,10 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
     setDetailsId(null);
   }
 
+  const hasWallet = walletBalance != null;
+  const canBuy = hasWallet && before >= selectedPrice;
+
+
   return (
     <>
       <div className="overflow-x-auto rounded-lg border bg-white">
@@ -127,9 +131,26 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
 
                 <td className="px-4 py-3">{p.position ?? '—'}</td>
 
-                <td className="px-4 py-3 text-muted-foreground">
-                  {p.current_team_name ?? 'Sem contrato'}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    {p.current_team_shield ? (
+                      <img
+                        src={p.current_team_shield}
+                        alt={p.current_team_name ?? 'Escudo do time'}
+                        className="h-5 w-5 object-contain"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="h-5 w-5 rounded bg-gray-200" />
+                    )}
+
+                    <span className="text-muted-foreground">
+                      {p.current_team_name ?? 'Sem contrato'}
+                    </span>
+                  </div>
                 </td>
+
 
                 <td className="px-4 py-3">{p.price ?? '—'}</td>
 
@@ -217,11 +238,16 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
                 </div>
               </div>
 
-              {walletBalance != null && before < selectedPrice && (
+              {!hasWallet ? (
+                <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                  Você ainda não possui carteira neste campeonato. Crie/ative uma carteira para contratar jogadores.
+                </div>
+              ) : before < selectedPrice ? (
                 <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
                   Saldo insuficiente para contratar esse jogador.
                 </div>
-              )}
+              ) : null}
+
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t p-4">
@@ -236,7 +262,6 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
               <form
                 action={hirePlayerAction}
                 onSubmit={() => {
-                  // fecha o modal assim que enviar (o redirect virá na sequência)
                   closeHireModal();
                 }}
               >
@@ -245,10 +270,11 @@ export default function PlayersTable({ players, returnTo, walletBalance }: Props
 
                 <button
                   className="cursor-pointer rounded bg-black px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={walletBalance != null && before < selectedPrice}
+                  disabled={!canBuy}
                 >
                   Confirmar contratação
                 </button>
+
               </form>
             </div>
           </div>
