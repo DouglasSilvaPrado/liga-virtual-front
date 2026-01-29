@@ -6,7 +6,6 @@ import {
 } from '@/@types/competition';
 import { KnockoutBracketVisual } from './KnockoutBracketVisual';
 import { KnockoutRoundView } from '@/@types/knockout';
-import { unknown } from 'zod';
 
 interface KnockoutBracketProps {
   competitionId: string;
@@ -22,7 +21,6 @@ function hasJogosIdaVolta(specific: CompetitionSpecific): specific is MataMataSp
 export default async function KnockoutBracket({ competitionId, settings }: KnockoutBracketProps) {
   const { supabase, tenantId } = await createServerSupabase();
 
-  const idaVolta = hasJogosIdaVolta(settings.specific) ? settings.specific.jogos_ida_volta : false;
 
   const { data, error } = await supabase
     .from('knockout_rounds')
@@ -54,6 +52,8 @@ export default async function KnockoutBracket({ competitionId, settings }: Knock
     .eq('tenant_id', tenantId)
     .order('round_number', { ascending: false });
 
+    
+
   if (error) {
     console.error('Erro knockout:', error);
     return <p>Erro ao carregar mata-mata</p>;
@@ -64,6 +64,10 @@ export default async function KnockoutBracket({ competitionId, settings }: Knock
   }
 
   const dataView = data as unknown as KnockoutRoundView[];
+
+  const idaVolta =
+    dataView.some((round) => round.matches?.some((m) => (m.leg ?? 1) >= 2));
+
 
   const safeRounds: KnockoutRoundView[] =
     dataView?.map((round) => ({
