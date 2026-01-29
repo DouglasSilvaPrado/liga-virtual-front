@@ -12,7 +12,8 @@ export default async function LeagueDetailsPage({ params }: { params: Promise<{ 
 
   const { data: league } = await supabase
     .from('competitions_with_settings')
-    .select(`
+    .select(
+      `
       id,
       name,
       type,
@@ -21,15 +22,16 @@ export default async function LeagueDetailsPage({ params }: { params: Promise<{ 
       champion_team:teams!competitions_champion_team_id_fkey ( name ),
       settings,
       championships ( name )
-    `)
+    `,
+    )
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single<
-    CompetitionWithSettings & {
-      status: 'active' | 'finished';
-      champion_team?: { name: string } | null;
-    }
-  >();
+      CompetitionWithSettings & {
+        status: 'active' | 'finished';
+        champion_team?: { name: string } | null;
+      }
+    >();
 
   if (!league) {
     return <div className="p-6">Liga não encontrada</div>;
@@ -56,7 +58,7 @@ export default async function LeagueDetailsPage({ params }: { params: Promise<{ 
       <LeagueStatus competitionId={league.id} leagueType={league.type} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           <LeagueStandings competitionId={league.id} settings={league.settings} />
 
           {/* 🟦 DIVISÃO (liga) */}

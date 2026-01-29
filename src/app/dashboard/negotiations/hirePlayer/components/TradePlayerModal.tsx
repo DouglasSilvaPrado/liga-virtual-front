@@ -75,15 +75,16 @@ export default function TradePlayerModal({
 
   if (!open || !target) return null;
 
-  const disabledReason = !myTeamId || !activeChampionshipId
-    ? 'Sem time/campeonato ativo.'
-    : offeredId == null
-    ? 'Selecione um jogador seu para oferecer.'
-    : mode !== 'none' && amount <= 0
-    ? 'Informe um valor maior que zero.'
-    : mode === 'pay' && !canPay
-    ? 'Saldo insuficiente para pagar o valor adicional.'
-    : null;
+  const disabledReason =
+    !myTeamId || !activeChampionshipId
+      ? 'Sem time/campeonato ativo.'
+      : offeredId == null
+        ? 'Selecione um jogador seu para oferecer.'
+        : mode !== 'none' && amount <= 0
+          ? 'Informe um valor maior que zero.'
+          : mode === 'pay' && !canPay
+            ? 'Saldo insuficiente para pagar o valor adicional.'
+            : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -99,21 +100,27 @@ export default function TradePlayerModal({
           </button>
         </div>
 
-        <div className="max-h-[75vh] overflow-y-auto p-4 space-y-4">
+        <div className="max-h-[75vh] space-y-4 overflow-y-auto p-4">
           {/* Alvo */}
           <div className="rounded-lg border p-4">
-            <div className="text-sm font-semibold mb-2">Jogador alvo</div>
+            <div className="mb-2 text-sm font-semibold">Jogador alvo</div>
             <div className="flex items-center gap-3">
-              {target.player_img ? <img src={target.player_img} alt="" className="h-12 w-12" /> : null}
+              {target.player_img ? (
+                <img src={target.player_img} alt="" className="h-12 w-12" />
+              ) : null}
               <div className="min-w-0">
-                <div className="font-medium truncate">{target.name ?? '—'}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="truncate font-medium">{target.name ?? '—'}</div>
+                <div className="text-muted-foreground text-xs">
                   {target.position ?? '—'} • Overall {target.rating ?? '—'} • ID {target.player_id}
                 </div>
 
-                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
                   {target.current_team_shield ? (
-                    <img src={target.current_team_shield} alt="" className="h-4 w-4 object-contain" />
+                    <img
+                      src={target.current_team_shield}
+                      alt=""
+                      className="h-4 w-4 object-contain"
+                    />
                   ) : null}
                   <span>Time atual: {target.current_team_name ?? '—'}</span>
                 </div>
@@ -123,10 +130,10 @@ export default function TradePlayerModal({
 
           {/* Seus jogadores */}
           <div className="rounded-lg border p-4">
-            <div className="text-sm font-semibold mb-2">Seu jogador (oferta)</div>
+            <div className="mb-2 text-sm font-semibold">Seu jogador (oferta)</div>
 
             {myPlayers.length === 0 ? (
-              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+              <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 Você não tem jogadores no seu time para oferecer.
               </div>
             ) : (
@@ -142,8 +149,8 @@ export default function TradePlayerModal({
                   >
                     {p.player_img ? <img src={p.player_img} alt="" className="h-10 w-10" /> : null}
                     <div className="min-w-0">
-                      <div className="font-medium truncate">{p.name ?? '—'}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="truncate font-medium">{p.name ?? '—'}</div>
+                      <div className="text-muted-foreground text-xs">
                         {p.position ?? '—'} • Overall {p.rating ?? '—'} • ID {p.player_id}
                       </div>
                     </div>
@@ -154,11 +161,11 @@ export default function TradePlayerModal({
           </div>
 
           {/* Tipo de proposta */}
-          <div className="rounded-lg border p-4 space-y-3">
+          <div className="space-y-3 rounded-lg border p-4">
             <div className="text-sm font-semibold">Tipo de proposta</div>
 
             <div className="space-y-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="radio"
                   name="mode"
@@ -168,7 +175,7 @@ export default function TradePlayerModal({
                 Somente troca
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="radio"
                   name="mode"
@@ -178,7 +185,7 @@ export default function TradePlayerModal({
                 Troca + eu pago um valor adicional
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="radio"
                   name="mode"
@@ -192,7 +199,7 @@ export default function TradePlayerModal({
             {mode !== 'none' ? (
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1">Valor adicional (R$)</div>
+                  <div className="text-muted-foreground mb-1 text-xs">Valor adicional (R$)</div>
                   <input
                     className="w-full rounded border px-3 py-2 text-sm"
                     value={amountText}
@@ -205,10 +212,12 @@ export default function TradePlayerModal({
                 <div className="rounded border bg-gray-50 p-3 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Seu saldo</span>
-                    <span className="font-medium">{hasWallet ? `R$ ${money(walletBalance ?? 0)}` : '—'}</span>
+                    <span className="font-medium">
+                      {hasWallet ? `R$ ${money(walletBalance ?? 0)}` : '—'}
+                    </span>
                   </div>
 
-                  <div className="mt-1 text-xs text-muted-foreground">
+                  <div className="text-muted-foreground mt-1 text-xs">
                     {mode === 'pay'
                       ? 'Se a proposta for aceita, esse valor será debitado de você.'
                       : 'Se a proposta for aceita, esse valor será debitado do outro time.'}

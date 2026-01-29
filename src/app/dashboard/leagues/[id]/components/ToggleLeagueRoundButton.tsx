@@ -30,7 +30,12 @@ export default function ToggleLeagueRoundButton({
   }
 
   return (
-    <Button variant={isOpen ? 'secondary' : 'default'} size="sm" onClick={toggle} disabled={loading}>
+    <Button
+      variant={isOpen ? 'secondary' : 'default'}
+      size="sm"
+      onClick={toggle}
+      disabled={loading}
+    >
       {loading ? 'Salvando...' : isOpen ? 'Bloquear rodada' : 'Liberar rodada'}
     </Button>
   );

@@ -65,14 +65,14 @@ export default async function LeagueStandings({
       <div className="flex items-end justify-between">
         <h2 className="text-lg font-semibold">Classificação</h2>
 
-        <div className="text-xs text-muted-foreground">
+        <div className="text-muted-foreground text-xs">
           {qtdAcessos > 0 && <span className="mr-3">⬆️ Acesso: top {qtdAcessos}</span>}
           {qtdRebaixados > 0 && <span>⬇️ Rebaixamento: últimos {qtdRebaixados}</span>}
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">Sem classificação ainda.</p>
+        <p className="text-muted-foreground mt-2 text-sm">Sem classificação ainda.</p>
       ) : (
         <table className="mt-3 w-full text-sm">
           <thead>

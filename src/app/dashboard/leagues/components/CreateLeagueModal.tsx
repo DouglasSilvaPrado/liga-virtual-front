@@ -281,10 +281,7 @@ export default function CreateLeagueModal() {
                 const checked = !!selectedTeamIds[team.id];
 
                 return (
-                  <div
-                    key={team.id}
-                    className="flex items-center justify-between border-b py-2"
-                  >
+                  <div key={team.id} className="flex items-center justify-between border-b py-2">
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={checked}

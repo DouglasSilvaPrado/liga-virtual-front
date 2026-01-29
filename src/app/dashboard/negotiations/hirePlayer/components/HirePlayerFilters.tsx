@@ -21,8 +21,10 @@ export default function HirePlayerFilters({ value }: { value: HireSearchParams }
           className="mt-1 w-full rounded border px-3 py-2 text-sm"
         >
           <option value="">Todas</option>
-          {['GK','CB','LB','RB','CDM','CM','CAM','LM','RM','LW','RW','ST'].map((p) => (
-            <option key={p} value={p}>{p}</option>
+          {['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'ST'].map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
           ))}
         </select>
       </div>
@@ -71,7 +73,7 @@ export default function HirePlayerFilters({ value }: { value: HireSearchParams }
         </select>
       </div>
 
-      <div className="md:col-span-6 flex gap-2">
+      <div className="flex gap-2 md:col-span-6">
         <button className="rounded bg-black px-4 py-2 text-sm text-white">Filtrar</button>
         <a className="rounded border px-4 py-2 text-sm" href="?">
           Limpar

@@ -116,11 +116,13 @@ export default function PlayersTable({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b">
-              {['Jogador', 'Overall', 'Nacionalidade', 'Posição', 'Time', 'Valor', 'Ações'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-semibold">
-                  {h}
-                </th>
-              ))}
+              {['Jogador', 'Overall', 'Nacionalidade', 'Posição', 'Time', 'Valor', 'Ações'].map(
+                (h) => (
+                  <th key={h} className="px-4 py-3 text-left font-semibold">
+                    {h}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
 
@@ -133,7 +135,7 @@ export default function PlayersTable({
               return (
                 <tr
                   key={p.id}
-                  className="border-b last:border-b-0 cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer border-b last:border-b-0 hover:bg-gray-50"
                   onClick={() => openDetailsModal(p.id)}
                   title="Ver detalhes"
                 >
@@ -153,7 +155,7 @@ export default function PlayersTable({
                           {p.name ?? '—'}
                         </button>
 
-                        <div className="text-xs text-muted-foreground">ID: {p.id}</div>
+                        <div className="text-muted-foreground text-xs">ID: {p.id}</div>
                       </div>
                     </div>
                   </td>
@@ -203,7 +205,11 @@ export default function PlayersTable({
                         }}
                         className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={!isFreeAgent}
-                        title={!isFreeAgent ? 'Só é possível contratar jogador sem contrato' : 'Contratar'}
+                        title={
+                          !isFreeAgent
+                            ? 'Só é possível contratar jogador sem contrato'
+                            : 'Contratar'
+                        }
                       >
                         Contratar
                       </button>
@@ -234,7 +240,7 @@ export default function PlayersTable({
 
             {players.length === 0 ? (
               <tr>
-                <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
+                <td className="text-muted-foreground px-4 py-6" colSpan={7}>
                   Nenhum jogador encontrado.
                 </td>
               </tr>
@@ -263,11 +269,14 @@ export default function PlayersTable({
 
             <div className="space-y-4 p-4">
               <div className="flex items-center gap-3">
-                {selectedHire.player_img ? <img src={selectedHire.player_img} alt="" className="h-10 w-10" /> : null}
+                {selectedHire.player_img ? (
+                  <img src={selectedHire.player_img} alt="" className="h-10 w-10" />
+                ) : null}
                 <div>
                   <div className="font-medium">{selectedHire.name ?? '—'}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {selectedHire.position ?? '—'} • Overall {selectedHire.rating ?? '—'} • ID {selectedHire.id}
+                  <div className="text-muted-foreground text-xs">
+                    {selectedHire.position ?? '—'} • Overall {selectedHire.rating ?? '—'} • ID{' '}
+                    {selectedHire.id}
                   </div>
                 </div>
               </div>
@@ -275,7 +284,9 @@ export default function PlayersTable({
               <div className="rounded border p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Saldo atual</span>
-                  <span className="font-medium">{walletBalance == null ? '—' : `R$ ${money(before)}`}</span>
+                  <span className="font-medium">
+                    {walletBalance == null ? '—' : `R$ ${money(before)}`}
+                  </span>
                 </div>
 
                 <div className="mt-2 flex items-center justify-between">
@@ -298,7 +309,8 @@ export default function PlayersTable({
 
               {!hasWallet ? (
                 <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-                  Você ainda não possui carteira neste campeonato. Crie/ative uma carteira para contratar jogadores.
+                  Você ainda não possui carteira neste campeonato. Crie/ative uma carteira para
+                  contratar jogadores.
                 </div>
               ) : before < selectedPrice ? (
                 <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">

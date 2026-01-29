@@ -79,8 +79,13 @@ function clamp(n: number, a: number, b: number) {
 
 function statTone(v: number | null | undefined) {
   if (v == null) return { pill: 'bg-white/10 border-white/15 text-white/80', bar: 'bg-white/20' };
-  if (v >= 85) return { pill: 'bg-emerald-400/15 border-emerald-300/30 text-emerald-100', bar: 'bg-emerald-400/60' };
-  if (v >= 75) return { pill: 'bg-amber-400/15 border-amber-300/30 text-amber-100', bar: 'bg-amber-400/60' };
+  if (v >= 85)
+    return {
+      pill: 'bg-emerald-400/15 border-emerald-300/30 text-emerald-100',
+      bar: 'bg-emerald-400/60',
+    };
+  if (v >= 75)
+    return { pill: 'bg-amber-400/15 border-amber-300/30 text-amber-100', bar: 'bg-amber-400/60' };
   return { pill: 'bg-rose-400/15 border-rose-300/30 text-rose-100', bar: 'bg-rose-400/60' };
 }
 
@@ -102,13 +107,7 @@ function traduzirPe(foot?: string | null) {
   return foot;
 }
 
-function BarStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | null | undefined;
-}) {
+function BarStat({ label, value }: { label: string; value: number | null | undefined }) {
   const v = value ?? null;
   const pct = v == null ? 0 : clamp(v, 0, 99);
   const tone = statTone(v);
@@ -123,10 +122,7 @@ function BarStat({
       </div>
 
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
-        <div
-          className={`h-2 rounded-full ${tone.bar}`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`h-2 rounded-full ${tone.bar}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -243,7 +239,7 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                   ].join(' ')}
                 >
                   {/* brilho */}
-                  <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+                  <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
                   <div className="pointer-events-none absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
                   <div className="p-4">
@@ -279,7 +275,11 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                       <div className="mt-1 text-xs text-white/60">
                         {details.league_img ? (
                           <span className="inline-flex items-center gap-2">
-                            <img src={details.league_img} alt="" className="h-5 w-8 object-contain" />
+                            <img
+                              src={details.league_img}
+                              alt=""
+                              className="h-5 w-8 object-contain"
+                            />
                             <span>Liga</span>
                           </span>
                         ) : (
@@ -362,7 +362,7 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
               </div>
 
               {/* DIREITA: STATS FIFA */}
-              <div className="lg:col-span-2 space-y-4">
+              <div className="space-y-4 lg:col-span-2">
                 {/* 6 stats principais FIFA */}
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="mb-3 flex items-center justify-between">
@@ -451,26 +451,39 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">POP</div>
-                      <div className="mt-1 text-sm font-bold text-white/90">{details.pop ?? '—'}</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        POP
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-white/90">
+                        {details.pop ?? '—'}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">IGS</div>
-                      <div className="mt-1 text-sm font-bold text-white/90">{details.igs ?? '—'}</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        IGS
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-white/90">
+                        {details.igs ?? '—'}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">PREÇO</div>
-                      <div className="mt-1 text-sm font-bold text-white/90">{details.price ?? '—'}</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        PREÇO
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-white/90">
+                        {details.price ?? '—'}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">VALOR</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        VALOR
+                      </div>
                       <div className="mt-1 text-sm font-bold text-white/90">
                         {details.price_value ?? '—'}
                       </div>
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
           ) : (

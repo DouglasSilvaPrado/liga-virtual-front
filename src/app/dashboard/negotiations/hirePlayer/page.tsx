@@ -41,7 +41,6 @@ type TeamPlayerMineRow = {
   } | null;
 };
 
-
 export type MyTeamPlayerRow = {
   player_id: number;
   name: string | null;
@@ -49,7 +48,6 @@ export type MyTeamPlayerRow = {
   position: string | null;
   player_img: string | null;
 };
-
 
 type TeamPlayerJoinRow = {
   player_id: number | null;
@@ -88,7 +86,8 @@ function normalizeBalance(v: WalletRow['balance']): number {
 
 function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: string } | null {
   if (sp.ok === 'hired') return { type: 'success', text: 'Jogador contratado com sucesso!' };
-  if (sp.ok === 'trade_sent') return { type: 'success', text: 'Proposta de troca enviada! Aguardando resposta.' };
+  if (sp.ok === 'trade_sent')
+    return { type: 'success', text: 'Proposta de troca enviada! Aguardando resposta.' };
 
   if (!sp.err) return null;
 
@@ -191,24 +190,25 @@ export default async function HirePlayerPage({
 
       // ✅ meus jogadores (para modal de troca)
       if (myTeamId && activeChampionshipId) {
-      const { data: mine } = await supabase
-        .from('team_players')
-        .select(
-          `
+        const { data: mine } = await supabase
+          .from('team_players')
+          .select(
+            `
           player_id,
           players (
             id, name, rating, position, player_img
           )
         `,
-        )
-        .eq('tenant_id', tenantId)
-        .eq('championship_id', activeChampionshipId)
-        .eq('team_id', myTeamId)
-        .returns<TeamPlayerMineRow[]>(); // ✅ TIPAGEM SUPABASE
+          )
+          .eq('tenant_id', tenantId)
+          .eq('championship_id', activeChampionshipId)
+          .eq('team_id', myTeamId)
+          .returns<TeamPlayerMineRow[]>(); // ✅ TIPAGEM SUPABASE
 
-      myPlayers =
-        (mine ?? [])
-          .filter((r): r is TeamPlayerMineRow & { player_id: number } => Number.isFinite(r.player_id))
+        myPlayers = (mine ?? [])
+          .filter((r): r is TeamPlayerMineRow & { player_id: number } =>
+            Number.isFinite(r.player_id),
+          )
           .map((r) => ({
             player_id: r.player_id,
             name: r.players?.name ?? null,

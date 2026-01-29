@@ -137,7 +137,6 @@ export default function SidebarClient({ onNavigate }: { onNavigate?: () => void 
               ))}
             </div>
           )}
-          
         </div>
 
         {/* Negociações */}

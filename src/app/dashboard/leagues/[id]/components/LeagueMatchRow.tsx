@@ -33,9 +33,7 @@ export default function LeagueMatchRow({ match, viewer }: Props) {
     (match.home_team.id === viewer.memberTeamId || match.away_team.id === viewer.memberTeamId);
 
   const canEdit =
-    match.round_info.is_open &&
-    match.status !== 'finished' &&
-    (viewer.isAdminOrOwner || isMyMatch);
+    match.round_info.is_open && match.status !== 'finished' && (viewer.isAdminOrOwner || isMyMatch);
 
   async function save() {
     if (!canEdit) return;

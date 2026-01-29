@@ -29,7 +29,7 @@ export default async function LeagueTeams({ competitionId }: { competitionId: st
       <h2 className="text-lg font-semibold">Times</h2>
 
       {teams.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">Nenhum time cadastrado.</p>
+        <p className="text-muted-foreground mt-2 text-sm">Nenhum time cadastrado.</p>
       ) : (
         <ul className="mt-3 space-y-1 text-sm">
           {teams.map((t, idx) => (

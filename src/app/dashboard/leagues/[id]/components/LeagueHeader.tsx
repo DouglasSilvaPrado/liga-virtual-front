@@ -17,7 +17,7 @@ export default function LeagueHeader({
         <div>
           <h1 className="text-2xl font-bold">{league.name}</h1>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Campeonato: {league.championships?.name ?? '—'}
           </p>
 

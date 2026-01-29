@@ -41,8 +41,6 @@ function moneyText(p: ProposalListItem, myTeamId: string) {
   return 'Sem dinheiro envolvido';
 }
 
-
-
 function badge(status: ProposalListItem['status']) {
   const base = 'inline-flex rounded border px-2 py-0.5 text-xs font-medium';
   switch (status) {
@@ -154,12 +152,13 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
                         <span>
                           <b>{p.offered_player?.name ?? '—'}</b>{' '}
                           <span className="text-muted-foreground">
-                            ({p.offered_player?.position ?? '—'} • {p.offered_player?.rating ?? '—'})
+                            ({p.offered_player?.position ?? '—'} • {p.offered_player?.rating ?? '—'}
+                            )
                           </span>
                         </span>
                       </div>
 
-                      <div className="text-xs text-muted-foreground">por</div>
+                      <div className="text-muted-foreground text-xs">por</div>
 
                       <div className="flex items-center gap-2">
                         {p.requested_player?.player_img ? (
@@ -168,16 +167,17 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
                         <span>
                           <b>{p.requested_player?.name ?? '—'}</b>{' '}
                           <span className="text-muted-foreground">
-                            ({p.requested_player?.position ?? '—'} • {p.requested_player?.rating ?? '—'})
+                            ({p.requested_player?.position ?? '—'} •{' '}
+                            {p.requested_player?.rating ?? '—'})
                           </span>
                         </span>
                       </div>
                     </div>
                   </td>
 
-                  <td className="px-4 py-3 text-muted-foreground">{moneyText(p, myTeamId)}</td>
+                  <td className="text-muted-foreground px-4 py-3">{moneyText(p, myTeamId)}</td>
 
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="text-muted-foreground px-4 py-3">
                     {new Date(p.created_at).toLocaleString('pt-BR')}
                   </td>
 
@@ -207,7 +207,7 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
                         </button>
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </td>
                 </tr>
@@ -216,7 +216,7 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
 
             {filtered.length === 0 ? (
               <tr>
-                <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
+                <td className="text-muted-foreground px-4 py-6" colSpan={7}>
                   Nenhuma proposta encontrada.
                 </td>
               </tr>

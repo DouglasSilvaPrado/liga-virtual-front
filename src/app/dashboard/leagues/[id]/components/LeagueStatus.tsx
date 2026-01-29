@@ -87,10 +87,10 @@ export default async function LeagueStatus({
     knockoutCount === 0;
 
   return (
-    <div className="flex items-center justify-between rounded border bg-muted p-3 text-sm">
+    <div className="bg-muted flex items-center justify-between rounded border p-3 text-sm">
       <div>
         <strong>Status:</strong> {label}
-        <span className="ml-2 text-xs text-muted-foreground">
+        <span className="text-muted-foreground ml-2 text-xs">
           (times: {teamsCount} • jogos: {matchesCount} • finalizados: {finishedCount})
           {knockoutCount > 0 && <span className="ml-2">(mata-mata: {knockoutCount} jogos)</span>}
         </span>

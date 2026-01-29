@@ -40,14 +40,14 @@ export default async function LeagueMatches({ competitionId }: { competitionId: 
       <h2 className="text-lg font-semibold">Partidas</h2>
 
       {matches.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-sm">
           Nenhuma partida criada ainda. (Próximo passo: botão “Gerar calendário”)
         </p>
       ) : (
         <div className="mt-3 space-y-2 text-sm">
           {matches.map((m) => (
             <div key={m.id} className="flex items-center justify-between border-b py-1">
-              <span className="w-10 text-xs text-muted-foreground">R{m.round ?? '-'}</span>
+              <span className="text-muted-foreground w-10 text-xs">R{m.round ?? '-'}</span>
               <span className="flex-1">{m.home_team?.name ?? '—'}</span>
               <span className="mx-2 w-20 text-center">
                 {m.score_home ?? '-'} x {m.score_away ?? '-'}

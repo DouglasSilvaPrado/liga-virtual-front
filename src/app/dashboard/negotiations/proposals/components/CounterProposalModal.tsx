@@ -23,7 +23,12 @@ function money(n: number) {
   return n.toLocaleString('pt-BR');
 }
 
-export default function CounterProposalModal({ open, onClose, baseProposal, walletBalance }: Props) {
+export default function CounterProposalModal({
+  open,
+  onClose,
+  baseProposal,
+  walletBalance,
+}: Props) {
   const [loading, setLoading] = useState(false);
   const [myPlayers, setMyPlayers] = useState<MyPlayer[]>([]);
   const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
@@ -78,11 +83,9 @@ export default function CounterProposalModal({ open, onClose, baseProposal, wall
 
   if (!open || !baseProposal) return null;
 
-  const needsBalance =
-    moneyDirection !== 'none' && moneyDirection === 'pay' && moneyAmountNum > 0;
+  const needsBalance = moneyDirection !== 'none' && moneyDirection === 'pay' && moneyAmountNum > 0;
 
-  const insufficient =
-    needsBalance && walletBalance != null && moneyAmountNum > walletBalance;
+  const insufficient = needsBalance && walletBalance != null && moneyAmountNum > walletBalance;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -101,17 +104,19 @@ export default function CounterProposalModal({ open, onClose, baseProposal, wall
         <div className="space-y-4 p-4">
           <div className="rounded border p-3 text-sm">
             <div className="font-semibold">Proposta original</div>
-            <div className="mt-2 text-muted-foreground">
+            <div className="text-muted-foreground mt-2">
               Eles oferecem: <b>{baseProposal.offered_player?.name ?? '—'}</b> • Querem:{' '}
               <b>{baseProposal.requested_player?.name ?? '—'}</b>
             </div>
           </div>
 
           <div className="rounded border p-3">
-            <div className="text-sm font-semibold">Escolha um jogador do seu time para oferecer</div>
+            <div className="text-sm font-semibold">
+              Escolha um jogador do seu time para oferecer
+            </div>
 
             {loading ? (
-              <div className="mt-2 text-sm text-muted-foreground">Carregando…</div>
+              <div className="text-muted-foreground mt-2 text-sm">Carregando…</div>
             ) : myPlayers.length === 0 ? (
               <div className="mt-2 text-sm text-red-700">
                 Você não tem jogadores no seu time para fazer contra-proposta.
@@ -130,7 +135,7 @@ export default function CounterProposalModal({ open, onClose, baseProposal, wall
                     {p.player_img ? <img src={p.player_img} className="h-10 w-10" alt="" /> : null}
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium">{p.name ?? '—'}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {p.position ?? '—'} • {p.rating ?? '—'} • ID {p.player_id}
                       </div>
                     </div>
@@ -162,7 +167,7 @@ export default function CounterProposalModal({ open, onClose, baseProposal, wall
                 disabled={moneyDirection === 'none'}
               />
 
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 Seu saldo: {walletBalance == null ? '—' : `R$ ${money(walletBalance)}`}
               </div>
             </div>

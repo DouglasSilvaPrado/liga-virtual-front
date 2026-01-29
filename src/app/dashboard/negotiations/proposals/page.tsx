@@ -149,7 +149,7 @@ export default async function ProposalsPage() {
     return (
       <div className="space-y-4 p-6">
         <h1 className="text-2xl font-bold">Propostas</h1>
-        <div className="text-sm text-muted-foreground">Nenhuma proposta encontrada.</div>
+        <div className="text-muted-foreground text-sm">Nenhuma proposta encontrada.</div>
       </div>
     );
   }
@@ -171,7 +171,10 @@ export default async function ProposalsPage() {
     .in('id', teamIds)
     .returns<TeamWithShield[]>();
 
-  const teamsMap = new Map<string, { id: string; name: string | null; shield_url: string | null }>();
+  const teamsMap = new Map<
+    string,
+    { id: string; name: string | null; shield_url: string | null }
+  >();
   (teamsRaw ?? []).forEach((t) => {
     teamsMap.set(t.id, {
       id: t.id,
@@ -216,7 +219,7 @@ export default async function ProposalsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Propostas</h1>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           Seu saldo: {walletBalance == null ? '—' : `R$ ${walletBalance.toLocaleString('pt-BR')}`}
         </div>
       </div>

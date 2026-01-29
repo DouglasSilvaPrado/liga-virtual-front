@@ -61,7 +61,7 @@ export default async function LeaguePage() {
       </div>
 
       {competitionIds.length === 0 && (
-        <div className="rounded border bg-muted p-4 text-sm text-muted-foreground">
+        <div className="bg-muted text-muted-foreground rounded border p-4 text-sm">
           Nenhuma liga iniciou ainda (sem times cadastrados).
         </div>
       )}
@@ -71,13 +71,13 @@ export default async function LeaguePage() {
           <div key={l.id} className="rounded-lg border bg-white p-4 shadow-sm">
             <h2 className="text-lg font-semibold">{l.name}</h2>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Campeonato: {l.championships?.name ?? '—'}
             </p>
 
             <p className="mt-1 text-sm">Tipo: {l.type}</p>
 
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               Criado em: {new Date(l.created_at).toLocaleDateString('pt-BR')}
             </p>
 
