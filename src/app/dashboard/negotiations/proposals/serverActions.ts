@@ -15,7 +15,7 @@ function withParam(url: string, key: string, value: string) {
   return u.pathname + u.search;
 }
 
-/** ✅ ACCEPT (via RPC idealmente) */
+/** ✅ ACCEPT (via RPC) */
 export async function acceptProposalAction(formData: FormData) {
   const proposalId = String(formData.get('proposal_id') ?? '');
   const returnTo = '/dashboard/negotiations/proposals';
@@ -23,14 +23,36 @@ export async function acceptProposalAction(formData: FormData) {
 
   const { supabase } = await createServerSupabase();
 
-  type AcceptRpcRow = { ok: boolean; proposal_id: string };
+  type AcceptRpcRow = {
+    ok: boolean;
+    proposal_id: string;
+    code: string | null;
+    message: string | null;
+  };
 
   const { data, error } = await supabase
     .rpc('accept_trade_proposal', { p_proposal_id: proposalId })
-    .select()
-    .single<AcceptRpcRow>();
+    .returns<AcceptRpcRow[]>();
 
-  if (error || !data?.ok) redirect(withParam(returnTo, 'err', 'accept_failed'));
+  if (error) {
+    console.error('accept_trade_proposal RPC error:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
+    const msg = String(error.message ?? '')
+      .slice(0, 60)
+      .replace(/\s+/g, '_');
+    redirect(withParam(returnTo, 'err', `rpc_${error.code ?? 'error'}_${msg}`));
+  }
+
+  const row: AcceptRpcRow | null = Array.isArray(data) && data.length > 0 ? data[0] : null;
+
+  if (!row?.ok) {
+    redirect(withParam(returnTo, 'err', row?.code ?? 'accept_failed'));
+  }
 
   revalidatePath(returnTo);
   redirect(withParam(returnTo, 'ok', 'accepted'));

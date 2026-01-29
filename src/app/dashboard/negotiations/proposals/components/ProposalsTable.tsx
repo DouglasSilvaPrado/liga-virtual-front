@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { ProposalListItem, MoneyDirection } from '../page';
+import type { ProposalListItem } from '../page';
 import { acceptProposalAction, rejectProposalAction } from '../serverActions';
 import CounterProposalModal from './CounterProposalModal';
 
@@ -17,22 +17,22 @@ function money(n: number) {
 
 function moneyText(p: ProposalListItem, myTeamId: string) {
   const amount = Math.max(0, p.money_amount ?? 0);
-  const dir: MoneyDirection = p.money_direction ?? 'none';
+  const dir = p.money_direction ?? 'none';
 
   if (dir === 'none' || amount <= 0) return 'Sem dinheiro envolvido';
 
-  // from_to => FROM paga TO
-  // to_from => TO paga FROM
   const myIsFrom = p.from_team_id === myTeamId;
   const myIsTo = p.to_team_id === myTeamId;
 
-  if (dir === 'from_to') {
+  // pay => FROM paga TO
+  if (dir === 'pay') {
     if (myIsFrom) return `Você paga R$ ${money(amount)}`;
     if (myIsTo) return `Você recebe +R$ ${money(amount)}`;
     return `FROM paga TO: R$ ${money(amount)}`;
   }
 
-  if (dir === 'to_from') {
+  // ask => TO paga FROM
+  if (dir === 'ask') {
     if (myIsTo) return `Você paga R$ ${money(amount)}`;
     if (myIsFrom) return `Você recebe +R$ ${money(amount)}`;
     return `TO paga FROM: R$ ${money(amount)}`;
@@ -40,6 +40,8 @@ function moneyText(p: ProposalListItem, myTeamId: string) {
 
   return 'Sem dinheiro envolvido';
 }
+
+
 
 function badge(status: ProposalListItem['status']) {
   const base = 'inline-flex rounded border px-2 py-0.5 text-xs font-medium';
@@ -123,23 +125,23 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
 
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {p.from_team?.shield_url ? (
-                        <img src={p.from_team.shield_url} className="h-5 w-5 object-contain" alt="" />
+                      {p.pay?.shield_url ? (
+                        <img src={p.pay.shield_url} className="h-5 w-5 object-contain" alt="" />
                       ) : (
                         <div className="h-5 w-5 rounded bg-gray-200" />
                       )}
-                      <span className="text-muted-foreground">{p.from_team?.name ?? '—'}</span>
+                      <span className="text-muted-foreground">{p.pay?.name ?? '—'}</span>
                     </div>
                   </td>
 
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {p.to_team?.shield_url ? (
-                        <img src={p.to_team.shield_url} className="h-5 w-5 object-contain" alt="" />
+                      {p.ask?.shield_url ? (
+                        <img src={p.ask.shield_url} className="h-5 w-5 object-contain" alt="" />
                       ) : (
                         <div className="h-5 w-5 rounded bg-gray-200" />
                       )}
-                      <span className="text-muted-foreground">{p.to_team?.name ?? '—'}</span>
+                      <span className="text-muted-foreground">{p.ask?.name ?? '—'}</span>
                     </div>
                   </td>
 

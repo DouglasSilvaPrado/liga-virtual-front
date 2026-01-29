@@ -79,11 +79,7 @@ export default function CounterProposalModal({ open, onClose, baseProposal, wall
   if (!open || !baseProposal) return null;
 
   const needsBalance =
-    moneyDirection !== 'none' && moneyDirection === 'from_to' && moneyAmountNum > 0;
-
-  // OBS: aqui “from_to” significa FROM paga TO.
-  // Quem manda a contra-proposta será o “to_team” do base (receiver).
-  // No server action eu vou validar e setar corretamente.
+    moneyDirection !== 'none' && moneyDirection === 'pay' && moneyAmountNum > 0;
 
   const insufficient =
     needsBalance && walletBalance != null && moneyAmountNum > walletBalance;
@@ -154,8 +150,8 @@ export default function CounterProposalModal({ open, onClose, baseProposal, wall
                 onChange={(e) => setMoneyDirection(e.target.value as MoneyDirection)}
               >
                 <option value="none">Sem dinheiro</option>
-                <option value="from_to">Eu pago para o outro time</option>
-                <option value="to_from">Eu peço dinheiro do outro time</option>
+                <option value="pay">Eu pago para o outro time</option>
+                <option value="ask">Eu peço dinheiro do outro time</option>
               </select>
 
               <input

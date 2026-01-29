@@ -1,6 +1,6 @@
 export type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'countered' | 'cancelled';
 
-export type MoneyDirection = 'none' | 'from_to' | 'to_from';
+export type MoneyDirection = 'none' | 'pay' | 'ask';
 
 export type TradeProposalRow = {
   id: string;

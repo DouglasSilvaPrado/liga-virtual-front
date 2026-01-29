@@ -9,7 +9,7 @@ function normalizeBalance(v: WalletRow['balance']): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export type MoneyDirection = 'none' | 'from_to' | 'to_from';
+export type MoneyDirection = 'none' | 'pay' | 'ask';
 export type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'countered' | 'cancelled';
 
 export type ProposalRow = {
@@ -41,8 +41,8 @@ export type ProposalListItem = {
   money_direction: MoneyDirection;
   money_amount: number;
 
-  from_team: { id: string; name: string | null; shield_url: string | null } | null;
-  to_team: { id: string; name: string | null; shield_url: string | null } | null;
+  pay: { id: string; name: string | null; shield_url: string | null } | null;
+  ask: { id: string; name: string | null; shield_url: string | null } | null;
 
   offered_player: {
     id: number;
@@ -206,8 +206,8 @@ export default async function ProposalsPage() {
     money_direction: p.money_direction,
     money_amount: p.money_amount,
 
-    from_team: teamsMap.get(p.from_team_id) ?? null,
-    to_team: teamsMap.get(p.to_team_id) ?? null,
+    pay: teamsMap.get(p.from_team_id) ?? null,
+    ask: teamsMap.get(p.to_team_id) ?? null,
     offered_player: playersMap.get(p.offered_player_id) ?? null,
     requested_player: playersMap.get(p.requested_player_id) ?? null,
   }));
