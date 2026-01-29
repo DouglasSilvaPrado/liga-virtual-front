@@ -18,6 +18,7 @@ const leagueMenu = [{ href: '/dashboard/leagues', label: 'Ligas' }];
 
 const negotiationsMenu = [
   { href: '/dashboard/negotiations/hirePlayer', label: 'Contratar Jogador' },
+  { href: '/dashboard/negotiations/proposals', label: 'Propostas' },
 ];
 
 export default function SidebarClient({ onNavigate }: { onNavigate?: () => void }) {
