@@ -25,18 +25,40 @@ export interface PlayerRow {
   nation_img: string | null;
   club_img: string | null;
 
+  current_team_id: string | null;
   current_team_name: string | null;
   current_team_shield: string | null;
 }
 
+type TeamPlayerMineRow = {
+  player_id: number | null;
+  players: {
+    id: number;
+    name: string | null;
+    rating: number | null;
+    position: string | null;
+    player_img: string | null;
+  } | null;
+};
+
+
+export type MyTeamPlayerRow = {
+  player_id: number;
+  name: string | null;
+  rating: number | null;
+  position: string | null;
+  player_img: string | null;
+};
+
+
 type TeamPlayerJoinRow = {
   player_id: number | null;
   teams: {
+    id: string | null;
     name: string | null;
     shields?: { shield_url: string | null } | null;
   } | null;
 };
-
 
 type WalletRow = { id: string; balance: number | string | null };
 type TeamRow = { id: string; championship_id: string | null };
@@ -66,6 +88,8 @@ function normalizeBalance(v: WalletRow['balance']): number {
 
 function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: string } | null {
   if (sp.ok === 'hired') return { type: 'success', text: 'Jogador contratado com sucesso!' };
+  if (sp.ok === 'trade_sent') return { type: 'success', text: 'Proposta de troca enviada! Aguardando resposta.' };
+
   if (!sp.err) return null;
 
   const map: Record<string, string> = {
@@ -81,6 +105,16 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
     insufficient_funds: 'Saldo insuficiente.',
     already_hired: 'Esse jogador já está no seu time.',
     wallet_debit: 'Erro ao debitar a carteira.',
+
+    // trade (se você usar a action de troca)
+    trade_invalid_requested: 'Jogador alvo inválido.',
+    trade_invalid_offered: 'Jogador oferecido inválido.',
+    trade_invalid_money_mode: 'Modo de dinheiro inválido.',
+    trade_invalid_money_amount: 'Valor adicional inválido.',
+    trade_offered_not_mine: 'O jogador oferecido não pertence ao seu time.',
+    trade_requested_not_found: 'O jogador alvo não está em nenhum time.',
+    trade_requested_is_mine: 'Você não pode propor troca por um jogador do seu próprio time.',
+    trade_create_failed: 'Não foi possível criar a proposta de troca.',
   };
 
   return { type: 'error', text: map[sp.err] ?? `Erro: ${sp.err}` };
@@ -114,9 +148,11 @@ export default async function HirePlayerPage({
   const qs = buildQueryString(sp, { ok: '', err: '' });
   const returnTo = qs ? `${basePath}?${qs}` : basePath;
 
-  // -------------------- Descobrir contexto do usuário (time/campeonato e saldo) --------------------
+  // -------------------- Contexto usuário (time/campeonato e saldo) --------------------
   let walletBalance: number | null = null;
   let activeChampionshipId: string | null = null;
+  let myTeamId: string | null = null;
+  let myPlayers: MyTeamPlayerRow[] = [];
 
   const { data: userRes } = await supabase.auth.getUser();
   const userId = userRes?.user?.id ?? null;
@@ -139,6 +175,7 @@ export default async function HirePlayerPage({
         .limit(1)
         .maybeSingle<TeamRow>();
 
+      myTeamId = team?.id ?? null;
       activeChampionshipId = team?.championship_id ?? null;
 
       if (activeChampionshipId) {
@@ -150,6 +187,35 @@ export default async function HirePlayerPage({
           .maybeSingle<WalletRow>();
 
         if (wallet) walletBalance = normalizeBalance(wallet.balance);
+      }
+
+      // ✅ meus jogadores (para modal de troca)
+      if (myTeamId && activeChampionshipId) {
+      const { data: mine } = await supabase
+        .from('team_players')
+        .select(
+          `
+          player_id,
+          players (
+            id, name, rating, position, player_img
+          )
+        `,
+        )
+        .eq('tenant_id', tenantId)
+        .eq('championship_id', activeChampionshipId)
+        .eq('team_id', myTeamId)
+        .returns<TeamPlayerMineRow[]>(); // ✅ TIPAGEM SUPABASE
+
+      myPlayers =
+        (mine ?? [])
+          .filter((r): r is TeamPlayerMineRow & { player_id: number } => Number.isFinite(r.player_id))
+          .map((r) => ({
+            player_id: r.player_id,
+            name: r.players?.name ?? null,
+            rating: r.players?.rating ?? null,
+            position: r.players?.position ?? null,
+            player_img: r.players?.player_img ?? null,
+          }));
       }
     }
   }
@@ -175,7 +241,11 @@ export default async function HirePlayerPage({
   const { data, count, error } = await query;
   if (error) return <div className="p-6">Erro ao carregar jogadores</div>;
 
-  const playersBase = (data ?? []) as Omit<PlayerRow, 'current_team_name'>[];
+  const playersBase = (data ?? []) as Omit<
+    PlayerRow,
+    'current_team_id' | 'current_team_name' | 'current_team_shield'
+  >[];
+
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / size));
   const feedback = feedbackText(sp);
@@ -183,49 +253,52 @@ export default async function HirePlayerPage({
   // -------------------- Resolver "Time" (quem contratou) --------------------
   let players: PlayerRow[] = playersBase.map((p) => ({
     ...p,
+    current_team_id: null,
     current_team_name: null,
     current_team_shield: null,
   }));
-
 
   if (activeChampionshipId && playersBase.length > 0) {
     const ids = playersBase.map((p) => p.id);
 
     const { data: tpRows } = await supabase
       .from('team_players')
-      .select(`
+      .select(
+        `
         player_id,
         teams (
+          id,
           name,
           shields ( shield_url )
         )
-      `)
+      `,
+      )
       .eq('tenant_id', tenantId)
       .eq('championship_id', activeChampionshipId)
       .in('player_id', ids);
 
-    const map = new Map<number, { name: string; shield: string | null }>();
+    const map = new Map<number, { teamId: string; name: string; shield: string | null }>();
 
     (tpRows as TeamPlayerJoinRow[] | null)?.forEach((r) => {
       if (r.player_id == null) return;
 
+      const teamId = r.teams?.id ?? null;
       const name = r.teams?.name ?? null;
-      if (!name) return;
+      if (!teamId || !name) return;
 
       const shield = r.teams?.shields?.shield_url ?? null;
-
-      map.set(r.player_id, { name, shield });
+      map.set(r.player_id, { teamId, name, shield });
     });
 
     players = playersBase.map((p) => {
-      const team = map.get(p.id) ?? null;
+      const t = map.get(p.id);
       return {
         ...p,
-        current_team_name: team?.name ?? null,
-        current_team_shield: team?.shield ?? null,
+        current_team_id: t?.teamId ?? null,
+        current_team_name: t?.name ?? null,
+        current_team_shield: t?.shield ?? null,
       };
     });
-
   }
 
   return (
@@ -264,7 +337,9 @@ export default async function HirePlayerPage({
           </a>
 
           <a
-            className={`rounded border px-3 py-1 ${page >= totalPages ? 'pointer-events-none opacity-50' : ''}`}
+            className={`rounded border px-3 py-1 ${
+              page >= totalPages ? 'pointer-events-none opacity-50' : ''
+            }`}
             href={`?${buildQueryString(sp, { page: String(page + 1), ok: '', err: '' })}`}
           >
             Próxima
@@ -272,7 +347,14 @@ export default async function HirePlayerPage({
         </div>
       </div>
 
-      <PlayersTable players={players} returnTo={returnTo} walletBalance={walletBalance} />
+      <PlayersTable
+        players={players}
+        returnTo={returnTo}
+        walletBalance={walletBalance}
+        myPlayers={myPlayers}
+        myTeamId={myTeamId}
+        activeChampionshipId={activeChampionshipId}
+      />
     </div>
   );
 }
