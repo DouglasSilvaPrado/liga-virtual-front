@@ -226,8 +226,8 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
                         <span>
                           <b>{p.player?.name ?? '—'}</b>{' '}
                           <span className="text-muted-foreground">
-                            ({p.player?.position ?? '—'} • {p.player?.rating ?? '—'}
-                            {p.duration_rounds ? ` • ${p.duration_rounds} rod.` : ''})
+                            {p.player?.position ?? '—'} • {p.player?.rating ?? '—'}  •
+                            {p.duration_rounds ? `${p.duration_rounds} rod.` : ' Temporada'}
                           </span>
                         </span>
                       </div>

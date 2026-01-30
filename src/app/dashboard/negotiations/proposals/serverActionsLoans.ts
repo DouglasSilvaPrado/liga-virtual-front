@@ -15,27 +15,22 @@ function withParam(url: string, key: string, value: string) {
   return u.pathname + u.search;
 }
 
-/** ✅ SEND LOAN (cria proposta pendente) */
+/** ✅ SEND LOAN (por temporada) */
 export async function sendLoanProposalAction(formData: FormData) {
   const basePath = '/dashboard/negotiations/hirePlayer';
 
   const playerId = Number(formData.get('player_id'));
   const moneyAmountRaw = String(formData.get('money_amount') ?? '');
-  const durationRaw = String(formData.get('duration_rounds') ?? '');
   const returnToRaw = String(formData.get('return_to') || basePath);
   const returnTo = returnToRaw.startsWith('/') ? returnToRaw : basePath;
 
   const moneyAmount = Number(moneyAmountRaw);
-  const durationRounds = durationRaw ? Number(durationRaw) : null;
 
   if (!Number.isFinite(playerId) || playerId <= 0) {
     redirect(withParam(returnTo, 'err', 'loan_player_invalid'));
   }
   if (!Number.isFinite(moneyAmount) || moneyAmount <= 0) {
     redirect(withParam(returnTo, 'err', 'loan_invalid_money'));
-  }
-  if (durationRounds != null && (!Number.isFinite(durationRounds) || durationRounds < 0)) {
-    redirect(withParam(returnTo, 'err', 'loan_invalid_duration'));
   }
 
   const { supabase, tenantId } = await createServerSupabase();
@@ -83,6 +78,7 @@ export async function sendLoanProposalAction(formData: FormData) {
   if (ownerTeamId === myTeamId) redirect(withParam(returnTo, 'err', 'loan_player_is_mine'));
 
   // cria proposta: from = meu time (quem pede), to = dono do jogador
+  // ✅ duration_rounds = null (temporada)
   const { error: insErr } = await supabase.from('loan_proposals').insert({
     tenant_id: tenantId,
     championship_id: championshipId,
@@ -90,7 +86,7 @@ export async function sendLoanProposalAction(formData: FormData) {
     to_team_id: ownerTeamId,
     player_id: playerId,
     money_amount: Math.trunc(moneyAmount),
-    duration_rounds: durationRounds == null ? null : Math.trunc(durationRounds),
+    duration_rounds: null,
     status: 'pending' satisfies ProposalStatus,
     created_by_user_id: userId,
   });
@@ -103,11 +99,9 @@ export async function sendLoanProposalAction(formData: FormData) {
       hint: insErr.hint,
     });
 
-    // manda um pedacinho do erro pro front (curto)
     const msg = String(insErr.message ?? '')
       .slice(0, 60)
       .replace(/\s+/g, '_');
-
     redirect(withParam(returnTo, 'err', `loan_create_failed_${insErr.code ?? 'error'}_${msg}`));
   }
 
@@ -115,48 +109,44 @@ export async function sendLoanProposalAction(formData: FormData) {
   redirect(withParam(returnTo, 'ok', 'loan_sent'));
 }
 
-/** ✅ ACCEPT LOAN (simples: só muda status) */
+/** ✅ ACCEPT LOAN (via RPC) */
 export async function acceptLoanProposalAction(formData: FormData) {
   const proposalId = String(formData.get('proposal_id') ?? '');
   const returnTo = '/dashboard/negotiations/proposals';
   if (!proposalId) redirect(withParam(returnTo, 'err', 'proposal_invalid'));
 
-  const { supabase, tenantId } = await createServerSupabase();
+  const { supabase } = await createServerSupabase();
 
-  const { data: userRes } = await supabase.auth.getUser();
-  const userId = userRes?.user?.id ?? null;
-  if (!userId) redirect(withParam(returnTo, 'err', 'not_logged'));
+  type AcceptRpcRow = {
+    ok: boolean;
+    proposal_id: string;
+    code: string | null;
+    message: string | null;
+  };
 
-  const { data: tm } = await supabase
-    .from('tenant_members')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId)
-    .maybeSingle<{ id: string }>();
-  if (!tm?.id) redirect(withParam(returnTo, 'err', 'no_tenant_member'));
+  const { data, error } = await supabase
+    .rpc('accept_loan_proposal', { p_proposal_id: proposalId })
+    .returns<AcceptRpcRow[]>();
 
-  const { data: team } = await supabase
-    .from('teams')
-    .select('id, championship_id')
-    .eq('tenant_id', tenantId)
-    .eq('tenant_member_id', tm.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle<TeamRow>();
+  if (error) {
+    console.error('accept_loan_proposal RPC error:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
 
-  const myTeamId = team?.id ?? null;
-  if (!myTeamId) redirect(withParam(returnTo, 'err', 'no_team'));
+    const msg = String(error.message ?? '')
+      .slice(0, 60)
+      .replace(/\s+/g, '_');
+    redirect(withParam(returnTo, 'err', `rpc_${error.code ?? 'error'}_${msg}`));
+  }
 
-  // só o dono (to_team) pode aceitar
-  const { error } = await supabase
-    .from('loan_proposals')
-    .update({ status: 'accepted' satisfies ProposalStatus })
-    .eq('tenant_id', tenantId)
-    .eq('id', proposalId)
-    .eq('status', 'pending' satisfies ProposalStatus)
-    .eq('to_team_id', myTeamId);
+  const row: AcceptRpcRow | null = Array.isArray(data) && data.length > 0 ? data[0] : null;
 
-  if (error) redirect(withParam(returnTo, 'err', 'loan_accept_failed'));
+  if (!row?.ok) {
+    redirect(withParam(returnTo, 'err', row?.code ?? 'loan_accept_failed'));
+  }
 
   revalidatePath(returnTo);
   redirect(withParam(returnTo, 'ok', 'loan_accepted'));

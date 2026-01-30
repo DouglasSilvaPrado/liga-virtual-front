@@ -39,11 +39,8 @@ function Inner({
   returnTo: string;
 }) {
   const [money, setMoney] = useState('0');
-  const [duration, setDuration] = useState(''); // opcional
 
   const moneyNum = Number(onlyDigits(money || '0'));
-  const durationNum = duration ? Number(onlyDigits(duration)) : 0;
-
   const canSubmit = Number.isFinite(moneyNum) && moneyNum > 0;
 
   return (
@@ -54,6 +51,10 @@ function Inner({
           <button className="rounded px-2 py-1 text-sm hover:bg-gray-100" onClick={onClose}>
             ✕
           </button>
+        </div>
+
+        <div className="mb-2 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+          <b>Validade:</b> esta proposta é <b>por temporada</b> (não por rodadas).
         </div>
 
         <div className="mb-4 flex items-center gap-3 rounded border p-3">
@@ -93,21 +94,6 @@ function Inner({
             />
             <span className="text-muted-foreground text-xs">
               {moneyNum > 0 ? `R$ ${moneyNum.toLocaleString('pt-BR')}` : 'Informe um valor > 0'}
-            </span>
-          </label>
-
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">Duração (rodadas) (opcional)</span>
-            <input
-              className="rounded border px-3 py-2"
-              name="duration_rounds"
-              inputMode="numeric"
-              value={duration}
-              onChange={(e) => setDuration(onlyDigits(e.target.value))}
-              placeholder="Ex: 5"
-            />
-            <span className="text-muted-foreground text-xs">
-              {duration ? `${durationNum || 0} rodada(s)` : 'Se vazio, usa o padrão do sistema'}
             </span>
           </label>
 
