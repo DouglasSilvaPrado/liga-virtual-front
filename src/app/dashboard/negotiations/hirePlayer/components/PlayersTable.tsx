@@ -86,18 +86,18 @@ export default function PlayersTable({
     return parsePriceToNumber(selectedHire.price);
   }, [selectedHire]);
 
-    const marketPrice = useMemo(() => {
+  const marketPrice = useMemo(() => {
     if (!selectedMarketBuy) return 0;
-    return Number.isFinite(selectedMarketBuy.market_price ?? NaN) ? (selectedMarketBuy.market_price ?? 0) : 0;
+    return Number.isFinite(selectedMarketBuy.market_price ?? NaN)
+      ? (selectedMarketBuy.market_price ?? 0)
+      : 0;
   }, [selectedMarketBuy]);
 
   const beforeMarket = walletBalance ?? 0;
   const afterMarket = Math.max(0, beforeMarket - marketPrice);
   const diffMarket = afterMarket - beforeMarket;
 
-  const canBuyMarket =
-    walletBalance != null && marketPrice > 0 && beforeMarket >= marketPrice;
-
+  const canBuyMarket = walletBalance != null && marketPrice > 0 && beforeMarket >= marketPrice;
 
   const before = walletBalance ?? 0;
   const after = Math.max(0, before - selectedPrice);
@@ -169,7 +169,8 @@ export default function PlayersTable({
               const canTrade = !!p.current_team_id && !isMine;
 
               // ✅ pode propor empréstimo apenas se o jogador tem time e não é o meu
-              const canLoan = !!activeChampionshipId && !!myTeamId && !!p.current_team_id && !isMine;
+              const canLoan =
+                !!activeChampionshipId && !!myTeamId && !!p.current_team_id && !isMine;
 
               return (
                 <tr
@@ -238,8 +239,7 @@ export default function PlayersTable({
                       : (p.price ?? '—')}
                   </td>
 
-
-                                    <td className="px-4 py-3">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {/* COMPRAR (mercado) */}
                       <button
@@ -261,7 +261,7 @@ export default function PlayersTable({
                             ? 'Não está à venda'
                             : walletBalance == null
                               ? 'Você não possui carteira neste campeonato'
-                              : (myTeamId != null && p.current_team_id === myTeamId)
+                              : myTeamId != null && p.current_team_id === myTeamId
                                 ? 'Jogador já é do seu time'
                                 : (walletBalance ?? 0) < (p.market_price ?? 0)
                                   ? 'Saldo insuficiente'
@@ -326,7 +326,6 @@ export default function PlayersTable({
                       ) : null}
                     </div>
                   </td>
-
                 </tr>
               );
             })}
@@ -485,7 +484,7 @@ export default function PlayersTable({
         returnTo={returnTo}
       />
 
-            {/* MODAL COMPRA MERCADO */}
+      {/* MODAL COMPRA MERCADO */}
       {openMarketBuy && selectedMarketBuy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
@@ -508,8 +507,8 @@ export default function PlayersTable({
                 <div>
                   <div className="font-medium">{selectedMarketBuy.name ?? '—'}</div>
                   <div className="text-muted-foreground text-xs">
-                    {selectedMarketBuy.position ?? '—'} • Overall {selectedMarketBuy.rating ?? '—'} • ID{' '}
-                    {selectedMarketBuy.id}
+                    {selectedMarketBuy.position ?? '—'} • Overall {selectedMarketBuy.rating ?? '—'}{' '}
+                    • ID {selectedMarketBuy.id}
                   </div>
                 </div>
               </div>
@@ -534,7 +533,9 @@ export default function PlayersTable({
 
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-muted-foreground">Diferença</span>
-                  <span className={`font-medium ${diffMarket < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <span
+                    className={`font-medium ${diffMarket < 0 ? 'text-red-600' : 'text-green-600'}`}
+                  >
                     {diffMarket < 0 ? '-' : '+'}R$ {money(Math.abs(diffMarket))}
                   </span>
                 </div>
@@ -566,7 +567,11 @@ export default function PlayersTable({
                   closeMarketBuyModal();
                 }}
               >
-                <input type="hidden" name="listing_id" value={String(selectedMarketBuy.market_listing_id)} />
+                <input
+                  type="hidden"
+                  name="listing_id"
+                  value={String(selectedMarketBuy.market_listing_id)}
+                />
                 <input type="hidden" name="return_to" value={returnTo} />
 
                 <button
@@ -580,7 +585,6 @@ export default function PlayersTable({
           </div>
         </div>
       )}
-
     </>
   );
 }

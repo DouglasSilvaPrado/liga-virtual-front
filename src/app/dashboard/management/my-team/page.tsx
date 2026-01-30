@@ -159,15 +159,10 @@ export default async function MyTeamPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Meus jogadores</h2>
-              <div className="text-muted-foreground text-sm">
-                {myPlayers.length} jogador(es)
-              </div>
+              <div className="text-muted-foreground text-sm">{myPlayers.length} jogador(es)</div>
             </div>
 
-            <MyPlayersGrid
-              items={myPlayers}
-              championshipId={championship?.id ?? null}
-            />
+            <MyPlayersGrid items={myPlayers} championshipId={championship?.id ?? null} />
           </div>
         </div>
       )}

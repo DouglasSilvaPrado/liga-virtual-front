@@ -55,7 +55,7 @@ function Inner({
           <b>Validade:</b> esta proposta é <b>por temporada</b>.
         </div>
 
-        <div className="mb-3 text-sm text-muted-foreground">
+        <div className="text-muted-foreground mb-3 text-sm">
           Seu saldo: {walletBalance == null ? '—' : `R$ ${walletBalance.toLocaleString('pt-BR')}`}
         </div>
 

@@ -67,11 +67,7 @@ function Inner({
         </div>
 
         {/* ✅ 1 form só */}
-        <form
-          action={listPlayerOnMarketAction}
-          onSubmit={() => onClose()}
-          className="grid gap-3"
-        >
+        <form action={listPlayerOnMarketAction} onSubmit={() => onClose()} className="grid gap-3">
           <input type="hidden" name="championship_id" value={championshipId} />
           <input type="hidden" name="player_id" value={String(player.player_id)} />
 

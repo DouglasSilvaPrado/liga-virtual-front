@@ -3,10 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { AnyProposalListItem, LoanListItem } from '../page';
 import { acceptProposalAction, rejectProposalAction } from '../serverActions';
-import {
-  acceptLoanProposalAction,
-  rejectLoanProposalAction,
-} from '../serverActionsLoans';
+import { acceptLoanProposalAction, rejectLoanProposalAction } from '../serverActionsLoans';
 import CounterProposalModal from './CounterProposalModal';
 import CounterLoanProposalModal from './CounterLoanProposalModal';
 
@@ -78,9 +75,10 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
 
   // ✅ Modal counter do TRADE (mantém)
   const [openCounter, setOpenCounter] = useState(false);
-  const [counterBase, setCounterBase] = useState<Extract<AnyProposalListItem, { kind: 'trade' }> | null>(
-    null,
-  );
+  const [counterBase, setCounterBase] = useState<Extract<
+    AnyProposalListItem,
+    { kind: 'trade' }
+  > | null>(null);
 
   function openCounterModal(p: Extract<AnyProposalListItem, { kind: 'trade' }>) {
     setCounterBase(p);
@@ -152,7 +150,7 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
                 <tr key={`${p.kind}-${p.id}`} className="border-b last:border-b-0">
                   {/* Tipo */}
                   <td className="px-4 py-3">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {p.kind === 'trade' ? 'Troca' : 'Empréstimo'}
                     </span>
                   </td>
@@ -197,8 +195,8 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
                           <span>
                             <b>{p.offered_player?.name ?? '—'}</b>{' '}
                             <span className="text-muted-foreground">
-                              ({p.offered_player?.position ?? '—'} • {p.offered_player?.rating ?? '—'}
-                              )
+                              ({p.offered_player?.position ?? '—'} •{' '}
+                              {p.offered_player?.rating ?? '—'})
                             </span>
                           </span>
                         </div>
@@ -226,7 +224,7 @@ export default function ProposalsTable({ proposals, myTeamId, walletBalance }: P
                         <span>
                           <b>{p.player?.name ?? '—'}</b>{' '}
                           <span className="text-muted-foreground">
-                            {p.player?.position ?? '—'} • {p.player?.rating ?? '—'}  •
+                            {p.player?.position ?? '—'} • {p.player?.rating ?? '—'} •
                             {p.duration_rounds ? `${p.duration_rounds} rod.` : ' Temporada'}
                           </span>
                         </span>

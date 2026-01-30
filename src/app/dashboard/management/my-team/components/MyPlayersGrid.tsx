@@ -66,10 +66,10 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
             {/* topo "futbin-like" */}
             <div className="relative h-28 bg-gradient-to-b from-zinc-900 to-zinc-700">
               {/* rating + pos */}
-              <div className="absolute left-2 top-2 rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white">
+              <div className="absolute top-2 left-2 rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white">
                 {p.rating ?? '—'}
               </div>
-              <div className="absolute left-2 top-9 rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white">
+              <div className="absolute top-9 left-2 rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white">
                 {badgePos(p.position)}
               </div>
 
@@ -89,7 +89,7 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
               </div>
 
               {/* nation / club */}
-              <div className="absolute right-2 top-2 flex flex-col gap-1">
+              <div className="absolute top-2 right-2 flex flex-col gap-1">
                 {p.nation_img ? (
                   <img src={p.nation_img} alt="" className="h-4 w-6 object-contain" />
                 ) : null}
@@ -101,9 +101,7 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
 
             {/* body */}
             <div className="space-y-2 p-3">
-              <div className="min-h-[40px] text-sm font-semibold leading-5">
-                {p.name ?? '—'}
-              </div>
+              <div className="min-h-[40px] text-sm leading-5 font-semibold">{p.name ?? '—'}</div>
 
               <div className="flex items-center justify-between text-xs">
                 {p.listing_price != null ? (
@@ -131,7 +129,7 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
         ))}
 
         {sorted.length === 0 ? (
-          <div className="col-span-full rounded border bg-white p-4 text-sm text-muted-foreground">
+          <div className="text-muted-foreground col-span-full rounded border bg-white p-4 text-sm">
             Nenhum jogador no seu time ainda.
           </div>
         ) : null}

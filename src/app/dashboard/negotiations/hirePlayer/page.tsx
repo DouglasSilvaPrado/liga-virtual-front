@@ -42,7 +42,6 @@ type MarketListingRow = {
   status: 'active' | 'sold' | 'cancelled';
 };
 
-
 type TeamPlayerMineRow = {
   player_id: number | null;
   players: {
@@ -102,7 +101,7 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
   if (sp.ok === 'trade_sent')
     return { type: 'success', text: 'Proposta de troca enviada! Aguardando resposta.' };
   if (sp.ok === 'loan_sent')
-  return { type: 'success', text: 'Proposta de empréstimo enviada! Aguardando resposta.' };
+    return { type: 'success', text: 'Proposta de empréstimo enviada! Aguardando resposta.' };
 
   if (sp.ok === 'market_bought') return { type: 'success', text: 'Jogador comprado com sucesso!' };
 
@@ -332,7 +331,7 @@ export default async function HirePlayerPage({
     });
   }
 
-   // -------------------- Resolver Mercado (listings ativos) --------------------
+  // -------------------- Resolver Mercado (listings ativos) --------------------
   if (activeChampionshipId && players.length > 0) {
     const ids = players.map((p) => p.id);
 

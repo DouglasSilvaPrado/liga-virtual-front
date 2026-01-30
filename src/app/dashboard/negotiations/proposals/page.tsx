@@ -75,7 +75,7 @@ type PlayerMini = {
   player_img: string | null;
 };
 
-export type LoanProposalStatus = ProposalStatus; 
+export type LoanProposalStatus = ProposalStatus;
 
 export type LoanProposalRow = {
   id: string;
@@ -112,7 +112,6 @@ export type LoanListItem = {
 export type TradeListItem = ProposalListItem & { kind: 'trade' };
 
 export type AnyProposalListItem = TradeListItem | LoanListItem;
-
 
 export default async function ProposalsPage() {
   const { supabase, tenantId } = await createServerSupabase();
@@ -182,7 +181,7 @@ export default async function ProposalsPage() {
 
   if (pErr) return <div className="p-6">Erro ao carregar propostas.</div>;
 
-   // ✅ 1b) Propostas de empréstimo do campeonato envolvendo meu time
+  // ✅ 1b) Propostas de empréstimo do campeonato envolvendo meu time
   const { data: loansRaw, error: lErr } = await supabase
     .from('loan_proposals')
     .select(
@@ -248,13 +247,12 @@ export default async function ProposalsPage() {
   });
 
   // ✅ 3) Busca players envolvidos
-    const playerIds = Array.from(
+  const playerIds = Array.from(
     new Set<number>([
       ...proposals.flatMap((p) => [p.offered_player_id, p.requested_player_id]),
       ...loans.map((l) => l.player_id),
     ]),
   );
-
 
   const { data: playersRaw } = await supabase
     .from('players')
@@ -300,8 +298,7 @@ export default async function ProposalsPage() {
   // ✅ junta e ordena por data desc
   const list: AnyProposalListItem[] = [...tradeList, ...loanList].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-);
-
+  );
 
   return (
     <div className="space-y-6 p-6">

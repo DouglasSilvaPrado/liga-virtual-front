@@ -13,7 +13,12 @@ type Props = {
   walletBalance: number | null;
 };
 
-export default function CounterProposalModal({ open, onClose, baseProposal, walletBalance }: Props) {
+export default function CounterProposalModal({
+  open,
+  onClose,
+  baseProposal,
+  walletBalance,
+}: Props) {
   if (!open || !baseProposal) return null;
 
   // ✅ remount quando muda proposta -> reseta state
@@ -54,7 +59,7 @@ function Inner({
           </button>
         </div>
 
-        <div className="mb-3 text-sm text-muted-foreground">
+        <div className="text-muted-foreground mb-3 text-sm">
           Seu saldo: {walletBalance == null ? '—' : `R$ ${walletBalance.toLocaleString('pt-BR')}`}
         </div>
 
