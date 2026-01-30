@@ -5,6 +5,7 @@ import type { MyTeamPlayerRow, PlayerRow } from '../page';
 import { hirePlayerAction } from '../actions';
 import PlayerDetailsModal from './PlayerDetailsModal';
 import TradePlayerModal from './TradePlayerModal';
+import LoanProposalModal from './LoanProposalModal';
 
 type Props = {
   players: PlayerRow[];
@@ -20,17 +21,12 @@ function parsePriceToNumber(priceText: string | null | undefined): number {
   if (!priceText) return 0;
 
   const raw = priceText.toString().trim().toUpperCase();
-
-  // mantém só dígitos + separadores + sufixo K/M
   const m = raw.replace(/\s/g, '').match(/^R?\$?([\d.,]+)([KM])?$/i);
   if (!m) return 0;
 
-  let numPart = m[1]; // ex: "30.75" ou "1.51" ou "667"
-  const suffix = (m[2] ?? '').toUpperCase(); // "K" | "M" | ""
+  let numPart = m[1];
+  const suffix = (m[2] ?? '').toUpperCase();
 
-  // Se tiver '.' e ',', assumimos formato pt-BR: 1.234,56
-  // Se tiver só ',', tratamos como decimal: 30,75
-  // Se tiver só '.', tratamos como decimal: 30.75
   if (numPart.includes('.') && numPart.includes(',')) {
     numPart = numPart.replace(/\./g, '').replace(',', '.');
   } else if (numPart.includes(',')) {
@@ -68,6 +64,10 @@ export default function PlayersTable({
   const [openTrade, setOpenTrade] = useState(false);
   const [tradeTarget, setTradeTarget] = useState<PlayerRow | null>(null);
 
+  // modal empréstimo
+  const [openLoan, setOpenLoan] = useState(false);
+  const [loanPlayer, setLoanPlayer] = useState<PlayerRow | null>(null);
+
   const selectedPrice = useMemo(() => {
     if (!selectedHire) return 0;
     return parsePriceToNumber(selectedHire.price);
@@ -76,6 +76,16 @@ export default function PlayersTable({
   const before = walletBalance ?? 0;
   const after = Math.max(0, before - selectedPrice);
   const diff = after - before;
+
+  function openLoanModal(p: PlayerRow) {
+    setLoanPlayer(p);
+    setOpenLoan(true);
+  }
+
+  function closeLoanModal() {
+    setOpenLoan(false);
+    setLoanPlayer(null);
+  }
 
   function openHireModal(p: PlayerRow) {
     setSelectedHire(p);
@@ -130,7 +140,10 @@ export default function PlayersTable({
             {players.map((p) => {
               const isFreeAgent = !p.current_team_id; // sem time => pode contratar
               const isMine = myTeamId != null && p.current_team_id === myTeamId;
-              const canTrade = !!p.current_team_id && !isMine; // tem time e não é o meu time
+              const canTrade = !!p.current_team_id && !isMine;
+
+              // ✅ pode propor empréstimo apenas se o jogador tem time e não é o meu
+              const canLoan = !!activeChampionshipId && !!myTeamId && !!p.current_team_id && !isMine;
 
               return (
                 <tr
@@ -197,6 +210,7 @@ export default function PlayersTable({
 
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      {/* CONTRATAR */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -214,6 +228,7 @@ export default function PlayersTable({
                         Contratar
                       </button>
 
+                      {/* TROCAR */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -232,6 +247,20 @@ export default function PlayersTable({
                       >
                         Trocar
                       </button>
+
+                      {/* EMPRESTAR */}
+                      {canLoan ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation(); // ✅ importante!
+                            openLoanModal(p);
+                          }}
+                          className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
+                        >
+                          Emprestar
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -372,6 +401,24 @@ export default function PlayersTable({
               }
             : null
         }
+      />
+
+      {/* MODAL EMPRÉSTIMO */}
+      <LoanProposalModal
+        open={openLoan}
+        onClose={closeLoanModal}
+        player={
+          loanPlayer
+            ? {
+                id: loanPlayer.id,
+                name: loanPlayer.name,
+                rating: loanPlayer.rating,
+                position: loanPlayer.position,
+                player_img: loanPlayer.player_img,
+              }
+            : null
+        }
+        returnTo={returnTo}
       />
     </>
   );

@@ -75,6 +75,45 @@ type PlayerMini = {
   player_img: string | null;
 };
 
+export type LoanProposalStatus = ProposalStatus; 
+
+export type LoanProposalRow = {
+  id: string;
+  tenant_id: string;
+  championship_id: string;
+  from_team_id: string;
+  to_team_id: string;
+  player_id: number;
+  money_amount: number;
+  duration_rounds: number | null;
+  status: LoanProposalStatus;
+  created_at: string;
+};
+
+export type LoanListItem = {
+  kind: 'loan';
+
+  id: string;
+  status: LoanProposalStatus;
+  created_at: string;
+
+  from_team_id: string;
+  to_team_id: string;
+
+  money_amount: number;
+  duration_rounds: number | null;
+
+  pay: { id: string; name: string | null; shield_url: string | null } | null; // quem envia
+  ask: { id: string; name: string | null; shield_url: string | null } | null; // quem recebe
+
+  player: PlayerMini | null;
+};
+
+export type TradeListItem = ProposalListItem & { kind: 'trade' };
+
+export type AnyProposalListItem = TradeListItem | LoanListItem;
+
+
 export default async function ProposalsPage() {
   const { supabase, tenantId } = await createServerSupabase();
 
@@ -143,6 +182,28 @@ export default async function ProposalsPage() {
 
   if (pErr) return <div className="p-6">Erro ao carregar propostas.</div>;
 
+   // ✅ 1b) Propostas de empréstimo do campeonato envolvendo meu time
+  const { data: loansRaw, error: lErr } = await supabase
+    .from('loan_proposals')
+    .select(
+      `
+      id, tenant_id, championship_id,
+      from_team_id, to_team_id,
+      player_id,
+      money_amount, duration_rounds,
+      status, created_at
+    `,
+    )
+    .eq('tenant_id', tenantId)
+    .eq('championship_id', activeChampionshipId)
+    .or(`from_team_id.eq.${myTeamId},to_team_id.eq.${myTeamId}`)
+    .order('created_at', { ascending: false })
+    .returns<LoanProposalRow[]>();
+
+  if (lErr) return <div className="p-6">Erro ao carregar propostas de empréstimo.</div>;
+
+  const loans = loansRaw ?? [];
+
   const proposals = proposalsRaw ?? [];
 
   if (proposals.length === 0) {
@@ -156,7 +217,10 @@ export default async function ProposalsPage() {
 
   // ✅ 2) Busca times envolvidos
   const teamIds = Array.from(
-    new Set<string>(proposals.flatMap((p) => [p.from_team_id, p.to_team_id])),
+    new Set<string>([
+      ...proposals.flatMap((p) => [p.from_team_id, p.to_team_id]),
+      ...loans.flatMap((p) => [p.from_team_id, p.to_team_id]),
+    ]),
   );
 
   const { data: teamsRaw } = await supabase
@@ -184,9 +248,13 @@ export default async function ProposalsPage() {
   });
 
   // ✅ 3) Busca players envolvidos
-  const playerIds = Array.from(
-    new Set<number>(proposals.flatMap((p) => [p.offered_player_id, p.requested_player_id])),
+    const playerIds = Array.from(
+    new Set<number>([
+      ...proposals.flatMap((p) => [p.offered_player_id, p.requested_player_id]),
+      ...loans.map((l) => l.player_id),
+    ]),
   );
+
 
   const { data: playersRaw } = await supabase
     .from('players')
@@ -198,7 +266,8 @@ export default async function ProposalsPage() {
   (playersRaw ?? []).forEach((pl) => playersMap.set(pl.id, pl));
 
   // ✅ 4) Monta DTO final
-  const list: ProposalListItem[] = proposals.map((p) => ({
+  const tradeList: TradeListItem[] = proposals.map((p) => ({
+    kind: 'trade',
     id: p.id,
     status: p.status,
     created_at: p.created_at,
@@ -208,12 +277,31 @@ export default async function ProposalsPage() {
     requested_player_id: p.requested_player_id,
     money_direction: p.money_direction,
     money_amount: p.money_amount,
-
     pay: teamsMap.get(p.from_team_id) ?? null,
     ask: teamsMap.get(p.to_team_id) ?? null,
     offered_player: playersMap.get(p.offered_player_id) ?? null,
     requested_player: playersMap.get(p.requested_player_id) ?? null,
   }));
+
+  const loanList: LoanListItem[] = loans.map((l) => ({
+    kind: 'loan',
+    id: l.id,
+    status: l.status,
+    created_at: l.created_at,
+    from_team_id: l.from_team_id,
+    to_team_id: l.to_team_id,
+    money_amount: l.money_amount ?? 0,
+    duration_rounds: l.duration_rounds ?? null,
+    pay: teamsMap.get(l.from_team_id) ?? null,
+    ask: teamsMap.get(l.to_team_id) ?? null,
+    player: playersMap.get(l.player_id) ?? null,
+  }));
+
+  // ✅ junta e ordena por data desc
+  const list: AnyProposalListItem[] = [...tradeList, ...loanList].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+);
+
 
   return (
     <div className="space-y-6 p-6">

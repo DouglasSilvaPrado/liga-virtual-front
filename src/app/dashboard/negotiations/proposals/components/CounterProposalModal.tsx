@@ -1,212 +1,122 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import type { ProposalListItem, MoneyDirection } from '../page';
+import { useState } from 'react';
+import type { AnyProposalListItem } from '../page';
 import { counterProposalAction } from '../serverActions';
+
+type TradeItem = Extract<AnyProposalListItem, { kind: 'trade' }>;
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  baseProposal: ProposalListItem | null;
+  baseProposal: TradeItem | null;
   walletBalance: number | null;
 };
 
-type MyPlayer = {
-  player_id: number;
-  name: string | null;
-  rating: number | null;
-  position: string | null;
-  player_img: string | null;
-};
+export default function CounterProposalModal({ open, onClose, baseProposal, walletBalance }: Props) {
+  if (!open || !baseProposal) return null;
 
-function money(n: number) {
-  return n.toLocaleString('pt-BR');
+  // ✅ remount quando muda proposta -> reseta state
+  return (
+    <Inner
+      key={baseProposal.id}
+      onClose={onClose}
+      baseProposal={baseProposal}
+      walletBalance={walletBalance}
+    />
+  );
 }
 
-export default function CounterProposalModal({
-  open,
+function Inner({
   onClose,
   baseProposal,
   walletBalance,
-}: Props) {
-  const [loading, setLoading] = useState(false);
-  const [myPlayers, setMyPlayers] = useState<MyPlayer[]>([]);
-  const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
-
-  // money
-  const [moneyDirection, setMoneyDirection] = useState<MoneyDirection>('none');
-  const [moneyAmount, setMoneyAmount] = useState<string>('0');
-
-  useEffect(() => {
-    if (!open) return;
-
-    let cancelled = false;
-
-    async function loadMyPlayers() {
-      setLoading(true);
-      try {
-        const res = await fetch('/api/me/team-players', { method: 'GET' });
-        if (!res.ok) throw new Error('Erro ao carregar seus jogadores');
-        const data = (await res.json()) as { players: MyPlayer[] };
-        if (!cancelled) {
-          const list = data.players ?? [];
-          setMyPlayers(list);
-          setSelectedOffer(list[0]?.player_id ?? null);
-        }
-      } catch {
-        if (!cancelled) {
-          setMyPlayers([]);
-          setSelectedOffer(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    loadMyPlayers();
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
-
-  const moneyAmountNum = useMemo(() => {
-    // aceita digitar "50000" etc
-    const n = Number(String(moneyAmount).replace(/[^\d]/g, ''));
-    return Number.isFinite(n) ? n : 0;
-  }, [moneyAmount]);
-
-  const canSubmit =
-    !!baseProposal &&
-    selectedOffer != null &&
-    Number.isFinite(selectedOffer) &&
-    (moneyDirection === 'none' || moneyAmountNum > 0);
-
-  if (!open || !baseProposal) return null;
-
-  const needsBalance = moneyDirection !== 'none' && moneyDirection === 'pay' && moneyAmountNum > 0;
-
-  const insufficient = needsBalance && walletBalance != null && moneyAmountNum > walletBalance;
+}: {
+  onClose: () => void;
+  baseProposal: TradeItem;
+  walletBalance: number | null;
+}) {
+  const [offeredPlayerId, setOfferedPlayerId] = useState<string>(
+    String(baseProposal.requested_player_id ?? ''),
+  );
+  const [moneyDirection, setMoneyDirection] = useState<'none' | 'pay' | 'ask'>(
+    baseProposal.money_direction ?? 'none',
+  );
+  const [moneyAmount, setMoneyAmount] = useState<string>(String(baseProposal.money_amount ?? 0));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-lg bg-white shadow-lg">
-        <div className="flex items-center justify-between border-b p-4">
-          <div className="font-semibold">Contra-proposta</div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded px-2 py-1 text-sm hover:bg-gray-100"
-          >
+      <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold">Contra-proposta (Troca)</h3>
+          <button className="rounded px-2 py-1 text-sm hover:bg-gray-100" onClick={onClose}>
             ✕
           </button>
         </div>
 
-        <div className="space-y-4 p-4">
-          <div className="rounded border p-3 text-sm">
-            <div className="font-semibold">Proposta original</div>
-            <div className="text-muted-foreground mt-2">
-              Eles oferecem: <b>{baseProposal.offered_player?.name ?? '—'}</b> • Querem:{' '}
-              <b>{baseProposal.requested_player?.name ?? '—'}</b>
-            </div>
-          </div>
-
-          <div className="rounded border p-3">
-            <div className="text-sm font-semibold">
-              Escolha um jogador do seu time para oferecer
-            </div>
-
-            {loading ? (
-              <div className="text-muted-foreground mt-2 text-sm">Carregando…</div>
-            ) : myPlayers.length === 0 ? (
-              <div className="mt-2 text-sm text-red-700">
-                Você não tem jogadores no seu time para fazer contra-proposta.
-              </div>
-            ) : (
-              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                {myPlayers.map((p) => (
-                  <button
-                    key={p.player_id}
-                    type="button"
-                    onClick={() => setSelectedOffer(p.player_id)}
-                    className={`flex items-center gap-3 rounded border p-2 text-left hover:bg-gray-50 ${
-                      selectedOffer === p.player_id ? 'bg-gray-100' : ''
-                    }`}
-                  >
-                    {p.player_img ? <img src={p.player_img} className="h-10 w-10" alt="" /> : null}
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{p.name ?? '—'}</div>
-                      <div className="text-muted-foreground text-xs">
-                        {p.position ?? '—'} • {p.rating ?? '—'} • ID {p.player_id}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded border p-3">
-            <div className="text-sm font-semibold">Dinheiro adicional</div>
-
-            <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center">
-              <select
-                className="rounded border px-3 py-2 text-sm"
-                value={moneyDirection}
-                onChange={(e) => setMoneyDirection(e.target.value as MoneyDirection)}
-              >
-                <option value="none">Sem dinheiro</option>
-                <option value="pay">Eu pago para o outro time</option>
-                <option value="ask">Eu peço dinheiro do outro time</option>
-              </select>
-
-              <input
-                className="rounded border px-3 py-2 text-sm"
-                value={moneyAmount}
-                onChange={(e) => setMoneyAmount(e.target.value)}
-                placeholder="Valor (ex: 50000)"
-                disabled={moneyDirection === 'none'}
-              />
-
-              <div className="text-muted-foreground text-xs">
-                Seu saldo: {walletBalance == null ? '—' : `R$ ${money(walletBalance)}`}
-              </div>
-            </div>
-
-            {insufficient ? (
-              <div className="mt-2 rounded border border-red-300 bg-red-50 p-2 text-xs text-red-700">
-                Saldo insuficiente para oferecer esse valor.
-              </div>
-            ) : null}
-          </div>
+        <div className="mb-3 text-sm text-muted-foreground">
+          Seu saldo: {walletBalance == null ? '—' : `R$ ${walletBalance.toLocaleString('pt-BR')}`}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t p-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded border px-4 py-2 text-sm hover:bg-gray-50"
-          >
-            Cancelar
-          </button>
+        <div className="mb-4 rounded border p-3 text-sm">
+          Base: <b>{baseProposal.offered_player?.name ?? '—'}</b> por{' '}
+          <b>{baseProposal.requested_player?.name ?? '—'}</b>
+        </div>
 
-          <form action={counterProposalAction} onSubmit={onClose}>
-            <input type="hidden" name="base_proposal_id" value={baseProposal.id} />
-            <input type="hidden" name="offered_player_id" value={String(selectedOffer ?? '')} />
-            <input type="hidden" name="money_direction" value={moneyDirection} />
+        <form action={counterProposalAction} className="grid gap-3">
+          <input type="hidden" name="base_proposal_id" value={baseProposal.id} />
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-muted-foreground">ID do jogador oferecido (seu)</span>
             <input
-              type="hidden"
-              name="money_amount"
-              value={String(moneyDirection === 'none' ? 0 : moneyAmountNum)}
+              className="rounded border px-3 py-2"
+              name="offered_player_id"
+              inputMode="numeric"
+              value={offeredPlayerId}
+              onChange={(e) => setOfferedPlayerId(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder="Ex: 123"
             />
+          </label>
 
-            <button
-              className="cursor-pointer rounded bg-black px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!canSubmit || insufficient}
+          <label className="grid gap-1 text-sm">
+            <span className="text-muted-foreground">Dinheiro</span>
+            <select
+              className="rounded border px-3 py-2"
+              name="money_direction"
+              value={moneyDirection}
+              onChange={(e) => setMoneyDirection(e.target.value as 'none' | 'pay' | 'ask')}
             >
+              <option value="none">Sem dinheiro</option>
+              <option value="pay">Você paga</option>
+              <option value="ask">Você recebe</option>
+            </select>
+          </label>
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-muted-foreground">Valor (R$)</span>
+            <input
+              className="rounded border px-3 py-2"
+              name="money_amount"
+              inputMode="numeric"
+              value={moneyAmount}
+              onChange={(e) => setMoneyAmount(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder="Ex: 100000"
+            />
+          </label>
+
+          <div className="mt-2 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="rounded border px-3 py-2 text-sm hover:bg-gray-50"
+              onClick={onClose}
+            >
+              Cancelar
+            </button>
+            <button className="rounded bg-black px-3 py-2 text-sm text-white">
               Enviar contra-proposta
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>
   );

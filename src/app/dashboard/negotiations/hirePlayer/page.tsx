@@ -88,6 +88,8 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
   if (sp.ok === 'hired') return { type: 'success', text: 'Jogador contratado com sucesso!' };
   if (sp.ok === 'trade_sent')
     return { type: 'success', text: 'Proposta de troca enviada! Aguardando resposta.' };
+  if (sp.ok === 'loan_sent')
+  return { type: 'success', text: 'Proposta de empréstimo enviada! Aguardando resposta.' };
 
   if (!sp.err) return null;
 
@@ -114,6 +116,14 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
     trade_requested_not_found: 'O jogador alvo não está em nenhum time.',
     trade_requested_is_mine: 'Você não pode propor troca por um jogador do seu próprio time.',
     trade_create_failed: 'Não foi possível criar a proposta de troca.',
+
+    // loan (se você usar a action de empréstimo)
+    loan_player_invalid: 'Jogador inválido.',
+    loan_invalid_money: 'Valor da proposta inválido.',
+    loan_invalid_duration: 'Duração inválida.',
+    loan_player_not_in_any_team: 'Este jogador não está em nenhum time.',
+    loan_player_is_mine: 'Você não pode propor empréstimo do seu próprio jogador.',
+    loan_create_failed: 'Não foi possível criar a proposta de empréstimo.',
   };
 
   return { type: 'error', text: map[sp.err] ?? `Erro: ${sp.err}` };
