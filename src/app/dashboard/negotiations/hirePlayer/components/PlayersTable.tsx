@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { MyTeamPlayerRow, PlayerRow } from '../page';
-import { hirePlayerAction } from '../actions';
+import { buyMarketListingAction, hirePlayerAction } from '../actions';
 import PlayerDetailsModal from './PlayerDetailsModal';
 import TradePlayerModal from './TradePlayerModal';
 import LoanProposalModal from './LoanProposalModal';
@@ -68,10 +68,36 @@ export default function PlayersTable({
   const [openLoan, setOpenLoan] = useState(false);
   const [loanPlayer, setLoanPlayer] = useState<PlayerRow | null>(null);
 
+  // modal compra mercado
+  const [openMarketBuy, setOpenMarketBuy] = useState(false);
+  const [selectedMarketBuy, setSelectedMarketBuy] = useState<PlayerRow | null>(null);
+
+  function openMarketBuyModal(p: PlayerRow) {
+    setSelectedMarketBuy(p);
+    setOpenMarketBuy(true);
+  }
+  function closeMarketBuyModal() {
+    setOpenMarketBuy(false);
+    setSelectedMarketBuy(null);
+  }
+
   const selectedPrice = useMemo(() => {
     if (!selectedHire) return 0;
     return parsePriceToNumber(selectedHire.price);
   }, [selectedHire]);
+
+    const marketPrice = useMemo(() => {
+    if (!selectedMarketBuy) return 0;
+    return Number.isFinite(selectedMarketBuy.market_price ?? NaN) ? (selectedMarketBuy.market_price ?? 0) : 0;
+  }, [selectedMarketBuy]);
+
+  const beforeMarket = walletBalance ?? 0;
+  const afterMarket = Math.max(0, beforeMarket - marketPrice);
+  const diffMarket = afterMarket - beforeMarket;
+
+  const canBuyMarket =
+    walletBalance != null && marketPrice > 0 && beforeMarket >= marketPrice;
+
 
   const before = walletBalance ?? 0;
   const after = Math.max(0, before - selectedPrice);
@@ -206,11 +232,46 @@ export default function PlayersTable({
                     </div>
                   </td>
 
-                  <td className="px-4 py-3">{p.price ?? '—'}</td>
-
                   <td className="px-4 py-3">
+                    {p.market_listing_id && p.market_price
+                      ? `R$ ${money(p.market_price)}`
+                      : (p.price ?? '—')}
+                  </td>
+
+
+                                    <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {/* CONTRATAR */}
+                      {/* COMPRAR (mercado) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMarketBuyModal(p);
+                        }}
+                        className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={
+                          !p.market_listing_id ||
+                          !p.market_price ||
+                          walletBalance == null ||
+                          (myTeamId != null && p.current_team_id === myTeamId) ||
+                          (walletBalance ?? 0) < (p.market_price ?? 0)
+                        }
+                        title={
+                          !p.market_listing_id
+                            ? 'Não está à venda'
+                            : walletBalance == null
+                              ? 'Você não possui carteira neste campeonato'
+                              : (myTeamId != null && p.current_team_id === myTeamId)
+                                ? 'Jogador já é do seu time'
+                                : (walletBalance ?? 0) < (p.market_price ?? 0)
+                                  ? 'Saldo insuficiente'
+                                  : 'Comprar jogador'
+                        }
+                      >
+                        Comprar
+                      </button>
+
+                      {/* CONTRATAR (somente free agent e NÃO listado) */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -218,11 +279,13 @@ export default function PlayersTable({
                           openHireModal(p);
                         }}
                         className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={!isFreeAgent}
+                        disabled={!isFreeAgent || !!p.market_listing_id}
                         title={
-                          !isFreeAgent
-                            ? 'Só é possível contratar jogador sem contrato'
-                            : 'Contratar'
+                          !!p.market_listing_id
+                            ? 'Este jogador está no mercado (use Comprar)'
+                            : !isFreeAgent
+                              ? 'Só é possível contratar jogador sem contrato'
+                              : 'Contratar'
                         }
                       >
                         Contratar
@@ -253,7 +316,7 @@ export default function PlayersTable({
                         <button
                           type="button"
                           onClick={(e) => {
-                            e.stopPropagation(); // ✅ importante!
+                            e.stopPropagation();
                             openLoanModal(p);
                           }}
                           className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
@@ -263,6 +326,7 @@ export default function PlayersTable({
                       ) : null}
                     </div>
                   </td>
+
                 </tr>
               );
             })}
@@ -420,6 +484,103 @@ export default function PlayersTable({
         }
         returnTo={returnTo}
       />
+
+            {/* MODAL COMPRA MERCADO */}
+      {openMarketBuy && selectedMarketBuy && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
+            <div className="flex items-center justify-between border-b p-4">
+              <div className="font-semibold">Confirmar compra</div>
+              <button
+                type="button"
+                onClick={closeMarketBuyModal}
+                className="cursor-pointer rounded px-2 py-1 text-sm hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 p-4">
+              <div className="flex items-center gap-3">
+                {selectedMarketBuy.player_img ? (
+                  <img src={selectedMarketBuy.player_img} alt="" className="h-10 w-10" />
+                ) : null}
+                <div>
+                  <div className="font-medium">{selectedMarketBuy.name ?? '—'}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {selectedMarketBuy.position ?? '—'} • Overall {selectedMarketBuy.rating ?? '—'} • ID{' '}
+                    {selectedMarketBuy.id}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded border p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Saldo atual</span>
+                  <span className="font-medium">
+                    {walletBalance == null ? '—' : `R$ ${money(beforeMarket)}`}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-muted-foreground">Preço do mercado</span>
+                  <span className="font-medium">R$ {money(marketPrice)}</span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-muted-foreground">Saldo após compra</span>
+                  <span className="font-semibold">R$ {money(afterMarket)}</span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-muted-foreground">Diferença</span>
+                  <span className={`font-medium ${diffMarket < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {diffMarket < 0 ? '-' : '+'}R$ {money(Math.abs(diffMarket))}
+                  </span>
+                </div>
+              </div>
+
+              {walletBalance == null ? (
+                <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                  Você ainda não possui carteira neste campeonato.
+                </div>
+              ) : beforeMarket < marketPrice ? (
+                <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                  Saldo insuficiente para comprar esse jogador.
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t p-4">
+              <button
+                type="button"
+                onClick={closeMarketBuyModal}
+                className="cursor-pointer rounded border px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+
+              <form
+                action={buyMarketListingAction}
+                onSubmit={() => {
+                  closeMarketBuyModal();
+                }}
+              >
+                <input type="hidden" name="listing_id" value={String(selectedMarketBuy.market_listing_id)} />
+                <input type="hidden" name="return_to" value={returnTo} />
+
+                <button
+                  className="cursor-pointer rounded bg-black px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!canBuyMarket || !selectedMarketBuy.market_listing_id}
+                >
+                  Confirmar compra
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }

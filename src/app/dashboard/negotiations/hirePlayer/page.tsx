@@ -28,7 +28,20 @@ export interface PlayerRow {
   current_team_id: string | null;
   current_team_name: string | null;
   current_team_shield: string | null;
+
+  market_listing_id: string | null;
+  market_price: number | null;
+  market_seller_team_id: string | null;
 }
+
+type MarketListingRow = {
+  id: string;
+  player_id: number;
+  price: number;
+  seller_team_id: string;
+  status: 'active' | 'sold' | 'cancelled';
+};
+
 
 type TeamPlayerMineRow = {
   player_id: number | null;
@@ -91,6 +104,8 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
   if (sp.ok === 'loan_sent')
   return { type: 'success', text: 'Proposta de empréstimo enviada! Aguardando resposta.' };
 
+  if (sp.ok === 'market_bought') return { type: 'success', text: 'Jogador comprado com sucesso!' };
+
   if (!sp.err) return null;
 
   const map: Record<string, string> = {
@@ -124,6 +139,12 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
     loan_player_not_in_any_team: 'Este jogador não está em nenhum time.',
     loan_player_is_mine: 'Você não pode propor empréstimo do seu próprio jogador.',
     loan_create_failed: 'Não foi possível criar a proposta de empréstimo.',
+
+    listing_invalid: 'Listagem inválida.',
+    listing_not_found: 'Listagem não encontrada ou não está ativa.',
+    cannot_buy_own: 'Você não pode comprar seu próprio jogador.',
+    player_not_owned: 'O vendedor não possui mais este jogador.',
+    market_buy_failed: 'Não foi possível concluir a compra.',
   };
 
   return { type: 'error', text: map[sp.err] ?? `Erro: ${sp.err}` };
@@ -309,6 +330,42 @@ export default async function HirePlayerPage({
         current_team_shield: t?.shield ?? null,
       };
     });
+  }
+
+   // -------------------- Resolver Mercado (listings ativos) --------------------
+  if (activeChampionshipId && players.length > 0) {
+    const ids = players.map((p) => p.id);
+
+    const { data: listings } = await supabase
+      .from('player_market_listings')
+      .select('id, player_id, price, seller_team_id, status')
+      .eq('tenant_id', tenantId)
+      .eq('championship_id', activeChampionshipId)
+      .eq('status', 'active')
+      .in('player_id', ids)
+      .returns<MarketListingRow[]>();
+
+    const map = new Map<number, MarketListingRow>();
+    (listings ?? []).forEach((l) => map.set(l.player_id, l));
+
+    players = players.map((p) => {
+      const l = map.get(p.id);
+
+      return {
+        ...p,
+        market_listing_id: l?.id ?? null,
+        market_price: l?.price ?? null,
+        market_seller_team_id: l?.seller_team_id ?? null,
+      };
+    });
+  } else {
+    // garantir campos
+    players = players.map((p) => ({
+      ...p,
+      market_listing_id: null,
+      market_price: null,
+      market_seller_team_id: null,
+    }));
   }
 
   return (

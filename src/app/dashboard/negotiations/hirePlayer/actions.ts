@@ -200,3 +200,45 @@ export async function hirePlayerAction(formData: FormData) {
   revalidatePath(basePath);
   redirect(withParam(returnTo, 'ok', 'hired'));
 }
+
+export async function buyMarketListingAction(formData: FormData) {
+  const basePath = '/dashboard/negotiations/hirePlayer';
+
+  const listingId = String(formData.get('listing_id') ?? '');
+  const returnToRaw = String(formData.get('return_to') || basePath);
+  const returnTo = returnToRaw.startsWith('/') ? returnToRaw : basePath;
+
+  if (!listingId) {
+    redirect(withParam(returnTo, 'err', 'listing_invalid'));
+  }
+
+  const { supabase } = await createServerSupabase();
+
+  type BuyRpcRow = { ok: boolean; code: string | null; message: string | null };
+
+  const { data, error } = await supabase
+    .rpc('buy_market_listing', { p_listing_id: listingId })
+    .returns<BuyRpcRow[]>();
+
+  if (error) {
+    console.error('buy_market_listing RPC error:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
+    const msg = String(error.message ?? '')
+      .slice(0, 60)
+      .replace(/\s+/g, '_');
+    redirect(withParam(returnTo, 'err', `rpc_${error.code ?? 'error'}_${msg}`));
+  }
+
+  const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+  if (!row?.ok) {
+    redirect(withParam(returnTo, 'err', row?.code ?? 'market_buy_failed'));
+  }
+
+  revalidatePath(basePath);
+  redirect(withParam(returnTo, 'ok', 'market_bought'));
+}
