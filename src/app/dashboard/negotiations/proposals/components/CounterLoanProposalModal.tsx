@@ -19,7 +19,7 @@ export default function CounterLoanProposalModal({
 }: Props) {
   if (!open || !baseProposal) return null;
 
-  // ✅ isso força "remount" quando troca a proposta -> reseta state
+  // ✅ remount quando troca a proposta -> reseta state
   return (
     <Inner
       key={baseProposal.id}
@@ -51,18 +51,26 @@ function Inner({
           </button>
         </div>
 
+        <div className="mb-2 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+          <b>Validade:</b> esta proposta é <b>por temporada</b>.
+        </div>
+
         <div className="mb-3 text-sm text-muted-foreground">
           Seu saldo: {walletBalance == null ? '—' : `R$ ${walletBalance.toLocaleString('pt-BR')}`}
         </div>
 
         <div className="mb-4 rounded border p-3 text-sm">
           Jogador: <b>{baseProposal.player?.name ?? '—'}</b>
-          {baseProposal.duration_rounds ? (
-            <span className="text-muted-foreground"> • {baseProposal.duration_rounds} rod.</span>
-          ) : null}
+          <span className="text-muted-foreground"> • Temporada</span>
         </div>
 
-        <form action={counterLoanProposalAction} className="grid gap-3">
+        <form
+          action={counterLoanProposalAction}
+          onSubmit={() => {
+            onClose();
+          }}
+          className="grid gap-3"
+        >
           <input type="hidden" name="proposal_id" value={baseProposal.id} />
 
           <label className="grid gap-1 text-sm">

@@ -270,7 +270,7 @@ export async function counterLoanProposalAction(formData: FormData) {
     to_team_id: base.from_team_id,
     player_id: base.player_id,
     money_amount: Math.max(0, Math.trunc(moneyAmount)),
-    duration_rounds: base.duration_rounds ?? null,
+    duration_rounds: null,
     status: 'pending' satisfies ProposalStatus,
     parent_id: base.id,
   });
