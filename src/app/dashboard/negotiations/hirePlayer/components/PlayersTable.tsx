@@ -6,6 +6,7 @@ import { buyMarketListingAction, hirePlayerAction } from '../actions';
 import PlayerDetailsModal from './PlayerDetailsModal';
 import TradePlayerModal from './TradePlayerModal';
 import LoanProposalModal from './LoanProposalModal';
+import PlayerCard from '@/app/dashboard/components/Card/PlayerCard';
 
 type Props = {
   players: PlayerRow[];
@@ -181,7 +182,21 @@ export default function PlayersTable({
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      {p.player_img ? <img src={p.player_img} alt="" className="h-7 w-7" /> : null}
+                      <PlayerCard
+                        player={{
+                          name: p.name,
+                          rating: p.rating,
+                          position: p.position,
+                          player_img: p.player_img,
+                          nation_img: p.nation_img,
+                          club_img: p.club_img,
+                        }}
+                        showPlayerName={false}
+                        showOverall={false}
+                        showMiniImage={true}
+                        size={{ w: 56, h: 80 }}
+                        className="shrink-0"
+                      />
 
                       <div>
                         <button
@@ -199,6 +214,7 @@ export default function PlayersTable({
                       </div>
                     </div>
                   </td>
+
 
                   <td className="px-4 py-3">{p.rating ?? '—'}</td>
 
