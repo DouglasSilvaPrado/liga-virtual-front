@@ -8,13 +8,17 @@ import MyPlayersGrid, { MyTeamPlayerCardItem } from './components/MyPlayersGrid'
 
 type TeamRow = { id: string; championship_id: string | null; shield_id: string | null };
 
+type ChampionshipRow = { id: string };
+
+type TenantMemberRow = { id: string };
+
 type TeamPlayerJoinRow = {
   player_id: number | null;
   players: {
     id: number;
     name: string | null;
-    rating: number | null;
-    position: string | null;
+    oa: string | null;
+    bp: string | null;
     player_img: string | null;
     nation_img: string | null;
     club_img: string | null;
@@ -26,6 +30,12 @@ type ListingRow = {
   price: number;
   status: 'active' | 'sold' | 'cancelled';
 };
+
+function toIntOrNull(v: unknown): number | null {
+  if (v == null) return null;
+  const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : NaN;
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
 
 export default async function MyTeamPage() {
   const { supabase, tenantId } = await createServerSupabase();
@@ -45,18 +55,18 @@ export default async function MyTeamPage() {
   // campeonato ativo (por enquanto 1º)
   const { data: championship } = await supabase
     .from('championships')
-    .select('*')
+    .select('id')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: true })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle<ChampionshipRow>();
 
   const { data: tenantMember, error: memberError } = await supabase
     .from('tenant_members')
-    .select('*')
+    .select('id')
     .eq('tenant_id', tenantId)
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle<TenantMemberRow>();
 
   if (memberError) console.error('Erro buscando tenant_member:', memberError);
 
@@ -64,7 +74,7 @@ export default async function MyTeamPage() {
     .from('teams')
     .select('*')
     .eq('tenant_id', tenantId)
-    .eq('tenant_member_id', tenantMember?.id)
+    .eq('tenant_member_id', tenantMember?.id ?? '')
     .maybeSingle<Team>();
 
   const hasTeam = !!team;
@@ -86,32 +96,31 @@ export default async function MyTeamPage() {
       .from('team_players')
       .select(
         `
-        player_id,
-        players (
-          id, name, rating, position, player_img, nation_img, club_img
-        )
-      `,
+          player_id,
+          players (
+            id, name, oa, bp, player_img, nation_img, club_img
+          )
+        `,
       )
       .eq('tenant_id', tenantId)
       .eq('championship_id', championship.id)
       .eq('team_id', team.id)
       .returns<TeamPlayerJoinRow[]>();
 
-    const playersBase = (tp ?? [])
+    const playersBase: MyTeamPlayerCardItem[] = (tp ?? [])
       .filter((r): r is TeamPlayerJoinRow & { player_id: number } => Number.isFinite(r.player_id))
       .map((r) => ({
-        player_id: r.player_id!,
-        id: r.players?.id ?? r.player_id!,
+        player_id: r.player_id,
+        id: r.players?.id ?? r.player_id,
         name: r.players?.name ?? null,
-        rating: r.players?.rating ?? null,
-        position: r.players?.position ?? null,
+        rating: toIntOrNull(r.players?.oa),
+        position: r.players?.bp ?? null,
         player_img: r.players?.player_img ?? null,
         nation_img: r.players?.nation_img ?? null,
         club_img: r.players?.club_img ?? null,
-        listing_price: null as number | null,
+        listing_price: null,
       }));
 
-    // pegar listings ativos desses jogadores (se houver)
     const ids = playersBase.map((p) => p.player_id);
 
     if (ids.length > 0) {
@@ -136,6 +145,8 @@ export default async function MyTeamPage() {
     }
   }
 
+  const canCreateTeam = !!tenantMember?.id && !!championship?.id;
+
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
@@ -144,11 +155,17 @@ export default async function MyTeamPage() {
 
       {!hasTeam && (
         <div className="mt-6">
-          <CreateTeamModal
-            tenantId={tenantId}
-            tenantMemberId={tenantMember?.id}
-            championshipId={championship?.id}
-          />
+          {canCreateTeam ? (
+            <CreateTeamModal
+              tenantId={tenantId}
+              tenantMemberId={tenantMember.id}
+              championshipId={championship.id}
+            />
+          ) : (
+            <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              Não foi possível criar o time: faltam dados de tenantMember ou campeonato ativo.
+            </div>
+          )}
         </div>
       )}
 

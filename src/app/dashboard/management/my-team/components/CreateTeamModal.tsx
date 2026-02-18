@@ -20,10 +20,13 @@ interface Props {
   championshipId: string;
 }
 
+type ShieldsListResponse = { data: Shield[] };
+
 export default function CreateTeamModal({ tenantId, tenantMemberId, championshipId }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [shieldId, setShieldId] = useState<string | undefined>();
+
+  const [shieldId, setShieldId] = useState<string | null>(null);
   const [name, setName] = useState('');
 
   const [page, setPage] = useState(1);
@@ -33,61 +36,80 @@ export default function CreateTeamModal({ tenantId, tenantMemberId, championship
 
   const router = useRouter();
 
-  // Load paginated shields
-  async function loadShields() {
-    if (!hasMore) return;
-    setLoadingShields(true);
-
-    const res = await fetch(`/api/shields/list?tenant_id=${tenantId}&page=${page}`);
-    const json: { data: Shield[] } = await res.json();
-
-    if (json.data.length < 20) setHasMore(false);
-
-    setShields((prev) => {
-      const merged = [...prev, ...json.data];
-      const unique = Array.from(new Map(merged.map((s) => [s.id, s])).values());
-      return unique;
-    });
-
-    setLoadingShields(false);
+  async function fetchPage(p: number) {
+    const res = await fetch(
+      `/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${p}`,
+    );
+    const json = (await res.json()) as ShieldsListResponse;
+    return json.data ?? [];
   }
 
+  // Carrega a 1ª página quando abrir
   useEffect(() => {
-    if (!open || shields.length > 0) return;
+    if (!open) return;
 
     let ignore = false;
 
-    async function fetchShields() {
+    async function run() {
       setLoadingShields(true);
-
-      const res = await fetch(
-        `/api/shields/list?tenant_id=${tenantId}&tenant_member_id=${tenantMemberId}&page=${page}`,
-      );
-      const json: { data: Shield[] } = await res.json();
-
-      if (!ignore) {
-        setShields(Array.from(new Map(json.data.map((s) => [s.id, s])).values()));
-        setHasMore(json.data.length === 20);
+      try {
+        const data = await fetchPage(1);
+        if (!ignore) {
+          setPage(1);
+          setShields(Array.from(new Map(data.map((s) => [s.id, s])).values()));
+          setHasMore(data.length === 20);
+        }
+      } finally {
+        if (!ignore) setLoadingShields(false);
       }
-
-      setLoadingShields(false);
     }
 
-    fetchShields();
+    // só recarrega se estiver vazio (evita refetch ao reabrir)
+    if (shields.length === 0) run();
 
     return () => {
       ignore = true;
     };
-  }, [open, page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Carrega próxima página quando page aumenta
+  useEffect(() => {
+    if (!open) return;
+    if (page <= 1) return;
+    if (!hasMore) return;
+
+    let ignore = false;
+
+    async function run() {
+      setLoadingShields(true);
+      try {
+        const data = await fetchPage(page);
+        if (!ignore) {
+          setShields((prev) => {
+            const merged = [...prev, ...data];
+            return Array.from(new Map(merged.map((s) => [s.id, s])).values());
+          });
+          setHasMore(data.length === 20);
+        }
+      } finally {
+        if (!ignore) setLoadingShields(false);
+      }
+    }
+
+    run();
+
+    return () => {
+      ignore = true;
+    };
+  }, [open, page, hasMore, tenantId, tenantMemberId]);
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const target = e.currentTarget;
-
     const bottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 50;
 
-    if (bottom && !loadingShields) {
+    if (bottom && !loadingShields && hasMore) {
       setPage((p) => p + 1);
-      setTimeout(() => loadShields(), 200);
     }
   }
 

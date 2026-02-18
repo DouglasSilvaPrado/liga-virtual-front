@@ -45,13 +45,11 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
 
   return (
     <>
-      {/* Futbin tiny: ~102px largura. Vamos usar 112px (fica melhor no grid) */}
       <div className="grid grid-cols-3 gap-x-6 gap-y-10 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
         {sorted.map((p) => {
           return (
             <div key={p.player_id} className="w-[112px]">
-              {/* CARD */}
-               <PlayerCard
+              <PlayerCard
                 player={{
                   name: p.name,
                   rating: p.rating,
@@ -59,9 +57,9 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
                   player_img: p.player_img,
                   nation_img: p.nation_img,
                   club_img: p.club_img,
-                }} />
+                }}
+              />
 
-              {/* Botão fora do card (igual seu layout) */}
               <button
                 type="button"
                 onClick={() => openModal(p)}
@@ -69,12 +67,11 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
                 title={!championshipId ? 'Sem campeonato ativo' : 'Listar no mercado'}
                 className={[
                   'mt-3 w-[112px]',
-                  'rounded-full border border-black/10',
+                  'cursor-pointer rounded-full border border-black/10',
                   'bg-white/10 px-3 py-2',
                   'text-[11px] font-extrabold tracking-tight text-black',
                   'hover:bg-white/20 active:scale-[0.99]',
                   'disabled:cursor-not-allowed disabled:opacity-60',
-                  'cursor-pointer'
                 ].join(' ')}
               >
                 {p.listing_price != null ? 'Editar preço' : 'Listar no mercado'}
