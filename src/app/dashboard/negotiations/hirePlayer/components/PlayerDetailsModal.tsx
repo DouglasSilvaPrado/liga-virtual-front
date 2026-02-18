@@ -5,14 +5,17 @@ import { useEffect, useMemo, useState } from 'react';
 export type PlayerDetails = {
   id: number;
   player_id: number | null;
+
   name: string | null;
   player_img: string | null;
   nation_img: string | null;
   league_img: string | null;
   club_img: string | null;
+
   rating: number | null;
   position: string | null;
   price: string | null;
+
   foot: string | null;
   skills: number | null;
   weak_foot: number | null;
@@ -73,8 +76,118 @@ type Props = {
   onClose: () => void;
 };
 
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(v: unknown): v is JsonRecord {
+  return typeof v === 'object' && v !== null;
+}
+
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
+}
+
+function toNum(v: unknown): number | null {
+  if (v == null) return null;
+  const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : NaN;
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+function pickNum(obj: unknown, ...keys: string[]): number | null {
+  if (!isRecord(obj)) return null;
+  for (const k of keys) {
+    const v = toNum(obj[k]);
+    if (v != null) return v;
+  }
+  return null;
+}
+
+function pickStr(obj: unknown, ...keys: string[]): string | null {
+  if (!isRecord(obj)) return null;
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === 'string') {
+      const t = v.trim();
+      if (t !== '') return t;
+    }
+  }
+  return null;
+}
+
+function normalizeDetails(raw: unknown): PlayerDetails {
+  // suporta schema antigo e novo (SoFIFA-like)
+  const id = toNum(isRecord(raw) ? raw.id : null) ?? 0;
+
+  const rating = pickNum(raw, 'rating', 'oa');
+  const position = pickStr(raw, 'position', 'bp');
+
+  return {
+    id,
+    player_id: pickNum(raw, 'player_id', 'sofifa_player_id'),
+
+    name: pickStr(raw, 'name'),
+    player_img: pickStr(raw, 'player_img'),
+    nation_img: pickStr(raw, 'nation_img'),
+    league_img: pickStr(raw, 'league_img'),
+    club_img: pickStr(raw, 'club_img'),
+
+    rating,
+    position,
+    price: pickStr(raw, 'price', 'vl'),
+
+    foot: pickStr(raw, 'foot', 'pf'),
+    skills: pickNum(raw, 'skills', 'sk'),
+    weak_foot: pickNum(raw, 'weak_foot', 'wk'),
+
+    pace: pickNum(raw, 'pace', 'pac'),
+    shooting: pickNum(raw, 'shooting', 'sho'),
+    passing: pickNum(raw, 'passing', 'pas'),
+    dribbling: pickNum(raw, 'dribbling', 'dri'),
+    defending: pickNum(raw, 'defending', 'def'),
+    physical: pickNum(raw, 'physical', 'phy'),
+
+    pop: pickNum(raw, 'pop'),
+    igs: pickNum(raw, 'igs'),
+    height: pickStr(raw, 'height', 'hi'),
+    accelerate: pickStr(raw, 'accelerate', 'at'),
+    age: pickNum(raw, 'age', 'ae'),
+
+    weight: pickStr(raw, 'weight', 'wi'),
+
+    acceleration: pickNum(raw, 'acceleration', 'ac'),
+    sprint_speed: pickNum(raw, 'sprint_speed', 'sp'),
+    att_position: pickNum(raw, 'att_position', 'po'),
+    finishing: pickNum(raw, 'finishing', 'fi'),
+    shot_power: pickNum(raw, 'shot_power', 'so'),
+    long_shots: pickNum(raw, 'long_shots', 'lo'),
+    volleys: pickNum(raw, 'volleys', 'vo'),
+    penalties: pickNum(raw, 'penalties', 'pe'),
+
+    vision: pickNum(raw, 'vision', 'vi'),
+    crossing: pickNum(raw, 'crossing', 'cr'),
+    freekick_accuracy: pickNum(raw, 'freekick_accuracy', 'fr'),
+    short_passing: pickNum(raw, 'short_passing', 'sh'),
+    long_passing: pickNum(raw, 'long_passing', 'ln'),
+    curve: pickNum(raw, 'curve', 'cu'),
+
+    agility: pickNum(raw, 'agility', 'ag'),
+    balance: pickNum(raw, 'balance', 'ba'),
+    reactions: pickNum(raw, 'reactions', 're'),
+    ball_control: pickNum(raw, 'ball_control', 'bo'),
+    composure: pickNum(raw, 'composure', 'cp', 'cm'),
+
+    interceptions: pickNum(raw, 'interceptions', 'in'),
+    heading_accuracy: pickNum(raw, 'heading_accuracy', 'he'),
+    marking: pickNum(raw, 'marking', 'ma'),
+    standing_tackle: pickNum(raw, 'standing_tackle', 'st'),
+    sliding_tackle: pickNum(raw, 'sliding_tackle', 'sl'),
+
+    jumping: pickNum(raw, 'jumping', 'ju'),
+    stamina: pickNum(raw, 'stamina', 'sa'),
+    strength: pickNum(raw, 'strength', 'sr'),
+    aggression: pickNum(raw, 'aggression', 'ar'),
+
+    price_value: pickNum(raw, 'price_value'),
+  };
 }
 
 function statTone(v: number | null | undefined) {
@@ -116,9 +229,7 @@ function BarStat({ label, value }: { label: string; value: number | null | undef
     <div className="rounded-lg border border-white/10 bg-white/5 p-3">
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold tracking-wide text-white/70">{label}</div>
-        <div className={`rounded-md border px-2 py-0.5 text-xs font-bold ${tone.pill}`}>
-          {v ?? '—'}
-        </div>
+        <div className={`rounded-md border px-2 py-0.5 text-xs font-bold ${tone.pill}`}>{v ?? '—'}</div>
       </div>
 
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
@@ -172,8 +283,10 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
           const j = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(j?.error ?? `http_${res.status}`);
         }
-        const data = (await res.json()) as PlayerDetails;
-        if (!cancelled) setDetails(data);
+
+        const raw: unknown = await res.json();
+        const normalized = normalizeDetails(raw);
+        if (!cancelled) setDetails(normalized);
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : 'erro_desconhecido');
       } finally {
@@ -193,9 +306,7 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      {/* Container */}
       <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-black/30 px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="text-sm font-semibold text-white/90">Detalhes do Jogador</div>
@@ -215,7 +326,6 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
           </button>
         </div>
 
-        {/* Body com scroll */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="p-6 text-sm text-white/70">Carregando...</div>
@@ -227,7 +337,6 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
             </div>
           ) : details ? (
             <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3">
-              {/* CARD FUT (esquerda) */}
               <div className="lg:col-span-1">
                 <div
                   className={[
@@ -238,17 +347,13 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                     tier.glow,
                   ].join(' ')}
                 >
-                  {/* brilho */}
                   <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
                   <div className="pointer-events-none absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
                   <div className="p-4">
-                    {/* topo: OVR + POS */}
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <div className="text-4xl font-black tracking-tight text-white">
-                          {details.rating ?? '—'}
-                        </div>
+                        <div className="text-4xl font-black tracking-tight text-white">{details.rating ?? '—'}</div>
                         <div className="inline-flex items-center gap-2">
                           <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-xs font-bold text-white/80">
                             {details.position ?? '—'}
@@ -258,28 +363,17 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {details.nation_img ? (
-                          <img src={details.nation_img} alt="" className="h-6 w-8 object-contain" />
-                        ) : null}
-                        {details.club_img ? (
-                          <img src={details.club_img} alt="" className="h-7 w-7 object-contain" />
-                        ) : null}
+                        {details.nation_img ? <img src={details.nation_img} alt="" className="h-6 w-8 object-contain" /> : null}
+                        {details.club_img ? <img src={details.club_img} alt="" className="h-7 w-7 object-contain" /> : null}
                       </div>
                     </div>
 
-                    {/* nome */}
                     <div className="mt-3">
-                      <div className="truncate text-lg font-extrabold tracking-wide text-white">
-                        {details.name ?? '—'}
-                      </div>
+                      <div className="truncate text-lg font-extrabold tracking-wide text-white">{details.name ?? '—'}</div>
                       <div className="mt-1 text-xs text-white/60">
                         {details.league_img ? (
                           <span className="inline-flex items-center gap-2">
-                            <img
-                              src={details.league_img}
-                              alt=""
-                              className="h-5 w-8 object-contain"
-                            />
+                            <img src={details.league_img} alt="" className="h-5 w-8 object-contain" />
                             <span>Liga</span>
                           </span>
                         ) : (
@@ -288,7 +382,6 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                       </div>
                     </div>
 
-                    {/* imagem do player */}
                     <div className="mt-4 flex justify-center">
                       {details.player_img ? (
                         <img
@@ -301,69 +394,44 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                       )}
                     </div>
 
-                    {/* infos rápidas */}
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                          PÉ
-                        </div>
-                        <div className="mt-1 text-sm font-bold text-white/90">
-                          {traduzirPe(details.foot)}
-                        </div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">PÉ</div>
+                        <div className="mt-1 text-sm font-bold text-white/90">{traduzirPe(details.foot)}</div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                          HABS / PÉ FRACO
-                        </div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">HABS / PÉ FRACO</div>
                         <div className="mt-1 text-sm font-bold text-white/90">
                           {details.skills ?? '—'}★ / {details.weak_foot ?? '—'}★
                         </div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                          ALTURA
-                        </div>
-                        <div className="mt-1 text-sm font-bold text-white/90">
-                          {details.height ?? '—'}
-                        </div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">ALTURA</div>
+                        <div className="mt-1 text-sm font-bold text-white/90">{details.height ?? '—'}</div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                          PESO
-                        </div>
-                        <div className="mt-1 text-sm font-bold text-white/90">
-                          {details.weight ?? '—'}
-                        </div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">PESO</div>
+                        <div className="mt-1 text-sm font-bold text-white/90">{details.weight ?? '—'}</div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                          IDADE
-                        </div>
-                        <div className="mt-1 text-sm font-bold text-white/90">
-                          {details.age ?? '—'}
-                        </div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">IDADE</div>
+                        <div className="mt-1 text-sm font-bold text-white/90">{details.age ?? '—'}</div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                          ACELERAÇÃO
-                        </div>
-                        <div className="mt-1 text-sm font-bold text-white/90">
-                          {details.accelerate ?? '—'}
-                        </div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">ACELERAÇÃO</div>
+                        <div className="mt-1 text-sm font-bold text-white/90">{details.accelerate ?? '—'}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* DIREITA: STATS FIFA */}
               <div className="space-y-4 lg:col-span-2">
-                {/* 6 stats principais FIFA */}
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="text-sm font-semibold text-white/90">Atributos Principais</div>
@@ -380,7 +448,6 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                   </div>
                 </div>
 
-                {/* Subatributos em barras */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="mb-3 text-sm font-semibold text-white/90">Velocidade</div>
@@ -447,40 +514,23 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                   </div>
                 </div>
 
-                {/* Rodapé com “meta” */}
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                        POP
-                      </div>
-                      <div className="mt-1 text-sm font-bold text-white/90">
-                        {details.pop ?? '—'}
-                      </div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">POP</div>
+                      <div className="mt-1 text-sm font-bold text-white/90">{details.pop ?? '—'}</div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                        IGS
-                      </div>
-                      <div className="mt-1 text-sm font-bold text-white/90">
-                        {details.igs ?? '—'}
-                      </div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">IGS</div>
+                      <div className="mt-1 text-sm font-bold text-white/90">{details.igs ?? '—'}</div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                        PREÇO
-                      </div>
-                      <div className="mt-1 text-sm font-bold text-white/90">
-                        {details.price ?? '—'}
-                      </div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">PREÇO</div>
+                      <div className="mt-1 text-sm font-bold text-white/90">{details.price ?? '—'}</div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
-                        VALOR
-                      </div>
-                      <div className="mt-1 text-sm font-bold text-white/90">
-                        {details.price_value ?? '—'}
-                      </div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">VALOR</div>
+                      <div className="mt-1 text-sm font-bold text-white/90">{details.price_value ?? '—'}</div>
                     </div>
                   </div>
                 </div>

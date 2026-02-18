@@ -47,8 +47,8 @@ type TeamPlayerMineRow = {
   players: {
     id: number;
     name: string | null;
-    rating: number | null;
-    position: string | null;
+    oa: string | null; // novo
+    bp: string | null; // novo
     player_img: string | null;
   } | null;
 };
@@ -73,9 +73,32 @@ type TeamPlayerJoinRow = {
 type WalletRow = { id: string; balance: number | string | null };
 type TeamRow = { id: string; championship_id: string | null };
 
+type PlayersListRow = {
+  id: number;
+  name: string | null;
+  oa: string | null;
+  bp: string | null;
+  vl: string | null;
+  player_img: string | null;
+  nation_img: string | null;
+  club_img: string | null;
+  positions: string | null;
+};
+
 function safeInt(v: string | undefined, fallback: number) {
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+function pad2(n: number) {
+  const x = Math.max(0, Math.min(99, Math.trunc(n)));
+  return String(x).padStart(2, '0');
+}
+
+function toIntOrNull(v: unknown): number | null {
+  if (v == null) return null;
+  const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : NaN;
+  return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
 function buildQueryString(sp: HireSearchParams, override: Partial<HireSearchParams> = {}) {
@@ -110,7 +133,7 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
   const map: Record<string, string> = {
     player_invalid: 'Jogador inválido.',
     not_logged: 'Você precisa estar logado.',
-    no_tenant_member: 'Seu usuário não pertence a este tenant.',
+    no_tenant_member: 'Seu usuário não pertence ao tenant.',
     no_team: 'Você ainda não tem time criado.',
     no_championship: 'Seu time não está vinculado a um campeonato.',
     player_not_found: 'Jogador não encontrado.',
@@ -121,7 +144,6 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
     already_hired: 'Esse jogador já está no seu time.',
     wallet_debit: 'Erro ao debitar a carteira.',
 
-    // trade (se você usar a action de troca)
     trade_invalid_requested: 'Jogador alvo inválido.',
     trade_invalid_offered: 'Jogador oferecido inválido.',
     trade_invalid_money_mode: 'Modo de dinheiro inválido.',
@@ -131,7 +153,6 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
     trade_requested_is_mine: 'Você não pode propor troca por um jogador do seu próprio time.',
     trade_create_failed: 'Não foi possível criar a proposta de troca.',
 
-    // loan (se você usar a action de empréstimo)
     loan_player_invalid: 'Jogador inválido.',
     loan_invalid_money: 'Valor da proposta inválido.',
     loan_invalid_duration: 'Duração inválida.',
@@ -172,12 +193,11 @@ export default async function HirePlayerPage({
 
   const { supabase, tenantId } = await createServerSupabase();
 
-  // returnTo absoluto (pra action)
   const basePath = '/dashboard/negotiations/hirePlayer';
   const qs = buildQueryString(sp, { ok: '', err: '' });
   const returnTo = qs ? `${basePath}?${qs}` : basePath;
 
-  // -------------------- Contexto usuário (time/campeonato e saldo) --------------------
+  // -------------------- Contexto usuário --------------------
   let walletBalance: number | null = null;
   let activeChampionshipId: string | null = null;
   let myTeamId: string | null = null;
@@ -218,32 +238,29 @@ export default async function HirePlayerPage({
         if (wallet) walletBalance = normalizeBalance(wallet.balance);
       }
 
-      // ✅ meus jogadores (para modal de troca)
       if (myTeamId && activeChampionshipId) {
         const { data: mine } = await supabase
           .from('team_players')
           .select(
             `
-          player_id,
-          players (
-            id, name, rating, position, player_img
-          )
-        `,
+            player_id,
+            players (
+              id, name, oa, bp, player_img
+            )
+          `,
           )
           .eq('tenant_id', tenantId)
           .eq('championship_id', activeChampionshipId)
           .eq('team_id', myTeamId)
-          .returns<TeamPlayerMineRow[]>(); // ✅ TIPAGEM SUPABASE
+          .returns<TeamPlayerMineRow[]>();
 
         myPlayers = (mine ?? [])
-          .filter((r): r is TeamPlayerMineRow & { player_id: number } =>
-            Number.isFinite(r.player_id),
-          )
+          .filter((r): r is TeamPlayerMineRow & { player_id: number } => Number.isFinite(r.player_id))
           .map((r) => ({
             player_id: r.player_id,
             name: r.players?.name ?? null,
-            rating: r.players?.rating ?? null,
-            position: r.players?.position ?? null,
+            rating: toIntOrNull(r.players?.oa) ?? null,
+            position: r.players?.bp ?? null,
             player_img: r.players?.player_img ?? null,
           }));
       }
@@ -253,34 +270,46 @@ export default async function HirePlayerPage({
   // -------------------- LISTAGEM --------------------
   let query = supabase
     .from('players')
-    .select('id,name,rating,position,price,player_img,nation_img,club_img', { count: 'exact' });
+    .select('id,name,oa,bp,vl,player_img,nation_img,club_img,positions', { count: 'exact' });
 
   if (q) query = query.ilike('name', `%${q}%`);
-  if (pos) query = query.eq('position', pos);
-  if (Number.isFinite(min)) query = query.gte('rating', min);
-  if (Number.isFinite(max)) query = query.lte('rating', max);
+  if (pos) query = query.ilike('positions', `%${pos}%`);
+
+  const minS = pad2(min);
+  const maxS = pad2(max);
+  query = query.gte('oa', minS).lte('oa', maxS);
 
   if (sort === 'name') {
     query = query.order('name', { ascending: dir === 'asc', nullsFirst: true });
   } else {
-    query = query.order('rating', { ascending: dir === 'asc', nullsFirst: false });
+    query = query.order('oa', { ascending: dir === 'asc', nullsFirst: false });
   }
 
   query = query.range(from, to);
 
-  const { data, count, error } = await query;
+  const { data, count, error } = await query.returns<PlayersListRow[]>();
   if (error) return <div className="p-6">Erro ao carregar jogadores</div>;
 
-  const playersBase = (data ?? []) as Omit<
-    PlayerRow,
-    'current_team_id' | 'current_team_name' | 'current_team_shield'
-  >[];
+  const playersBase: Omit<PlayerRow, 'current_team_id' | 'current_team_name' | 'current_team_shield'>[] =
+    (data ?? []).map((r) => ({
+      id: r.id,
+      name: r.name ?? null,
+      rating: toIntOrNull(r.oa),
+      position: r.bp ?? null,
+      price: r.vl ?? null,
+      player_img: r.player_img ?? null,
+      nation_img: r.nation_img ?? null,
+      club_img: r.club_img ?? null,
+      market_listing_id: null,
+      market_price: null,
+      market_seller_team_id: null,
+    }));
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / size));
   const feedback = feedbackText(sp);
 
-  // -------------------- Resolver "Time" (quem contratou) --------------------
+  // -------------------- Resolver "Time" --------------------
   let players: PlayerRow[] = playersBase.map((p) => ({
     ...p,
     current_team_id: null,
@@ -331,7 +360,7 @@ export default async function HirePlayerPage({
     });
   }
 
-  // -------------------- Resolver Mercado (listings ativos) --------------------
+  // -------------------- Resolver Mercado --------------------
   if (activeChampionshipId && players.length > 0) {
     const ids = players.map((p) => p.id);
 
@@ -349,7 +378,6 @@ export default async function HirePlayerPage({
 
     players = players.map((p) => {
       const l = map.get(p.id);
-
       return {
         ...p,
         market_listing_id: l?.id ?? null,
@@ -358,7 +386,6 @@ export default async function HirePlayerPage({
       };
     });
   } else {
-    // garantir campos
     players = players.map((p) => ({
       ...p,
       market_listing_id: null,
@@ -403,9 +430,7 @@ export default async function HirePlayerPage({
           </a>
 
           <a
-            className={`rounded border px-3 py-1 ${
-              page >= totalPages ? 'pointer-events-none opacity-50' : ''
-            }`}
+            className={`rounded border px-3 py-1 ${page >= totalPages ? 'pointer-events-none opacity-50' : ''}`}
             href={`?${buildQueryString(sp, { page: String(page + 1), ok: '', err: '' })}`}
           >
             Próxima

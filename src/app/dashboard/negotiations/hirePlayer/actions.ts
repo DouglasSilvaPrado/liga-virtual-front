@@ -6,9 +6,8 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 
 type PlayerForHire = {
   id: number;
-  position: string | null;
-  price: string | null;
-  price_value: number | null;
+  bp: string | null; // novo (posição base)
+  vl: string | null; // novo (valor)
 };
 
 type WalletRow = {
@@ -34,14 +33,18 @@ function parsePriceToNumber(priceText: string | null | undefined): number {
 
   const raw = priceText.toString().trim().toUpperCase();
 
-  // mantém só dígitos + separadores + sufixo K/M
-  const m = raw.replace(/\s/g, '').match(/^R?\$?([\d.,]+)([KM])?$/i);
+  // aceita R$, €, £, $
+  const cleaned = raw
+    .replace(/\s/g, '')
+    .replace(/^R\$/i, '')
+    .replace(/^[€£$]/, '');
+
+  const m = cleaned.match(/^([\d.,]+)([KM])?$/i);
   if (!m) return 0;
 
-  let numPart = m[1]; // "2.69" | "30.75" | "667" | "1.234,56"
-  const suffix = (m[2] ?? '').toUpperCase(); // "K" | "M" | ""
+  let numPart = m[1];
+  const suffix = (m[2] ?? '').toUpperCase();
 
-  // Se tiver '.' e ',', assume pt-BR: 1.234,56
   if (numPart.includes('.') && numPart.includes(',')) {
     numPart = numPart.replace(/\./g, '').replace(',', '.');
   } else if (numPart.includes(',')) {
@@ -108,7 +111,7 @@ export async function hirePlayerAction(formData: FormData) {
 
   const { data: player, error: playerErr } = await supabase
     .from('players')
-    .select('id, position, price, price_value')
+    .select('id, bp, vl')
     .eq('id', playerId)
     .single<PlayerForHire>();
 
@@ -116,10 +119,7 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'player_not_found'));
   }
 
-  const price =
-    player.price_value != null && Number.isFinite(player.price_value)
-      ? player.price_value
-      : parsePriceToNumber(player.price);
+  const price = parsePriceToNumber(player.vl);
 
   if (!Number.isFinite(price) || price < 0) {
     redirect(withParam(returnTo, 'err', 'invalid_price'));
@@ -165,7 +165,7 @@ export async function hirePlayerAction(formData: FormData) {
   const { error: tpErr } = await supabase.from('team_players').insert({
     team_id: team.id,
     player_id: player.id,
-    position: player.position,
+    position: player.bp, // ✅ novo
     championship_id: team.championship_id,
     tenant_id: tenantId,
   });

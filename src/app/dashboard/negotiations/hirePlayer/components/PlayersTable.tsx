@@ -22,7 +22,12 @@ function parsePriceToNumber(priceText: string | null | undefined): number {
   if (!priceText) return 0;
 
   const raw = priceText.toString().trim().toUpperCase();
-  const m = raw.replace(/\s/g, '').match(/^R?\$?([\d.,]+)([KM])?$/i);
+
+  // aceita símbolos: R$, €, £, $
+  const cleaned = raw.replace(/\s/g, '').replace(/^R\$/i, '').replace(/^[€£$]/, '');
+
+  // "91.5M" | "76K" | "1.234,56" | "91500000"
+  const m = cleaned.match(/^([\d.,]+)([KM])?$/i);
   if (!m) return 0;
 
   let numPart = m[1];
@@ -53,23 +58,18 @@ export default function PlayersTable({
   myTeamId,
   activeChampionshipId,
 }: Props) {
-  // modal contratação
   const [openHire, setOpenHire] = useState(false);
   const [selectedHire, setSelectedHire] = useState<PlayerRow | null>(null);
 
-  // modal detalhes
   const [openDetails, setOpenDetails] = useState(false);
   const [detailsId, setDetailsId] = useState<number | null>(null);
 
-  // modal troca
   const [openTrade, setOpenTrade] = useState(false);
   const [tradeTarget, setTradeTarget] = useState<PlayerRow | null>(null);
 
-  // modal empréstimo
   const [openLoan, setOpenLoan] = useState(false);
   const [loanPlayer, setLoanPlayer] = useState<PlayerRow | null>(null);
 
-  // modal compra mercado
   const [openMarketBuy, setOpenMarketBuy] = useState(false);
   const [selectedMarketBuy, setSelectedMarketBuy] = useState<PlayerRow | null>(null);
 
@@ -165,11 +165,10 @@ export default function PlayersTable({
 
           <tbody>
             {players.map((p) => {
-              const isFreeAgent = !p.current_team_id; // sem time => pode contratar
+              const isFreeAgent = !p.current_team_id;
               const isMine = myTeamId != null && p.current_team_id === myTeamId;
               const canTrade = !!p.current_team_id && !isMine;
 
-              // ✅ pode propor empréstimo apenas se o jogador tem time e não é o meu
               const canLoan =
                 !!activeChampionshipId && !!myTeamId && !!p.current_team_id && !isMine;
 
@@ -215,7 +214,6 @@ export default function PlayersTable({
                     </div>
                   </td>
 
-
                   <td className="px-4 py-3">{p.rating ?? '—'}</td>
 
                   <td className="px-4 py-3">
@@ -257,7 +255,6 @@ export default function PlayersTable({
 
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {/* COMPRAR (mercado) */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -287,7 +284,6 @@ export default function PlayersTable({
                         Comprar
                       </button>
 
-                      {/* CONTRATAR (somente free agent e NÃO listado) */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -307,7 +303,6 @@ export default function PlayersTable({
                         Contratar
                       </button>
 
-                      {/* TROCAR */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -327,7 +322,6 @@ export default function PlayersTable({
                         Trocar
                       </button>
 
-                      {/* EMPRESTAR */}
                       {canLoan ? (
                         <button
                           type="button"
@@ -357,10 +351,8 @@ export default function PlayersTable({
         </table>
       </div>
 
-      {/* MODAL DETALHES */}
       <PlayerDetailsModal open={openDetails} playerId={detailsId} onClose={closeDetailsModal} />
 
-      {/* MODAL CONTRATAÇÃO */}
       {openHire && selectedHire && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
@@ -457,7 +449,6 @@ export default function PlayersTable({
         </div>
       )}
 
-      {/* MODAL TROCA */}
       <TradePlayerModal
         open={openTrade}
         onClose={closeTradeModal}
@@ -482,7 +473,6 @@ export default function PlayersTable({
         }
       />
 
-      {/* MODAL EMPRÉSTIMO */}
       <LoanProposalModal
         open={openLoan}
         onClose={closeLoanModal}
@@ -500,7 +490,6 @@ export default function PlayersTable({
         returnTo={returnTo}
       />
 
-      {/* MODAL COMPRA MERCADO */}
       {openMarketBuy && selectedMarketBuy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
@@ -523,8 +512,8 @@ export default function PlayersTable({
                 <div>
                   <div className="font-medium">{selectedMarketBuy.name ?? '—'}</div>
                   <div className="text-muted-foreground text-xs">
-                    {selectedMarketBuy.position ?? '—'} • Overall {selectedMarketBuy.rating ?? '—'}{' '}
-                    • ID {selectedMarketBuy.id}
+                    {selectedMarketBuy.position ?? '—'} • Overall {selectedMarketBuy.rating ?? '—'} •
+                    ID {selectedMarketBuy.id}
                   </div>
                 </div>
               </div>
@@ -549,9 +538,7 @@ export default function PlayersTable({
 
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-muted-foreground">Diferença</span>
-                  <span
-                    className={`font-medium ${diffMarket < 0 ? 'text-red-600' : 'text-green-600'}`}
-                  >
+                  <span className={`font-medium ${diffMarket < 0 ? 'text-red-600' : 'text-green-600'}`}>
                     {diffMarket < 0 ? '-' : '+'}R$ {money(Math.abs(diffMarket))}
                   </span>
                 </div>

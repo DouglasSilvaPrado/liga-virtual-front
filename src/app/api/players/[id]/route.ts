@@ -5,6 +5,9 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+// Row “flexível” sem any (usado só pra devolver o que vier do banco)
+type PlayerDbRow = Record<string, unknown>;
+
 export async function GET(_: Request, context: RouteContext) {
   const { id: idStr } = await context.params;
 
@@ -15,7 +18,11 @@ export async function GET(_: Request, context: RouteContext) {
 
   const { supabase } = await createServerSupabase();
 
-  const { data, error } = await supabase.from('players').select('*').eq('id', id).single();
+  const { data, error } = await supabase
+    .from('players')
+    .select('*')
+    .eq('id', id)
+    .single<PlayerDbRow>();
 
   if (error || !data) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
