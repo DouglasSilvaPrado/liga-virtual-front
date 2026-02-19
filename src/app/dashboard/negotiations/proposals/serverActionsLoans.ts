@@ -272,7 +272,6 @@ export async function counterLoanProposalAction(formData: FormData) {
     money_amount: Math.max(0, Math.trunc(moneyAmount)),
     duration_rounds: null,
     status: 'pending' satisfies ProposalStatus,
-    parent_id: base.id,
   });
 
   if (insErr) redirect(withParam(returnTo, 'err', 'loan_counter_failed'));

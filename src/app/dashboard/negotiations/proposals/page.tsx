@@ -9,6 +9,12 @@ function normalizeBalance(v: WalletRow['balance']): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function toIntOrNull(v: unknown): number | null {
+  if (v == null) return null;
+  const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : NaN;
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
 export type MoneyDirection = 'none' | 'pay' | 'ask';
 export type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'countered' | 'cancelled';
 
@@ -27,44 +33,18 @@ export type ProposalRow = {
   created_at: string;
 };
 
-export type ProposalListItem = {
-  id: string;
-  status: ProposalStatus;
-  created_at: string;
-
-  from_team_id: string;
-  to_team_id: string;
-
-  offered_player_id: number;
-  requested_player_id: number;
-
-  money_direction: MoneyDirection;
-  money_amount: number;
-
-  pay: { id: string; name: string | null; shield_url: string | null } | null;
-  ask: { id: string; name: string | null; shield_url: string | null } | null;
-
-  offered_player: {
-    id: number;
-    name: string | null;
-    rating: number | null;
-    position: string | null;
-    player_img: string | null;
-  } | null;
-
-  requested_player: {
-    id: number;
-    name: string | null;
-    rating: number | null;
-    position: string | null;
-    player_img: string | null;
-  } | null;
-};
-
 type TeamWithShield = {
   id: string;
   name: string | null;
   shields: { shield_url: string | null } | null;
+};
+
+type PlayerMiniDb = {
+  id: number;
+  name: string | null;
+  oa: string | null; // novo
+  bp: string | null; // novo
+  player_img: string | null;
 };
 
 type PlayerMini = {
@@ -90,6 +70,27 @@ export type LoanProposalRow = {
   created_at: string;
 };
 
+export type ProposalListItem = {
+  id: string;
+  status: ProposalStatus;
+  created_at: string;
+
+  from_team_id: string;
+  to_team_id: string;
+
+  offered_player_id: number;
+  requested_player_id: number;
+
+  money_direction: MoneyDirection;
+  money_amount: number;
+
+  pay: { id: string; name: string | null; shield_url: string | null } | null;
+  ask: { id: string; name: string | null; shield_url: string | null } | null;
+
+  offered_player: PlayerMini | null;
+  requested_player: PlayerMini | null;
+};
+
 export type LoanListItem = {
   kind: 'loan';
 
@@ -103,14 +104,13 @@ export type LoanListItem = {
   money_amount: number;
   duration_rounds: number | null;
 
-  pay: { id: string; name: string | null; shield_url: string | null } | null; // quem envia
-  ask: { id: string; name: string | null; shield_url: string | null } | null; // quem recebe
+  pay: { id: string; name: string | null; shield_url: string | null } | null;
+  ask: { id: string; name: string | null; shield_url: string | null } | null;
 
   player: PlayerMini | null;
 };
 
 export type TradeListItem = ProposalListItem & { kind: 'trade' };
-
 export type AnyProposalListItem = TradeListItem | LoanListItem;
 
 export default async function ProposalsPage() {
@@ -161,7 +161,7 @@ export default async function ProposalsPage() {
     return <div className="p-6">Você ainda não tem time/campeonato ativo.</div>;
   }
 
-  // ✅ 1) Propostas do campeonato envolvendo meu time
+  // ✅ 1) Propostas de troca (meu time envolvido)
   const { data: proposalsRaw, error: pErr } = await supabase
     .from('trade_proposals')
     .select(
@@ -181,7 +181,7 @@ export default async function ProposalsPage() {
 
   if (pErr) return <div className="p-6">Erro ao carregar propostas.</div>;
 
-  // ✅ 1b) Propostas de empréstimo do campeonato envolvendo meu time
+  // ✅ 1b) Propostas de empréstimo (meu time envolvido)
   const { data: loansRaw, error: lErr } = await supabase
     .from('loan_proposals')
     .select(
@@ -201,11 +201,11 @@ export default async function ProposalsPage() {
 
   if (lErr) return <div className="p-6">Erro ao carregar propostas de empréstimo.</div>;
 
+  const proposals = proposalsRaw ?? [];
   const loans = loansRaw ?? [];
 
-  const proposals = proposalsRaw ?? [];
-
-  if (proposals.length === 0) {
+  // ✅ só exibe "nenhuma proposta" se não tem trade NEM loan
+  if (proposals.length === 0 && loans.length === 0) {
     return (
       <div className="space-y-4 p-6">
         <h1 className="text-2xl font-bold">Propostas</h1>
@@ -234,10 +234,7 @@ export default async function ProposalsPage() {
     .in('id', teamIds)
     .returns<TeamWithShield[]>();
 
-  const teamsMap = new Map<
-    string,
-    { id: string; name: string | null; shield_url: string | null }
-  >();
+  const teamsMap = new Map<string, { id: string; name: string | null; shield_url: string | null }>();
   (teamsRaw ?? []).forEach((t) => {
     teamsMap.set(t.id, {
       id: t.id,
@@ -246,7 +243,7 @@ export default async function ProposalsPage() {
     });
   });
 
-  // ✅ 3) Busca players envolvidos
+  // ✅ 3) Busca players envolvidos (AGORA: oa/bp)
   const playerIds = Array.from(
     new Set<number>([
       ...proposals.flatMap((p) => [p.offered_player_id, p.requested_player_id]),
@@ -256,27 +253,40 @@ export default async function ProposalsPage() {
 
   const { data: playersRaw } = await supabase
     .from('players')
-    .select('id, name, rating, position, player_img')
+    .select('id, name, oa, bp, player_img')
     .in('id', playerIds)
-    .returns<PlayerMini[]>();
+    .returns<PlayerMiniDb[]>();
 
   const playersMap = new Map<number, PlayerMini>();
-  (playersRaw ?? []).forEach((pl) => playersMap.set(pl.id, pl));
+  (playersRaw ?? []).forEach((pl) => {
+    playersMap.set(pl.id, {
+      id: pl.id,
+      name: pl.name ?? null,
+      rating: toIntOrNull(pl.oa),
+      position: pl.bp ?? null,
+      player_img: pl.player_img ?? null,
+    });
+  });
 
-  // ✅ 4) Monta DTO final
+  // ✅ 4) DTO final
   const tradeList: TradeListItem[] = proposals.map((p) => ({
     kind: 'trade',
     id: p.id,
     status: p.status,
     created_at: p.created_at,
+
     from_team_id: p.from_team_id,
     to_team_id: p.to_team_id,
+
     offered_player_id: p.offered_player_id,
     requested_player_id: p.requested_player_id,
+
     money_direction: p.money_direction,
     money_amount: p.money_amount,
+
     pay: teamsMap.get(p.from_team_id) ?? null,
     ask: teamsMap.get(p.to_team_id) ?? null,
+
     offered_player: playersMap.get(p.offered_player_id) ?? null,
     requested_player: playersMap.get(p.requested_player_id) ?? null,
   }));
@@ -286,16 +296,19 @@ export default async function ProposalsPage() {
     id: l.id,
     status: l.status,
     created_at: l.created_at,
+
     from_team_id: l.from_team_id,
     to_team_id: l.to_team_id,
+
     money_amount: l.money_amount ?? 0,
     duration_rounds: l.duration_rounds ?? null,
+
     pay: teamsMap.get(l.from_team_id) ?? null,
     ask: teamsMap.get(l.to_team_id) ?? null,
+
     player: playersMap.get(l.player_id) ?? null,
   }));
 
-  // ✅ junta e ordena por data desc
   const list: AnyProposalListItem[] = [...tradeList, ...loanList].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
