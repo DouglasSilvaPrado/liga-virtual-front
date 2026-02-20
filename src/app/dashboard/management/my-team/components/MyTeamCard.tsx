@@ -62,14 +62,6 @@ export default function MyTeamCard({ team, shield }: Props) {
           </div>
         </div>
 
-        {/* COLORS */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Cor principal:</span>
-          <div
-            className="h-6 w-6 rounded-full border"
-            style={{ background: shield?.main_color || '#ccc' }}
-          ></div>
-        </div>
 
         {/* EXTRAS */}
         <div className="space-y-3 text-sm">
@@ -77,13 +69,6 @@ export default function MyTeamCard({ team, shield }: Props) {
             <MapPin size={16} className="text-muted-foreground" />
             <span>
               <strong>Estádio:</strong> {shield?.stadium ? shield.stadium : 'Não informado'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Flag size={16} className="text-muted-foreground" />
-            <span>
-              <strong>País:</strong> {shield?.country ? shield?.country : 'N/A'}
             </span>
           </div>
         </div>
