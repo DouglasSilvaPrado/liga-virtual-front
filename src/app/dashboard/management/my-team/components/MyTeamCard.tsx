@@ -55,10 +55,7 @@ export default function MyTeamCard({ team, shield }: Props) {
 
           <div>
             <h2 className="text-2xl font-bold">{team.name}</h2>
-            <p className="text-muted-foreground text-sm">
-              {shield?.abbreviation ? shield?.abbreviation : 'N/A'} •{' '}
-              {shield?.country ? shield?.country : 'N/A'}
-            </p>
+          
           </div>
         </div>
 
