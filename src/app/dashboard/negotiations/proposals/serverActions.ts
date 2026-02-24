@@ -1,3 +1,4 @@
+// src/app/dashboard/negotiations/proposals/serverActions.ts
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -6,6 +7,12 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 import type { MoneyDirection, ProposalStatus } from './types';
 
 type TeamRow = { id: string; championship_id: string | null };
+
+type PlayerContractRow = {
+  player_id: number | null;
+  team_id: string | null;
+  status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+};
 
 function withParam(url: string, key: string, value: string) {
   const u = new URL(url, 'http://local');
@@ -104,7 +111,7 @@ export async function rejectProposalAction(formData: FormData) {
   redirect(withParam(returnTo, 'ok', 'rejected'));
 }
 
-/** ✅ COUNTER */
+/** ✅ COUNTER (agora valida offered_player_id via player_contracts) */
 export async function counterProposalAction(formData: FormData) {
   const baseProposalId = String(formData.get('base_proposal_id') ?? '');
   const offeredPlayerId = Number(formData.get('offered_player_id'));
@@ -141,7 +148,9 @@ export async function counterProposalAction(formData: FormData) {
     .maybeSingle<TeamRow>();
 
   const myTeamId = myTeam?.id ?? null;
+  const championshipId = myTeam?.championship_id ?? null;
   if (!myTeamId) redirect(withParam(returnTo, 'err', 'no_team'));
+  if (!championshipId) redirect(withParam(returnTo, 'err', 'no_championship'));
 
   const { data: base, error: bErr } = await supabase
     .from('trade_proposals')
@@ -163,6 +172,40 @@ export async function counterProposalAction(formData: FormData) {
   if (bErr || !base) redirect(withParam(returnTo, 'err', 'proposal_invalid'));
   if (base.to_team_id !== myTeamId) redirect(withParam(returnTo, 'err', 'not_allowed'));
   if (base.status !== 'pending') redirect(withParam(returnTo, 'err', 'not_pending'));
+
+  // ✅ offered_player_id precisa ser MEU e ativo (não loaned_out)
+  const { data: offeredContract } = await supabase
+    .from('player_contracts')
+    .select('player_id, team_id, status')
+    .eq('tenant_id', tenantId)
+    .eq('championship_id', championshipId)
+    .eq('player_id', offeredPlayerId)
+    .maybeSingle<PlayerContractRow>();
+
+  if (!offeredContract?.player_id) redirect(withParam(returnTo, 'err', 'trade_invalid_offered'));
+  if (offeredContract.team_id !== myTeamId)
+    redirect(withParam(returnTo, 'err', 'trade_offered_not_mine'));
+  if (offeredContract.status !== 'active')
+    redirect(withParam(returnTo, 'err', 'player_not_available'));
+
+  // ✅ requested (o que eu quero receber) deve estar com o outro time e ativo/loaned_out (depende sua regra)
+  // aqui vou exigir active ou loaned_out, mas você pode travar só active.
+  const { data: requestedContract } = await supabase
+    .from('player_contracts')
+    .select('player_id, team_id, status')
+    .eq('tenant_id', tenantId)
+    .eq('championship_id', championshipId)
+    .eq('player_id', base.offered_player_id)
+    .maybeSingle<PlayerContractRow>();
+
+  // se o jogador alvo "sumiu" ou mudou de time, bloqueia contra
+  if (!requestedContract?.player_id)
+    redirect(withParam(returnTo, 'err', 'trade_requested_not_found'));
+  if (requestedContract.team_id !== base.from_team_id)
+    redirect(withParam(returnTo, 'err', 'trade_requested_not_found'));
+  if (!['active', 'loaned_out'].includes(requestedContract.status ?? '')) {
+    redirect(withParam(returnTo, 'err', 'player_not_available'));
+  }
 
   const amount = Number.isFinite(moneyAmount) ? Math.max(0, moneyAmount) : 0;
   const dir: MoneyDirection = moneyDirection ?? 'none';

@@ -74,7 +74,6 @@ function Inner({
         <form
           action={sendLoanProposalAction}
           onSubmit={() => {
-            // fecha na hora (o server action vai redirecionar/revalidar)
             onClose();
           }}
           className="grid gap-3"

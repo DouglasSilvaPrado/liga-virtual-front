@@ -1,3 +1,4 @@
+// src/app/dashboard/negotiations/proposals/serverActionsLoans.ts
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -7,6 +8,12 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'countered' | 'cancelled';
 type TeamRow = { id: string; championship_id: string | null };
 
+type PlayerContractRow = {
+  player_id: number | null;
+  team_id: string | null;
+  status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+};
+
 function withParam(url: string, key: string, value: string) {
   const u = new URL(url, 'http://local');
   u.searchParams.set(key, value);
@@ -15,7 +22,7 @@ function withParam(url: string, key: string, value: string) {
   return u.pathname + u.search;
 }
 
-/** ✅ SEND LOAN (por temporada) */
+/** ✅ SEND LOAN (por temporada) — usando player_contracts */
 export async function sendLoanProposalAction(formData: FormData) {
   const basePath = '/dashboard/negotiations/hirePlayer';
 
@@ -35,9 +42,9 @@ export async function sendLoanProposalAction(formData: FormData) {
 
   const { supabase, tenantId } = await createServerSupabase();
 
-  const { data: userRes } = await supabase.auth.getUser();
+  const { data: userRes, error: userErr } = await supabase.auth.getUser();
   const userId = userRes?.user?.id ?? null;
-  if (!userId) redirect(withParam(returnTo, 'err', 'not_logged'));
+  if (userErr || !userId) redirect(withParam(returnTo, 'err', 'not_logged'));
 
   // tenant_member
   const { data: tm } = await supabase
@@ -46,9 +53,10 @@ export async function sendLoanProposalAction(formData: FormData) {
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
     .maybeSingle<{ id: string }>();
+
   if (!tm?.id) redirect(withParam(returnTo, 'err', 'no_tenant_member'));
 
-  // meu time
+  // meu time/championship
   const { data: myTeam } = await supabase
     .from('teams')
     .select('id, championship_id')
@@ -64,29 +72,43 @@ export async function sendLoanProposalAction(formData: FormData) {
   if (!myTeamId) redirect(withParam(returnTo, 'err', 'no_team'));
   if (!championshipId) redirect(withParam(returnTo, 'err', 'no_championship'));
 
-  // descobrir o time atual do jogador (dono)
-  const { data: ownerTp } = await supabase
-    .from('team_players')
-    .select('team_id')
+  // ✅ dono atual do jogador (via contrato)
+  const { data: ownerContract } = await supabase
+    .from('player_contracts')
+    .select('player_id, team_id, status')
     .eq('tenant_id', tenantId)
     .eq('championship_id', championshipId)
     .eq('player_id', playerId)
-    .maybeSingle<{ team_id: string }>();
+    .maybeSingle<PlayerContractRow>();
 
-  const ownerTeamId = ownerTp?.team_id ?? null;
-  if (!ownerTeamId) redirect(withParam(returnTo, 'err', 'loan_player_not_in_any_team'));
-  if (ownerTeamId === myTeamId) redirect(withParam(returnTo, 'err', 'loan_player_is_mine'));
+  if (!ownerContract?.player_id || !ownerContract.team_id) {
+    redirect(withParam(returnTo, 'err', 'loan_player_not_in_any_team'));
+  }
 
-  // cria proposta: from = meu time (quem pede), to = dono do jogador
-  // ✅ duration_rounds = null (temporada)
+  // se for meu jogador
+  if (ownerContract.team_id === myTeamId) {
+    redirect(withParam(returnTo, 'err', 'loan_player_is_mine'));
+  }
+
+  // se já estiver emprestado
+  if (ownerContract.status === 'loaned_out') {
+    redirect(withParam(returnTo, 'err', 'loan_player_already_loaned'));
+  }
+
+  // se não estiver ativo, não negocia
+  if (ownerContract.status !== 'active') {
+    redirect(withParam(returnTo, 'err', 'player_not_available'));
+  }
+
+  // ✅ cria proposta: from = meu time (quem pede), to = dono
   const { error: insErr } = await supabase.from('loan_proposals').insert({
     tenant_id: tenantId,
     championship_id: championshipId,
     from_team_id: myTeamId,
-    to_team_id: ownerTeamId,
+    to_team_id: ownerContract.team_id,
     player_id: playerId,
     money_amount: Math.trunc(moneyAmount),
-    duration_rounds: null,
+    duration_rounds: null, // temporada
     status: 'pending' satisfies ProposalStatus,
     created_by_user_id: userId,
   });
@@ -198,7 +220,7 @@ export async function rejectLoanProposalAction(formData: FormData) {
   redirect(withParam(returnTo, 'ok', 'loan_rejected'));
 }
 
-/** ✅ COUNTER LOAN */
+/** ✅ COUNTER LOAN (valida dono/status via player_contracts + created_by_user_id) */
 export async function counterLoanProposalAction(formData: FormData) {
   const proposalId = String(formData.get('proposal_id') ?? '');
   const moneyAmount = Number(formData.get('money_amount') ?? 0);
@@ -232,7 +254,9 @@ export async function counterLoanProposalAction(formData: FormData) {
     .maybeSingle<TeamRow>();
 
   const myTeamId = myTeam?.id ?? null;
+  const championshipId = myTeam?.championship_id ?? null;
   if (!myTeamId) redirect(withParam(returnTo, 'err', 'no_team'));
+  if (!championshipId) redirect(withParam(returnTo, 'err', 'no_championship'));
 
   // base
   const { data: base, error: bErr } = await supabase
@@ -254,6 +278,21 @@ export async function counterLoanProposalAction(formData: FormData) {
   if (base.to_team_id !== myTeamId) redirect(withParam(returnTo, 'err', 'not_allowed'));
   if (base.status !== 'pending') redirect(withParam(returnTo, 'err', 'not_pending'));
 
+  // ✅ valida dono/status atual do jogador
+  const { data: ownerContract } = await supabase
+    .from('player_contracts')
+    .select('player_id, team_id, status')
+    .eq('tenant_id', tenantId)
+    .eq('championship_id', championshipId)
+    .eq('player_id', base.player_id)
+    .maybeSingle<PlayerContractRow>();
+
+  if (!ownerContract?.player_id)
+    redirect(withParam(returnTo, 'err', 'loan_player_not_in_any_team'));
+  if (ownerContract.team_id !== myTeamId) redirect(withParam(returnTo, 'err', 'not_allowed'));
+  if (ownerContract.status !== 'active')
+    redirect(withParam(returnTo, 'err', 'player_not_available'));
+
   // marca base como countered
   await supabase
     .from('loan_proposals')
@@ -270,8 +309,9 @@ export async function counterLoanProposalAction(formData: FormData) {
     to_team_id: base.from_team_id,
     player_id: base.player_id,
     money_amount: Math.max(0, Math.trunc(moneyAmount)),
-    duration_rounds: null,
+    duration_rounds: null, // temporada
     status: 'pending' satisfies ProposalStatus,
+    created_by_user_id: userId, // ✅ importante
   });
 
   if (insErr) redirect(withParam(returnTo, 'err', 'loan_counter_failed'));
