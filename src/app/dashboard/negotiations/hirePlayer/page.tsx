@@ -11,6 +11,7 @@ export type HireSearchParams = {
   size?: string;
   sort?: 'rating' | 'name';
   dir?: 'asc' | 'desc';
+  contract?: 'all' | 'free' | 'contracted'; // ✅ NOVO
   ok?: string;
   err?: string;
 };
@@ -211,6 +212,8 @@ export default async function HirePlayerPage({
   const qs = buildQueryString(sp, { ok: '', err: '' });
   const returnTo = qs ? `${basePath}?${qs}` : basePath;
 
+  const contract = (sp.contract ?? 'all') as 'all' | 'free' | 'contracted';
+
   // -------------------- Contexto usuário --------------------
   let walletBalance: number | null = null;
   let activeChampionshipId: string | null = null;
@@ -281,10 +284,27 @@ export default async function HirePlayerPage({
     }
   }
 
+  // -------------------- FILTRO "LIVRE/CONTRATADO" --------------------
+  let contractedIds: number[] = [];
+
+  if (activeChampionshipId) {
+    const { data: cIds } = await supabase
+      .from('player_contracts')
+      .select('player_id')
+      .eq('tenant_id', tenantId)
+      .eq('championship_id', activeChampionshipId)
+      .in('status', ['active', 'loaned_out'])
+      .returns<{ player_id: number | null }[]>();
+
+    contractedIds = (cIds ?? [])
+      .map((r) => r.player_id)
+      .filter((id): id is number => Number.isFinite(id));
+}
+
   // -------------------- LISTAGEM --------------------
   let query = supabase
-    .from('players')
-    .select('id,name,oa,bp,vl,player_img,nation_img,club_img,positions', { count: 'exact' });
+  .from('players')
+  .select('id,name,oa,bp,vl,player_img,nation_img,club_img,positions', { count: 'exact' })
 
   if (q) query = query.ilike('name', `%${q}%`);
   if (pos) query = query.ilike('positions', `%${pos}%`);
@@ -297,6 +317,20 @@ export default async function HirePlayerPage({
     query = query.order('name', { ascending: dir === 'asc', nullsFirst: true });
   } else {
     query = query.order('oa', { ascending: dir === 'asc', nullsFirst: false });
+  }
+  // ✅ aplica o filtro
+  if (contract === 'free') {
+    if (contractedIds.length > 0) {
+      // PostgREST: not.in.(1,2,3)
+      query = query.not('id', 'in', `(${contractedIds.join(',')})`);
+    }
+  } else if (contract === 'contracted') {
+    if (contractedIds.length === 0) {
+      // nada contratado -> força vazio
+      query = query.in('id', [-1]);
+    } else {
+      query = query.in('id', contractedIds);
+    }
   }
 
   query = query.range(from, to);

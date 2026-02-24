@@ -98,6 +98,7 @@ export async function POST(req: Request) {
       id,
       competition_id,
       tenant_id,
+      championship_id,
       group_id,
       group_round_id,
       knockout_round_id,
@@ -118,6 +119,7 @@ export async function POST(req: Request) {
       id: string;
       competition_id: string;
       tenant_id: string;
+      championship_id: string | null;
       group_id: string | null;
       group_round_id: string | null;
       knockout_round_id: string | null;
@@ -423,6 +425,71 @@ export async function POST(req: Request) {
         tenantId,
         settings,
       });
+    }
+  }
+
+  /* -------------------------------------------------- */
+  /* 🔟 Pagamento de salários por rodada (quando fecha) */
+  /* -------------------------------------------------- */
+  const championshipId = match.championship_id ?? null;
+  const roundNum = match.round ?? null;
+
+  if (championshipId && Number.isFinite(roundNum)) {
+    // conta todos os jogos da rodada do campeonato (ignora canceled)
+    const [{ count: totalRound }, { count: finishedRound }] = await Promise.all([
+      supabase
+        .from('matches')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('championship_id', championshipId)
+        .eq('round', roundNum)
+        .neq('status', 'canceled'),
+
+      supabase
+        .from('matches')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('championship_id', championshipId)
+        .eq('round', roundNum)
+        .eq('status', 'finished'),
+    ]);
+
+    if ((totalRound ?? 0) > 0 && (finishedRound ?? 0) === (totalRound ?? 0)) {
+      type PayRpcRow = { ok: boolean; code: string | null; message: string | null };
+
+      const { data: payData, error: payErr } = await supabase
+        .rpc('pay_salaries_for_round', {
+          p_tenant_id: tenantId,
+          p_championship_id: championshipId,
+          p_round: roundNum,
+        })
+        .returns<PayRpcRow[]>();
+
+      if (payErr) {
+        console.error('pay_salaries_for_round RPC error:', {
+          code: payErr.code,
+          message: payErr.message,
+          details: payErr.details,
+          hint: payErr.hint,
+        });
+      } else {
+        const row = Array.isArray(payData) && payData.length > 0 ? payData[0] : null;
+        console.log('Salary payment result:', row);
+      }
+
+      // avançar rodada global do campeonato aqui
+      const { data: cycle } = await supabase
+        .from('championship_cycles')
+        .select('current_round')
+        .eq('championship_id', championshipId)
+        .maybeSingle<{ current_round: number }>();
+
+      if (cycle?.current_round === roundNum) {
+        await supabase
+          .from('championship_cycles')
+          .update({ current_round: roundNum + 1 })
+          .eq('championship_id', championshipId);
+      }
     }
   }
 
