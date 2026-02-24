@@ -1,3 +1,4 @@
+// src/app/dashboard/negotiations/hirePlayer/actions.ts
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -6,8 +7,8 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 
 type PlayerForHire = {
   id: number;
-  bp: string | null; // novo (posição base)
-  vl: string | null; // novo (valor)
+  bp: string | null; // posição base
+  vl: string | null; // valor (texto)
 };
 
 type WalletRow = {
@@ -19,6 +20,25 @@ type TeamRow = {
   id: string;
   championship_id: string | null;
 };
+
+type CycleRow = { current_round: number };
+
+type ContractCheckRow = {
+  player_id: number;
+  status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+  team_id: string | null;
+};
+
+const DEFAULT_CONTRACT_DURATION_ROUNDS = 20;
+const BUYOUT_MULTIPLIER = 3;
+
+// salário por rodada: 1% do valor (ajuste depois)
+function calcSalaryPerRound(price: number) {
+  return Math.max(0, Math.round(price * 0.01));
+}
+function calcBuyout(price: number) {
+  return Math.max(0, Math.round(price * BUYOUT_MULTIPLIER));
+}
 
 function withParam(url: string, key: string, value: string) {
   const u = new URL(url, 'http://local');
@@ -76,6 +96,7 @@ export async function hirePlayerAction(formData: FormData) {
 
   const { supabase, tenantId } = await createServerSupabase();
 
+  // -------------------- Auth / tenant_member --------------------
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
   const userId = userRes?.user?.id;
   if (userErr || !userId) {
@@ -93,6 +114,7 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'no_tenant_member'));
   }
 
+  // -------------------- Meu time / campeonato --------------------
   const { data: team, error: teamErr } = await supabase
     .from('teams')
     .select('id, championship_id')
@@ -109,6 +131,9 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'no_championship'));
   }
 
+  const championshipId = team.championship_id;
+
+  // -------------------- Jogador --------------------
   const { data: player, error: playerErr } = await supabase
     .from('players')
     .select('id, bp, vl')
@@ -119,17 +144,32 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'player_not_found'));
   }
 
-  const price = parsePriceToNumber(player.vl);
+  // ✅ impede contratar jogador que já está sob contrato ativo/emprestado
+  const { data: cCheck } = await supabase
+    .from('player_contracts')
+    .select('player_id, status, team_id')
+    .eq('tenant_id', tenantId)
+    .eq('championship_id', championshipId)
+    .eq('player_id', player.id)
+    .in('status', ['active', 'loaned_out'])
+    .maybeSingle<ContractCheckRow>();
 
+  if (cCheck?.player_id) {
+    redirect(withParam(returnTo, 'err', 'already_hired'));
+  }
+
+  // -------------------- Preço --------------------
+  const price = parsePriceToNumber(player.vl);
   if (!Number.isFinite(price) || price < 0) {
     redirect(withParam(returnTo, 'err', 'invalid_price'));
   }
 
+  // -------------------- Wallet (cria se não existir) --------------------
   const { data: walletFound, error: walletErr } = await supabase
     .from('championship_wallet')
     .select('id, balance')
     .eq('tenant_member_id', tm.id)
-    .eq('championship_id', team.championship_id)
+    .eq('championship_id', championshipId)
     .maybeSingle<WalletRow>();
 
   if (walletErr) {
@@ -144,7 +184,7 @@ export async function hirePlayerAction(formData: FormData) {
       .from('championship_wallet')
       .insert({
         tenant_member_id: tm.id,
-        championship_id: team.championship_id,
+        championship_id: championshipId,
         balance: 0,
       })
       .select('id, balance')
@@ -158,22 +198,78 @@ export async function hirePlayerAction(formData: FormData) {
     walletBalance = normalizeBalance(createdWallet.balance);
   }
 
+  // ✅ saldo
   if (walletBalance < price) {
     redirect(withParam(returnTo, 'err', 'insufficient_funds'));
   }
 
+  // -------------------- Rodada atual (cria ciclo se não existir) --------------------
+  let currentRound = 1;
+
+  const { data: cycle } = await supabase
+    .from('championship_cycles')
+    .select('current_round')
+    .eq('championship_id', championshipId)
+    .maybeSingle<CycleRow>();
+
+  if (cycle?.current_round && Number.isFinite(cycle.current_round)) {
+    currentRound = Math.max(1, Math.trunc(cycle.current_round));
+  } else {
+    // MVP: tenta criar (pode falhar se já existir por race, mas ok)
+    await supabase.from('championship_cycles').insert({
+      championship_id: championshipId,
+      current_round: 1,
+    });
+    currentRound = 1;
+  }
+
+  const startRound = currentRound;
+  const endRound = startRound + DEFAULT_CONTRACT_DURATION_ROUNDS - 1;
+
+  const salaryPerRound = calcSalaryPerRound(price);
+  const buyoutAmount = calcBuyout(price);
+
+  // -------------------- Elenco (team_players) --------------------
   const { error: tpErr } = await supabase.from('team_players').insert({
     team_id: team.id,
     player_id: player.id,
-    position: player.bp, // ✅ novo
-    championship_id: team.championship_id,
+    position: player.bp, // posição base
+    championship_id: championshipId,
     tenant_id: tenantId,
   });
 
   if (tpErr) {
+    // normalmente unique(player_id, championship_id, tenant_id) ou afins
     redirect(withParam(returnTo, 'err', 'already_hired'));
   }
 
+  // -------------------- Contrato (player_contracts) --------------------
+  const { error: cInsErr } = await supabase.from('player_contracts').insert({
+    tenant_id: tenantId,
+    championship_id: championshipId,
+    player_id: player.id,
+    team_id: team.id,
+    status: 'active',
+    start_round: startRound,
+    end_round: endRound,
+    salary_per_round: salaryPerRound,
+    buyout_amount: buyoutAmount,
+  });
+
+  if (cInsErr) {
+    // rollback simples: remove do elenco pra não ficar inconsistente
+    await supabase
+      .from('team_players')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('championship_id', championshipId)
+      .eq('team_id', team.id)
+      .eq('player_id', player.id);
+
+    redirect(withParam(returnTo, 'err', 'contract_create_failed'));
+  }
+
+  // -------------------- Debita carteira (com guard gte) --------------------
   const { data: updatedWallet, error: updErr } = await supabase
     .from('championship_wallet')
     .update({ balance: walletBalance - price })
@@ -183,19 +279,52 @@ export async function hirePlayerAction(formData: FormData) {
     .maybeSingle<WalletRow>();
 
   if (updErr || !updatedWallet) {
+    // rollback contrato + elenco
+    await supabase
+      .from('player_contracts')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('championship_id', championshipId)
+      .eq('player_id', player.id);
+
+    await supabase
+      .from('team_players')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('championship_id', championshipId)
+      .eq('team_id', team.id)
+      .eq('player_id', player.id);
+
     redirect(withParam(returnTo, 'err', 'wallet_debit'));
   }
 
-  await supabase.from('wallet_transactions').insert({
-    tenant_id: tenantId,
-    championship_id: team.championship_id,
-    tenant_member_id: tm.id,
-    team_id: team.id,
-    player_id: player.id,
-    amount: price,
-    kind: 'hire_player',
-    metadata: { source: 'hire_player_page' },
-  });
+  // -------------------- Logs / eventos (best-effort) --------------------
+  {
+    const { error: evErr } = await supabase.from('contract_events').insert({
+      tenant_id: tenantId,
+      championship_id: championshipId,
+      player_id: player.id,
+      from_team_id: null,
+      to_team_id: team.id,
+      kind: 'sign',
+      payload: { startRound, endRound, salaryPerRound, buyoutAmount, source: 'hire_player_page' },
+    });
+    if (evErr) console.warn('contract_events insert failed', evErr);
+  }
+
+  {
+    const { error: txErr } = await supabase.from('wallet_transactions').insert({
+      tenant_id: tenantId,
+      championship_id: championshipId,
+      tenant_member_id: tm.id,
+      team_id: team.id,
+      player_id: player.id,
+      amount: price,
+      kind: 'hire_player',
+      metadata: { source: 'hire_player_page' },
+    });
+    if (txErr) console.warn('wallet_transactions insert failed', txErr);
+  }
 
   revalidatePath(basePath);
   redirect(withParam(returnTo, 'ok', 'hired'));

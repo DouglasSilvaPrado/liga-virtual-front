@@ -165,7 +165,8 @@ export default function PlayersTable({
 
           <tbody>
             {players.map((p) => {
-              const isFreeAgent = !p.current_team_id;
+              const isUnderContract = p.contract_status === 'active' || p.contract_status === 'loaned_out';
+              const isFreeAgent = !isUnderContract || !p.current_team_id;
               const isMine = myTeamId != null && p.current_team_id === myTeamId;
               const canTrade = !!p.current_team_id && !isMine;
 
@@ -244,6 +245,18 @@ export default function PlayersTable({
                       <span className="text-muted-foreground">
                         {p.current_team_name ?? 'Sem contrato'}
                       </span>
+
+                      <div className="text-xs text-muted-foreground">
+                        {p.contract_status === 'active' || p.contract_status === 'loaned_out' ? (
+                          <>
+                            {p.contract_end_round != null ? `Fim: R${p.contract_end_round}` : 'Fim: —'}
+                            {p.salary_per_round != null ? ` • Sal: R$ ${money(p.salary_per_round)}` : ''}
+                            {p.buyout_amount != null && p.buyout_amount > 0 ? ` • Multa: R$ ${money(p.buyout_amount)}` : ''}
+                          </>
+                        ) : (
+                          'Livre'
+                        )}
+                      </div>
                     </div>
                   </td>
 

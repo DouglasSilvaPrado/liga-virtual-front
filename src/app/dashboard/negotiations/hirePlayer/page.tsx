@@ -29,10 +29,29 @@ export interface PlayerRow {
   current_team_name: string | null;
   current_team_shield: string | null;
 
+  contract_status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+  contract_end_round: number | null;
+  salary_per_round: number | null;
+  buyout_amount: number | null;
+
   market_listing_id: string | null;
   market_price: number | null;
   market_seller_team_id: string | null;
 }
+
+type ContractJoinRow = {
+  player_id: number | null;
+  team_id: string | null;
+  status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+  end_round: number | null;
+  salary_per_round: number | null;
+  buyout_amount: number | null;
+  teams: {
+    id: string | null;
+    name: string | null;
+    shields?: { shield_url: string | null } | null;
+  } | null;
+};
 
 type MarketListingRow = {
   id: string;
@@ -59,15 +78,6 @@ export type MyTeamPlayerRow = {
   rating: number | null;
   position: string | null;
   player_img: string | null;
-};
-
-type TeamPlayerJoinRow = {
-  player_id: number | null;
-  teams: {
-    id: string | null;
-    name: string | null;
-    shields?: { shield_url: string | null } | null;
-  } | null;
 };
 
 type WalletRow = { id: string; balance: number | string | null };
@@ -165,6 +175,8 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
     cannot_buy_own: 'Você não pode comprar seu próprio jogador.',
     player_not_owned: 'O vendedor não possui mais este jogador.',
     market_buy_failed: 'Não foi possível concluir a compra.',
+
+    contract_create_failed: 'Não foi possível criar o contrato do jogador.',
   };
 
   return { type: 'error', text: map[sp.err] ?? `Erro: ${sp.err}` };
@@ -290,26 +302,35 @@ export default async function HirePlayerPage({
   const { data, count, error } = await query.returns<PlayersListRow[]>();
   if (error) return <div className="p-6">Erro ao carregar jogadores</div>;
 
-  const playersBase: Omit<PlayerRow, 'current_team_id' | 'current_team_name' | 'current_team_shield'>[] =
-    (data ?? []).map((r) => ({
-      id: r.id,
-      name: r.name ?? null,
-      rating: toIntOrNull(r.oa),
-      position: r.bp ?? null,
-      price: r.vl ?? null,
-      player_img: r.player_img ?? null,
-      nation_img: r.nation_img ?? null,
-      club_img: r.club_img ?? null,
-      market_listing_id: null,
-      market_price: null,
-      market_seller_team_id: null,
-    }));
+  const playersBase: Omit<
+    PlayerRow,
+    'current_team_id' | 'current_team_name' | 'current_team_shield'
+  >[] = (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.name ?? null,
+    rating: toIntOrNull(r.oa),
+    position: r.bp ?? null,
+    price: r.vl ?? null,
+    player_img: r.player_img ?? null,
+    nation_img: r.nation_img ?? null,
+    club_img: r.club_img ?? null,
+
+    // ✅ default contrato (vai ser preenchido no resolver depois)
+    contract_status: null,
+    contract_end_round: null,
+    salary_per_round: null,
+    buyout_amount: null,
+
+    market_listing_id: null,
+    market_price: null,
+    market_seller_team_id: null,
+  }));
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / size));
   const feedback = feedbackText(sp);
 
-  // -------------------- Resolver "Time" --------------------
+  // -------------------- Resolver "Contrato/Time" (player_contracts) --------------------
   let players: PlayerRow[] = playersBase.map((p) => ({
     ...p,
     current_team_id: null,
@@ -320,11 +341,11 @@ export default async function HirePlayerPage({
   if (activeChampionshipId && playersBase.length > 0) {
     const ids = playersBase.map((p) => p.id);
 
-    const { data: tpRows } = await supabase
-      .from('team_players')
+    const { data: cRows } = await supabase
+      .from('player_contracts')
       .select(
         `
-        player_id,
+        player_id, team_id, status, end_round, salary_per_round, buyout_amount,
         teams (
           id,
           name,
@@ -334,28 +355,53 @@ export default async function HirePlayerPage({
       )
       .eq('tenant_id', tenantId)
       .eq('championship_id', activeChampionshipId)
-      .in('player_id', ids);
+      .in('player_id', ids)
+      .returns<ContractJoinRow[]>();
 
-    const map = new Map<number, { teamId: string; name: string; shield: string | null }>();
+    const map = new Map<
+      number,
+      {
+        teamId: string | null;
+        name: string | null;
+        shield: string | null;
+        status: PlayerRow['contract_status'];
+        end_round: number | null;
+        salary: number | null;
+        buyout: number | null;
+      }
+    >();
 
-    (tpRows as TeamPlayerJoinRow[] | null)?.forEach((r) => {
+    (cRows ?? []).forEach((r) => {
       if (r.player_id == null) return;
 
-      const teamId = r.teams?.id ?? null;
+      const teamId = r.team_id ?? null;
       const name = r.teams?.name ?? null;
-      if (!teamId || !name) return;
-
       const shield = r.teams?.shields?.shield_url ?? null;
-      map.set(r.player_id, { teamId, name, shield });
+
+      map.set(r.player_id, {
+        teamId,
+        name,
+        shield,
+        status: r.status ?? null,
+        end_round: r.end_round ?? null,
+        salary: r.salary_per_round ?? null,
+        buyout: r.buyout_amount ?? null,
+      });
     });
 
     players = playersBase.map((p) => {
-      const t = map.get(p.id);
+      const c = map.get(p.id);
+
       return {
         ...p,
-        current_team_id: t?.teamId ?? null,
-        current_team_name: t?.name ?? null,
-        current_team_shield: t?.shield ?? null,
+        current_team_id: c?.teamId ?? null,
+        current_team_name: c?.name ?? null,
+        current_team_shield: c?.shield ?? null,
+
+        contract_status: c?.status ?? null,
+        contract_end_round: c?.end_round ?? null,
+        salary_per_round: c?.salary ?? null,
+        buyout_amount: c?.buyout ?? null,
       };
     });
   }
