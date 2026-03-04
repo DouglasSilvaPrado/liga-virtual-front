@@ -25,6 +25,14 @@ type TeamPlayerJoinRow = {
   } | null;
 };
 
+type ContractRow = {
+  player_id: number;
+  salary_per_round: number | null;
+  end_round: number | null;
+  buyout_amount: number | null;
+  status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+};
+
 type ListingRow = {
   player_id: number;
   price: number;
@@ -119,10 +127,29 @@ export default async function MyTeamPage() {
         nation_img: r.players?.nation_img ?? null,
         club_img: r.players?.club_img ?? null,
         listing_price: null,
+
+        // ✅ novos campos (preenche depois)
+        salary_per_round: null,
+        end_round: null,
+        buyout_amount: null,
       }));
 
     const ids = playersBase.map((p) => p.player_id);
 
+    // ✅ contratos (salary/buyout/end_round)
+    const { data: contracts } = await supabase
+      .from('player_contracts')
+      .select('player_id, salary_per_round, end_round, buyout_amount, status')
+      .eq('tenant_id', tenantId)
+      .eq('championship_id', championship.id)
+      .eq('team_id', team.id)
+      .in('player_id', ids)
+      .returns<ContractRow[]>();
+
+    const contractMap = new Map<number, ContractRow>();
+    (contracts ?? []).forEach((c) => contractMap.set(c.player_id, c));
+
+    // ✅ mercado (se você ainda quiser manter)
     if (ids.length > 0) {
       const { data: listings } = await supabase
         .from('player_market_listings')
@@ -133,13 +160,19 @@ export default async function MyTeamPage() {
         .in('player_id', ids)
         .returns<ListingRow[]>();
 
-      const map = new Map<number, number>();
-      (listings ?? []).forEach((l) => map.set(l.player_id, l.price));
+      const listingMap = new Map<number, number>();
+      (listings ?? []).forEach((l) => listingMap.set(l.player_id, l.price));
 
-      myPlayers = playersBase.map((p) => ({
-        ...p,
-        listing_price: map.get(p.player_id) ?? null,
-      }));
+      myPlayers = playersBase.map((p) => {
+        const c = contractMap.get(p.player_id);
+        return {
+          ...p,
+          listing_price: listingMap.get(p.player_id) ?? null,
+          salary_per_round: c?.salary_per_round ?? null,
+          end_round: c?.end_round ?? null,
+          buyout_amount: c?.buyout_amount ?? null,
+        };
+      });
     } else {
       myPlayers = playersBase;
     }
