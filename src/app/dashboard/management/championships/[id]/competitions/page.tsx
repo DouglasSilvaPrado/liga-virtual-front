@@ -8,6 +8,7 @@ import CreateCompetitionButton from './components/CreateCompetitionButton';
 import EditCompetitionButton from './components/EditCompetitionButton';
 import DeleteCompetitionButton from './components/DeleteCompetitionButton';
 import CompetitionTrophiesButton from './components/CompetitionTrophiesButton';
+import CloseSeasonButton from './components/CloseSeasonButton';
 
 export default async function ChampionshipCompetitionsPage(props: {
   params: Promise<{ id: string }>;
@@ -37,6 +38,8 @@ export default async function ChampionshipCompetitionsPage(props: {
   return (
     <div className="space-y-4 p-6">
       <h1 className="text-2xl font-bold">Competições – {championship.name}</h1>
+
+      <CloseSeasonButton championshipId={championshipId} currentSeason={championship.season} />
 
       <CreateCompetitionButton championshipId={championshipId} />
 
