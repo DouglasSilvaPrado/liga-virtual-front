@@ -29,7 +29,6 @@ type ContractCheckRow = {
   team_id: string | null;
 };
 
-const DEFAULT_CONTRACT_DURATION_ROUNDS = 20;
 const BUYOUT_MULTIPLIER = 3;
 
 // salário por rodada: 1% do valor (ajuste depois)
@@ -224,7 +223,7 @@ export async function hirePlayerAction(formData: FormData) {
   }
 
   const startRound = currentRound;
-  const endRound = startRound + DEFAULT_CONTRACT_DURATION_ROUNDS - 1;
+  const endRound: number | null = null;
 
   const salaryPerRound = calcSalaryPerRound(price);
   const buyoutAmount = calcBuyout(price);
@@ -251,7 +250,7 @@ export async function hirePlayerAction(formData: FormData) {
     team_id: team.id,
     status: 'active',
     start_round: startRound,
-    end_round: endRound,
+    end_round: null,
     salary_per_round: salaryPerRound,
     buyout_amount: buyoutAmount,
   });
@@ -307,7 +306,13 @@ export async function hirePlayerAction(formData: FormData) {
       from_team_id: null,
       to_team_id: team.id,
       kind: 'sign',
-      payload: { startRound, endRound, salaryPerRound, buyoutAmount, source: 'hire_player_page' },
+      payload: {
+        startRound,
+        endRound: null,
+        salaryPerRound,
+        buyoutAmount,
+        source: 'hire_player_page',
+      },
     });
     if (evErr) console.warn('contract_events insert failed', evErr);
   }
