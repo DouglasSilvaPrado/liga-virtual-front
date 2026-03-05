@@ -19,6 +19,7 @@ export type MyTeamPlayerCardItem = {
   salary_per_round: number | null;
   end_round: number | null;
   buyout_amount: number | null;
+  is_loaned: boolean;
 };
 
 type Props = {
@@ -91,12 +92,22 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
               <div>Multa: {p.buyout_amount != null ? fmtBRL(p.buyout_amount) : '—'}</div>
             </div>
 
+            {p.is_loaned ? (
+              <div className="mt-1 text-[10px] font-semibold text-amber-700">Emprestado</div>
+            ) : null}
+
             {/* ✅ Editar salário */}
             <button
               type="button"
               onClick={() => openSalaryModal(p)}
-              disabled={!championshipId}
-              title={!championshipId ? 'Sem campeonato ativo' : 'Editar salário'}
+              disabled={!championshipId || p.is_loaned}
+              title={
+                !championshipId
+                  ? 'Sem campeonato ativo'
+                  : p.is_loaned
+                  ? 'Jogador emprestado: só o dono pode editar contrato'
+                  : 'Editar salário'
+              }
               className={[
                 'mt-2 w-[112px]',
                 'cursor-pointer rounded-full border border-black/10',
@@ -113,8 +124,14 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
             <button
               type="button"
               onClick={() => openMarketModal(p)}
-              disabled={!championshipId}
-              title={!championshipId ? 'Sem campeonato ativo' : 'Listar no mercado'}
+              disabled={!championshipId || p.is_loaned}
+              title={
+                !championshipId
+                  ? 'Sem campeonato ativo'
+                  : p.is_loaned
+                  ? 'Jogador emprestado: não pode listar no mercado'
+                  : 'Listar no mercado'
+              }
               className={[
                 'mt-2 w-[112px]',
                 'cursor-pointer rounded-full border border-black/10',
@@ -124,7 +141,7 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
                 'disabled:cursor-not-allowed disabled:opacity-60',
               ].join(' ')}
             >
-              {p.listing_price != null ? 'Editar preço' : 'Listar no mercado'}
+              {p.is_loaned ? 'Indisponível' : p.listing_price != null ? 'Editar preço' : 'Listar no mercado'}
             </button>
           </div>
         ))}

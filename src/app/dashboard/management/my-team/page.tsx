@@ -14,6 +14,8 @@ type TenantMemberRow = { id: string };
 
 type TeamPlayerJoinRow = {
   player_id: number | null;
+  kind: 'owned' | 'loaned' | null;
+  owner_team_id: string | null;
   players: {
     id: number;
     name: string | null;
@@ -105,6 +107,8 @@ export default async function MyTeamPage() {
       .select(
         `
           player_id,
+          kind,
+          owner_team_id,
           players (
             id, name, oa, bp, player_img, nation_img, club_img
           )
@@ -128,10 +132,10 @@ export default async function MyTeamPage() {
         club_img: r.players?.club_img ?? null,
         listing_price: null,
 
-        // ✅ novos campos (preenche depois)
         salary_per_round: null,
         end_round: null,
         buyout_amount: null,
+        is_loaned: r.kind === 'loaned',
       }));
 
     const ids = playersBase.map((p) => p.player_id);
@@ -142,8 +146,8 @@ export default async function MyTeamPage() {
       .select('player_id, salary_per_round, end_round, buyout_amount, status')
       .eq('tenant_id', tenantId)
       .eq('championship_id', championship.id)
-      .eq('team_id', team.id)
       .in('player_id', ids)
+      .in('status', ['active', 'loaned_out'])
       .returns<ContractRow[]>();
 
     const contractMap = new Map<number, ContractRow>();
