@@ -22,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 
 import type { Championship } from '@/@types/championship';
-import type { CompetitionType, CompetitionWithSettings } from '@/@types/competition';
+import type {  CompetitionWithSettings } from '@/@types/competition';
 import type { Team } from '@/@types/team';
 
 type LeagueType = 'divisao' | 'divisao_mata';
@@ -163,6 +163,12 @@ export default function CreateLeagueModal() {
 
     if (!res.ok) {
       const err = await res.json().catch(() => null);
+
+      if (res.status === 403) {
+        alert('Você não tem permissão para cadastrar times na liga.');
+        return;
+      }
+
       alert(err?.error ?? 'Erro ao cadastrar times na liga');
       return;
     }

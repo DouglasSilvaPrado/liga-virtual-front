@@ -9,8 +9,32 @@ export interface League {
   championships: { name: string } | null;
 }
 
+type TenantMemberRow = {
+  id: string;
+  role: 'owner' | 'admin' | 'member' | null;
+};
+
 export default async function LeaguePage() {
   const { supabase, tenantId } = await createServerSupabase();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let role: TenantMemberRow['role'] = null;
+
+  if (user) {
+    const { data: tenantMember } = await supabase
+      .from('tenant_members')
+      .select('id, role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .single<TenantMemberRow>();
+
+    role = tenantMember?.role ?? null;
+  }
+
+  const canManageLeagueTeams = role === 'owner' || role === 'admin';
 
   /* -------------------------------------------------- */
   /* 1️⃣ Busca competições que têm times cadastrados     */
@@ -57,7 +81,7 @@ export default async function LeaguePage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Ligas</h1>
-        <CreateLeagueModal />
+        {canManageLeagueTeams && <CreateLeagueModal />}
       </div>
 
       {competitionIds.length === 0 && (

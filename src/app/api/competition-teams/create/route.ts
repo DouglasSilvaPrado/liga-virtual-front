@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { generateGroupMatches } from '@/lib/generateGroupMatches';
 import { generateLeagueMatches } from '@/lib/generateLeagueMatches';
+import { getCurrentTenantRole, isAdminOrOwner } from '@/lib/requireTenantRole';
 
 type CompetitionType = 'divisao' | 'divisao_mata' | 'copa_grupo' | 'copa_grupo_mata' | 'mata_mata';
 
@@ -58,11 +59,18 @@ export async function POST(req: Request) {
     const { supabase, tenantId } = await createServerSupabase();
 
     // 🔐 auth
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { user, role } = await getCurrentTenantRole();
 
-    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    if (!isAdminOrOwner(role)) {
+      return NextResponse.json(
+        { error: 'Você não tem permissão para cadastrar times nesta competição.' },
+        { status: 403 },
+      );
+    }
 
     // 🔎 valida competição + settings
     const { data: competition, error: compErr } = await supabase
