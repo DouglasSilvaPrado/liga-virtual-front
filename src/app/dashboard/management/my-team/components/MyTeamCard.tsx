@@ -55,10 +55,8 @@ export default function MyTeamCard({ team, shield }: Props) {
 
           <div>
             <h2 className="text-2xl font-bold">{team.name}</h2>
-          
           </div>
         </div>
-
 
         {/* EXTRAS */}
         <div className="space-y-3 text-sm">

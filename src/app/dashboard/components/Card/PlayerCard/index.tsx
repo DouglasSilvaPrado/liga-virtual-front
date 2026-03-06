@@ -88,11 +88,7 @@ export default function PlayerCard({
 
   return (
     <div
-      className={[
-        'relative select-none',
-        c.shadow,
-        className ?? '',
-      ].join(' ')}
+      className={['relative select-none', c.shadow, className ?? ''].join(' ')}
       style={{
         width: size.w,
         height: size.h,
@@ -105,84 +101,78 @@ export default function PlayerCard({
     >
       {/* rating + pos (coluna esquerda) */}
       {showOverall && (
-      <div className="absolute left-[17%] top-[25%] leading-none">
-        <div className="text-sm font-bold text-gray-700">{ratingText}</div>
-        <div className="text-[11px] font-black tracking-tight text-gray-700">
-          {posText}
+        <div className="absolute top-[25%] left-[17%] leading-none">
+          <div className="text-sm font-bold text-gray-700">{ratingText}</div>
+          <div className="text-[11px] font-black tracking-tight text-gray-700">{posText}</div>
         </div>
-      </div>
       )}
-
 
       {/* nation + club (topo direito) */}
       {!showMiniImage && (
-<div className="absolute right-[17%] top-[25%] flex flex-col items-end gap-[4px]">
-        {player.nation_img ? (
-          <img
-            src={player.nation_img}
-            alt=""
-            className="h-[14px] w-[14px] object-contain"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-          />
-        ) : null}
+        <div className="absolute top-[25%] right-[17%] flex flex-col items-end gap-[4px]">
+          {player.nation_img ? (
+            <img
+              src={player.nation_img}
+              alt=""
+              className="h-[14px] w-[14px] object-contain"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          ) : null}
 
-        {player.club_img ? (
-          <img
-            src={player.club_img}
-            alt=""
-            className="h-[14px] w-[14px] object-contain"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-          />
-        ) : null}
-      </div>
-      )}
-      
-      {/* player image */}
-      {!showMiniImage && (
-      <div className="absolute left-1/2 top-[34px] -translate-x-1/2">
-              {player.player_img ? (
-                <img
-                  src={player.player_img}
-                  alt=""
-                  className="h-[78px] w-[78px] object-contain"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="h-[78px] w-[78px] rounded bg-black/10" />
-              )}
+          {player.club_img ? (
+            <img
+              src={player.club_img}
+              alt=""
+              className="h-[14px] w-[14px] object-contain"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          ) : null}
         </div>
       )}
-      
 
-       {/* player mini image */}
+      {/* player image */}
+      {!showMiniImage && (
+        <div className="absolute top-[34px] left-1/2 -translate-x-1/2">
+          {player.player_img ? (
+            <img
+              src={player.player_img}
+              alt=""
+              className="h-[78px] w-[78px] object-contain"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="h-[78px] w-[78px] rounded bg-black/10" />
+          )}
+        </div>
+      )}
+
+      {/* player mini image */}
       {showMiniImage && (
-        <div className="absolute right-[-8%] top-[24%] -translate-x-1/2">
-        {player.player_img ? (
-          <img
-            src={player.player_img}
-            alt=""
-            className="h-[32px] w-[32px] object-contain"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <div className="h-[78px] w-[78px] rounded bg-black/10" />
-        )}
-      </div>
-      )
-      }
-      
+        <div className="absolute top-[24%] right-[-8%] -translate-x-1/2">
+          {player.player_img ? (
+            <img
+              src={player.player_img}
+              alt=""
+              className="h-[32px] w-[32px] object-contain"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="h-[78px] w-[78px] rounded bg-black/10" />
+          )}
+        </div>
+      )}
 
       {/* nome */}
       {showPlayerName && (
-      <div className="absolute bottom-[40px] left-[10px] right-[10px] text-center">
-        <div className="truncate text-[11px] font-black tracking-tight text-gray-700">
-          {shortName}
+        <div className="absolute right-[10px] bottom-[40px] left-[10px] text-center">
+          <div className="truncate text-[11px] font-black tracking-tight text-gray-700">
+            {shortName}
+          </div>
         </div>
-      </div>
       )}
 
       {/* nation + club (embaixo) */}

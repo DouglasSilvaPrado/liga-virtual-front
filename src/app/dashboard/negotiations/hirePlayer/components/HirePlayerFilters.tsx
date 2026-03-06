@@ -75,7 +75,11 @@ export default function HirePlayerFilters({ value }: { value: HireSearchParams }
 
       <label className="grid gap-1 text-sm">
         <span className="text-muted-foreground">Contrato</span>
-        <select className="rounded border px-3 py-2" name="contract" defaultValue={value.contract ?? 'all'}>
+        <select
+          className="rounded border px-3 py-2"
+          name="contract"
+          defaultValue={value.contract ?? 'all'}
+        >
           <option value="all">Todos</option>
           <option value="free">Livre</option>
           <option value="contracted">Com contrato</option>

@@ -272,7 +272,9 @@ export default async function HirePlayerPage({
           .returns<TeamPlayerMineRow[]>();
 
         myPlayers = (mine ?? [])
-          .filter((r): r is TeamPlayerMineRow & { player_id: number } => Number.isFinite(r.player_id))
+          .filter((r): r is TeamPlayerMineRow & { player_id: number } =>
+            Number.isFinite(r.player_id),
+          )
           .map((r) => ({
             player_id: r.player_id,
             name: r.players?.name ?? null,
@@ -299,12 +301,12 @@ export default async function HirePlayerPage({
     contractedIds = (cIds ?? [])
       .map((r) => r.player_id)
       .filter((id): id is number => Number.isFinite(id));
-}
+  }
 
   // -------------------- LISTAGEM --------------------
   let query = supabase
-  .from('players')
-  .select('id,name,oa,bp,vl,player_img,nation_img,club_img,positions', { count: 'exact' })
+    .from('players')
+    .select('id,name,oa,bp,vl,player_img,nation_img,club_img,positions', { count: 'exact' });
 
   if (q) query = query.ilike('name', `%${q}%`);
   if (pos) query = query.ilike('positions', `%${pos}%`);

@@ -229,7 +229,9 @@ function BarStat({ label, value }: { label: string; value: number | null | undef
     <div className="rounded-lg border border-white/10 bg-white/5 p-3">
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold tracking-wide text-white/70">{label}</div>
-        <div className={`rounded-md border px-2 py-0.5 text-xs font-bold ${tone.pill}`}>{v ?? '—'}</div>
+        <div className={`rounded-md border px-2 py-0.5 text-xs font-bold ${tone.pill}`}>
+          {v ?? '—'}
+        </div>
       </div>
 
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
@@ -353,7 +355,9 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                   <div className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <div className="text-4xl font-black tracking-tight text-white">{details.rating ?? '—'}</div>
+                        <div className="text-4xl font-black tracking-tight text-white">
+                          {details.rating ?? '—'}
+                        </div>
                         <div className="inline-flex items-center gap-2">
                           <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-xs font-bold text-white/80">
                             {details.position ?? '—'}
@@ -363,17 +367,27 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {details.nation_img ? <img src={details.nation_img} alt="" className="h-6 w-8 object-contain" /> : null}
-                        {details.club_img ? <img src={details.club_img} alt="" className="h-7 w-7 object-contain" /> : null}
+                        {details.nation_img ? (
+                          <img src={details.nation_img} alt="" className="h-6 w-8 object-contain" />
+                        ) : null}
+                        {details.club_img ? (
+                          <img src={details.club_img} alt="" className="h-7 w-7 object-contain" />
+                        ) : null}
                       </div>
                     </div>
 
                     <div className="mt-3">
-                      <div className="truncate text-lg font-extrabold tracking-wide text-white">{details.name ?? '—'}</div>
+                      <div className="truncate text-lg font-extrabold tracking-wide text-white">
+                        {details.name ?? '—'}
+                      </div>
                       <div className="mt-1 text-xs text-white/60">
                         {details.league_img ? (
                           <span className="inline-flex items-center gap-2">
-                            <img src={details.league_img} alt="" className="h-5 w-8 object-contain" />
+                            <img
+                              src={details.league_img}
+                              alt=""
+                              className="h-5 w-8 object-contain"
+                            />
                             <span>Liga</span>
                           </span>
                         ) : (
@@ -396,35 +410,57 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">PÉ</div>
-                        <div className="mt-1 text-sm font-bold text-white/90">{traduzirPe(details.foot)}</div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                          PÉ
+                        </div>
+                        <div className="mt-1 text-sm font-bold text-white/90">
+                          {traduzirPe(details.foot)}
+                        </div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">HABS / PÉ FRACO</div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                          HABS / PÉ FRACO
+                        </div>
                         <div className="mt-1 text-sm font-bold text-white/90">
                           {details.skills ?? '—'}★ / {details.weak_foot ?? '—'}★
                         </div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">ALTURA</div>
-                        <div className="mt-1 text-sm font-bold text-white/90">{details.height ?? '—'}</div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                          ALTURA
+                        </div>
+                        <div className="mt-1 text-sm font-bold text-white/90">
+                          {details.height ?? '—'}
+                        </div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">PESO</div>
-                        <div className="mt-1 text-sm font-bold text-white/90">{details.weight ?? '—'}</div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                          PESO
+                        </div>
+                        <div className="mt-1 text-sm font-bold text-white/90">
+                          {details.weight ?? '—'}
+                        </div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">IDADE</div>
-                        <div className="mt-1 text-sm font-bold text-white/90">{details.age ?? '—'}</div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                          IDADE
+                        </div>
+                        <div className="mt-1 text-sm font-bold text-white/90">
+                          {details.age ?? '—'}
+                        </div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-[10px] font-semibold tracking-widest text-white/60">ACELERAÇÃO</div>
-                        <div className="mt-1 text-sm font-bold text-white/90">{details.accelerate ?? '—'}</div>
+                        <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                          ACELERAÇÃO
+                        </div>
+                        <div className="mt-1 text-sm font-bold text-white/90">
+                          {details.accelerate ?? '—'}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -517,20 +553,36 @@ export default function PlayerDetailsModal({ open, playerId, onClose }: Props) {
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">POP</div>
-                      <div className="mt-1 text-sm font-bold text-white/90">{details.pop ?? '—'}</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        POP
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-white/90">
+                        {details.pop ?? '—'}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">IGS</div>
-                      <div className="mt-1 text-sm font-bold text-white/90">{details.igs ?? '—'}</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        IGS
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-white/90">
+                        {details.igs ?? '—'}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">PREÇO</div>
-                      <div className="mt-1 text-sm font-bold text-white/90">{details.price ?? '—'}</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        PREÇO
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-white/90">
+                        {details.price ?? '—'}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-[10px] font-semibold tracking-widest text-white/60">VALOR</div>
-                      <div className="mt-1 text-sm font-bold text-white/90">{details.price_value ?? '—'}</div>
+                      <div className="text-[10px] font-semibold tracking-widest text-white/60">
+                        VALOR
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-white/90">
+                        {details.price_value ?? '—'}
+                      </div>
                     </div>
                   </div>
                 </div>

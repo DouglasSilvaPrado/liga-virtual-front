@@ -22,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 
 import type { Championship } from '@/@types/championship';
-import type {  CompetitionWithSettings } from '@/@types/competition';
+import type { CompetitionWithSettings } from '@/@types/competition';
 import type { Team } from '@/@types/team';
 
 type LeagueType = 'divisao' | 'divisao_mata';

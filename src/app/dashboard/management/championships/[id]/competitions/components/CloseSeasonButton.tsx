@@ -22,7 +22,10 @@ export default function CloseSeasonButton(props: {
   const canSubmit = props.currentSeason && nextSeason.trim().length > 0;
 
   return (
-    <form action={closeSeasonAction} className="flex flex-col gap-2 rounded-xl border p-4 md:flex-row md:items-end">
+    <form
+      action={closeSeasonAction}
+      className="flex flex-col gap-2 rounded-xl border p-4 md:flex-row md:items-end"
+    >
       <input type="hidden" name="championship_id" value={props.championshipId} />
       <input
         type="hidden"
@@ -32,13 +35,14 @@ export default function CloseSeasonButton(props: {
 
       <div className="flex-1">
         <div className="text-sm font-medium">Temporada</div>
-        <div className="text-xs text-muted-foreground">
-          Atual: <b>{props.currentSeason ?? '—'}</b> · Ao virar, encerra empréstimos dessa temporada.
+        <div className="text-muted-foreground text-xs">
+          Atual: <b>{props.currentSeason ?? '—'}</b> · Ao virar, encerra empréstimos dessa
+          temporada.
         </div>
       </div>
 
       <div className="grid gap-1">
-        <label className="text-xs text-muted-foreground">Próxima temporada</label>
+        <label className="text-muted-foreground text-xs">Próxima temporada</label>
         <Input
           name="next_season"
           value={nextSeason}

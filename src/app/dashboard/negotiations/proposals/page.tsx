@@ -234,7 +234,10 @@ export default async function ProposalsPage() {
     .in('id', teamIds)
     .returns<TeamWithShield[]>();
 
-  const teamsMap = new Map<string, { id: string; name: string | null; shield_url: string | null }>();
+  const teamsMap = new Map<
+    string,
+    { id: string; name: string | null; shield_url: string | null }
+  >();
   (teamsRaw ?? []).forEach((t) => {
     teamsMap.set(t.id, {
       id: t.id,

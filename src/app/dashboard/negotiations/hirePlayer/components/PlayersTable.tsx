@@ -24,7 +24,10 @@ function parsePriceToNumber(priceText: string | null | undefined): number {
   const raw = priceText.toString().trim().toUpperCase();
 
   // aceita símbolos: R$, €, £, $
-  const cleaned = raw.replace(/\s/g, '').replace(/^R\$/i, '').replace(/^[€£$]/, '');
+  const cleaned = raw
+    .replace(/\s/g, '')
+    .replace(/^R\$/i, '')
+    .replace(/^[€£$]/, '');
 
   // "91.5M" | "76K" | "1.234,56" | "91500000"
   const m = cleaned.match(/^([\d.,]+)([KM])?$/i);
@@ -165,7 +168,8 @@ export default function PlayersTable({
 
           <tbody>
             {players.map((p) => {
-              const isUnderContract = p.contract_status === 'active' || p.contract_status === 'loaned_out';
+              const isUnderContract =
+                p.contract_status === 'active' || p.contract_status === 'loaned_out';
               const isFreeAgent = !isUnderContract || !p.current_team_id;
               const isMine = myTeamId != null && p.current_team_id === myTeamId;
               const canTrade = !!p.current_team_id && !isMine;
@@ -246,12 +250,18 @@ export default function PlayersTable({
                         {p.current_team_name ?? 'Sem contrato'}
                       </span>
 
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {p.contract_status === 'active' || p.contract_status === 'loaned_out' ? (
                           <>
-                            {p.contract_end_round != null ? `Fim: R${p.contract_end_round}` : 'Fim: —'}
-                            {p.salary_per_round != null ? ` • Sal: R$ ${money(p.salary_per_round)}` : ''}
-                            {p.buyout_amount != null && p.buyout_amount > 0 ? ` • Multa: R$ ${money(p.buyout_amount)}` : ''}
+                            {p.contract_end_round != null
+                              ? `Fim: R${p.contract_end_round}`
+                              : 'Fim: —'}
+                            {p.salary_per_round != null
+                              ? ` • Sal: R$ ${money(p.salary_per_round)}`
+                              : ''}
+                            {p.buyout_amount != null && p.buyout_amount > 0
+                              ? ` • Multa: R$ ${money(p.buyout_amount)}`
+                              : ''}
                           </>
                         ) : (
                           'Livre'
@@ -525,8 +535,8 @@ export default function PlayersTable({
                 <div>
                   <div className="font-medium">{selectedMarketBuy.name ?? '—'}</div>
                   <div className="text-muted-foreground text-xs">
-                    {selectedMarketBuy.position ?? '—'} • Overall {selectedMarketBuy.rating ?? '—'} •
-                    ID {selectedMarketBuy.id}
+                    {selectedMarketBuy.position ?? '—'} • Overall {selectedMarketBuy.rating ?? '—'}{' '}
+                    • ID {selectedMarketBuy.id}
                   </div>
                 </div>
               </div>
@@ -551,7 +561,9 @@ export default function PlayersTable({
 
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-muted-foreground">Diferença</span>
-                  <span className={`font-medium ${diffMarket < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <span
+                    className={`font-medium ${diffMarket < 0 ? 'text-red-600' : 'text-green-600'}`}
+                  >
                     {diffMarket < 0 ? '-' : '+'}R$ {money(Math.abs(diffMarket))}
                   </span>
                 </div>

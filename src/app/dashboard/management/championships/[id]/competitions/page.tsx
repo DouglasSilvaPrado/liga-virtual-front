@@ -72,10 +72,7 @@ export default async function ChampionshipCompetitionsPage(props: {
 
       {canManageChampionship && (
         <>
-          <CloseSeasonButton
-            championshipId={championshipId}
-            currentSeason={championship.season}
-          />
+          <CloseSeasonButton championshipId={championshipId} currentSeason={championship.season} />
 
           <CreateCompetitionButton championshipId={championshipId} />
         </>
@@ -93,9 +90,7 @@ export default async function ChampionshipCompetitionsPage(props: {
                 <div className="flex min-w-0 flex-1 flex-row items-center space-x-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={comp.competition_url || undefined} />
-                    <AvatarFallback>
-                      {comp.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarFallback>{comp.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
 
                   <div>
@@ -103,8 +98,7 @@ export default async function ChampionshipCompetitionsPage(props: {
                     <Badge variant="outline">{comp.type}</Badge>
 
                     <p className="text-muted-foreground mt-1 text-xs">
-                      Criado em:{' '}
-                      {new Date(comp.created_at!).toLocaleDateString('pt-BR')}
+                      Criado em: {new Date(comp.created_at!).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                 </div>

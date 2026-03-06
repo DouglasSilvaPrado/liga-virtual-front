@@ -86,7 +86,7 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
             />
 
             {/* ✅ Linha de contrato (compacta) */}
-            <div className="mt-2 text-[10px] leading-4 text-muted-foreground">
+            <div className="text-muted-foreground mt-2 text-[10px] leading-4">
               <div>Fim: {p.end_round ? `R${p.end_round}` : '—'}</div>
               <div>Sal: {p.salary_per_round != null ? fmtBRL(p.salary_per_round) : '—'}</div>
               <div>Multa: {p.buyout_amount != null ? fmtBRL(p.buyout_amount) : '—'}</div>
@@ -105,8 +105,8 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
                 !championshipId
                   ? 'Sem campeonato ativo'
                   : p.is_loaned
-                  ? 'Jogador emprestado: só o dono pode editar contrato'
-                  : 'Editar salário'
+                    ? 'Jogador emprestado: só o dono pode editar contrato'
+                    : 'Editar salário'
               }
               className={[
                 'mt-2 w-[112px]',
@@ -129,8 +129,8 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
                 !championshipId
                   ? 'Sem campeonato ativo'
                   : p.is_loaned
-                  ? 'Jogador emprestado: não pode listar no mercado'
-                  : 'Listar no mercado'
+                    ? 'Jogador emprestado: não pode listar no mercado'
+                    : 'Listar no mercado'
               }
               className={[
                 'mt-2 w-[112px]',
@@ -141,13 +141,17 @@ export default function MyPlayersGrid({ items, championshipId }: Props) {
                 'disabled:cursor-not-allowed disabled:opacity-60',
               ].join(' ')}
             >
-              {p.is_loaned ? 'Indisponível' : p.listing_price != null ? 'Editar preço' : 'Listar no mercado'}
+              {p.is_loaned
+                ? 'Indisponível'
+                : p.listing_price != null
+                  ? 'Editar preço'
+                  : 'Listar no mercado'}
             </button>
           </div>
         ))}
 
         {sorted.length === 0 ? (
-          <div className="col-span-full rounded-xl border bg-white p-4 text-sm text-muted-foreground">
+          <div className="text-muted-foreground col-span-full rounded-xl border bg-white p-4 text-sm">
             Nenhum jogador no seu time ainda.
           </div>
         ) : null}

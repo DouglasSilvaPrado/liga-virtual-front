@@ -74,11 +74,7 @@ function Inner({
           Ao salvar: <b>passe</b> = salário × 100 e <b>multa</b> = salário × 300.
         </div>
 
-        <form
-          action={updatePlayerSalaryAction}
-          onSubmit={() => onClose()}
-          className="grid gap-3"
-        >
+        <form action={updatePlayerSalaryAction} onSubmit={() => onClose()} className="grid gap-3">
           <input type="hidden" name="championship_id" value={championshipId} />
           <input type="hidden" name="player_id" value={String(player.player_id)} />
 
@@ -93,7 +89,9 @@ function Inner({
               placeholder="Ex: 305000"
             />
             <span className="text-muted-foreground text-xs">
-              {salaryNum >= 0 ? `R$ ${salaryNum.toLocaleString('pt-BR')}` : 'Informe um valor válido'}
+              {salaryNum >= 0
+                ? `R$ ${salaryNum.toLocaleString('pt-BR')}`
+                : 'Informe um valor válido'}
             </span>
           </label>
 
