@@ -8,11 +8,35 @@ export interface Cup {
   created_at: string;
   championships: {
     name: string;
-  };
+  } | null;
 }
+
+type TenantMemberRow = {
+  id: string;
+  role: 'owner' | 'admin' | 'member' | null;
+};
 
 export default async function CupPage() {
   const { supabase, tenantId } = await createServerSupabase();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let role: TenantMemberRow['role'] = null;
+
+  if (user) {
+    const { data: tenantMember } = await supabase
+      .from('tenant_members')
+      .select('id, role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .single<TenantMemberRow>();
+
+    role = tenantMember?.role ?? null;
+  }
+
+  const canManageCups = role === 'owner' || role === 'admin';
 
   /* -------------------------------------------------- */
   /* 1️⃣ Busca competições que já possuem standings     */
@@ -22,7 +46,9 @@ export default async function CupPage() {
     .select('competition_id')
     .eq('tenant_id', tenantId);
 
-  const competitionIds = standings?.map((s) => s.competition_id) ?? [];
+  const competitionIds = Array.from(
+    new Set((standings ?? []).map((s) => s.competition_id).filter(Boolean)),
+  );
 
   /* -------------------------------------------------- */
   /* 2️⃣ Busca apenas as copas válidas                  */
@@ -51,7 +77,7 @@ export default async function CupPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Copas</h1>
-        <CreateCupModal />
+        {canManageCups && <CreateCupModal />}
       </div>
 
       {(!cups || cups.length === 0) && (
