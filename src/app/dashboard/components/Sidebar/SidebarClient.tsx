@@ -5,24 +5,33 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
-const managementMenu = [
-  { href: '/dashboard/management/members', label: 'Membros' },
-  { href: '/dashboard/management/championships', label: 'Campeonatos' },
-  { href: '/dashboard/management/shields', label: 'Escudos' },
-  { href: '/dashboard/management/my-team', label: 'Meu Time' },
-];
+type UserRole = 'owner' | 'admin' | 'member' | null;
 
-const cupMenu = [{ href: '/dashboard/cups', label: 'Copas' }];
-
-const leagueMenu = [{ href: '/dashboard/leagues', label: 'Ligas' }];
-
-const negotiationsMenu = [
-  { href: '/dashboard/negotiations/hirePlayer', label: 'Contratar Jogador' },
-  { href: '/dashboard/negotiations/proposals', label: 'Propostas' },
-];
-
-export default function SidebarClient({ onNavigate }: { onNavigate?: () => void }) {
+export default function SidebarClient({
+  onNavigate,
+  role,
+}: {
+  onNavigate?: () => void;
+  role: UserRole;
+}) {
   const pathname = usePathname();
+
+  const managementMenu = [
+    { href: '/dashboard/management/members', label: 'Membros' },
+    ...(role === 'owner' || role === 'admin'
+      ? [{ href: '/dashboard/management/championships', label: 'Campeonatos' }]
+      : []),
+    { href: '/dashboard/management/shields', label: 'Escudos' },
+    { href: '/dashboard/management/my-team', label: 'Meu Time' },
+  ];
+
+  const cupMenu = [{ href: '/dashboard/cups', label: 'Copas' }];
+  const leagueMenu = [{ href: '/dashboard/leagues', label: 'Ligas' }];
+  const negotiationsMenu = [
+    { href: '/dashboard/negotiations/hirePlayer', label: 'Contratar Jogador' },
+    { href: '/dashboard/negotiations/proposals', label: 'Propostas' },
+  ];
+
   const autoOpen = pathname.startsWith('/dashboard/management');
   const autoOpenCup = pathname.startsWith('/dashboard/cup');
   const [isOpen, setIsOpen] = useState(autoOpen);
@@ -52,7 +61,6 @@ export default function SidebarClient({ onNavigate }: { onNavigate?: () => void 
           Início
         </Link>
 
-        {/* Gerenciamento */}
         <div>
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -81,7 +89,6 @@ export default function SidebarClient({ onNavigate }: { onNavigate?: () => void 
           )}
         </div>
 
-        {/* Copas */}
         <div>
           <button
             onClick={() => setIsOpenCup(!isOpenCup)}
@@ -110,7 +117,6 @@ export default function SidebarClient({ onNavigate }: { onNavigate?: () => void 
           )}
         </div>
 
-        {/* Ligas */}
         <div>
           <button
             onClick={() => setIsLeagueOpen(!isLeagueOpen)}
@@ -139,7 +145,6 @@ export default function SidebarClient({ onNavigate }: { onNavigate?: () => void 
           )}
         </div>
 
-        {/* Negociações */}
         <div>
           <button
             onClick={() => setIsNegotiationsOpen(!isNegotiationsOpen)}
