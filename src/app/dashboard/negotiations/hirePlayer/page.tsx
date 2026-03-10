@@ -181,6 +181,9 @@ function feedbackText(sp: HireSearchParams): { type: 'success' | 'error'; text: 
     contract_create_failed: 'Não foi possível criar o contrato do jogador.',
     loan_player_already_loaned: 'Este jogador já está emprestado no momento.',
     player_not_available: 'Este jogador não está disponível para negociação agora.',
+
+    team_player_limit_reached: 'Este time já atingiu o limite máximo de jogadores.',
+    team_limit_validation_failed: 'Não foi possível validar o limite de jogadores do time.',
   };
 
   return { type: 'error', text: map[sp.err] ?? `Erro: ${sp.err}` };

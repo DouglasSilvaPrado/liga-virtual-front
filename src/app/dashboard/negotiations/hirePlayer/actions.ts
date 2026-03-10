@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { getSystemSettings } from '@/lib/systemSettings';
+import { validateTeamPlayerLimit } from '@/lib/teamLimit';
 
 type PlayerForHire = {
   id: number;
@@ -131,6 +132,22 @@ export async function hirePlayerAction(formData: FormData) {
   }
   if (!team.championship_id) {
     redirect(withParam(returnTo, 'err', 'no_championship'));
+  }
+
+  try {
+    await validateTeamPlayerLimit({
+      teamId: team.id,
+      championshipId: team.championship_id,
+      tenantId,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'team_player_limit_reached';
+
+    if (message === 'team_player_limit_reached') {
+      redirect(withParam(returnTo, 'err', 'team_player_limit_reached'));
+    }
+
+    redirect(withParam(returnTo, 'err', 'team_limit_validation_failed'));
   }
 
   const championshipId = team.championship_id;
