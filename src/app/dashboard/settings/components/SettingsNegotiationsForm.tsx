@@ -10,6 +10,7 @@ type Props = {
     free_agent_negotiations_enabled: boolean;
     trades_enabled: boolean;
     loans_enabled: boolean;
+    max_players_per_team: number;
   };
 };
 
@@ -22,6 +23,9 @@ export default function SettingsNegotiationsForm({ initialData }: Props) {
   );
   const [tradesEnabled, setTradesEnabled] = useState(initialData.trades_enabled);
   const [loansEnabled, setLoansEnabled] = useState(initialData.loans_enabled);
+  const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(
+    initialData.max_players_per_team,
+  );
 
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -31,6 +35,10 @@ export default function SettingsNegotiationsForm({ initialData }: Props) {
   function onSubmit() {
     setMessage(null);
 
+    const normalizedMaxPlayers = Number.isFinite(maxPlayersPerTeam)
+      ? Math.max(0, Math.floor(maxPlayersPerTeam))
+      : 0;
+
     startTransition(async () => {
       const result = await saveNegotiationSettings({
         negotiations_enabled: negotiationsEnabled,
@@ -39,6 +47,7 @@ export default function SettingsNegotiationsForm({ initialData }: Props) {
           : false,
         trades_enabled: negotiationsEnabled ? tradesEnabled : false,
         loans_enabled: negotiationsEnabled ? loansEnabled : false,
+        max_players_per_team: normalizedMaxPlayers,
       });
 
       setMessage(result.message);
@@ -134,6 +143,33 @@ export default function SettingsNegotiationsForm({ initialData }: Props) {
             className="h-5 w-5"
           />
         </label>
+
+        <div className="rounded-xl border p-4">
+          <div className="font-medium text-gray-900">
+            Número máximo de jogadores por equipe
+          </div>
+          <div className="mt-1 text-sm text-gray-500">
+            Defina o limite de jogadores por time. Use <strong>0</strong> para desativar essa regra.
+          </div>
+
+          <div className="mt-4 flex items-center gap-3">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={maxPlayersPerTeam}
+              onChange={(e) => {
+                const value = e.target.value;
+                setMaxPlayersPerTeam(value === '' ? 0 : Number(value));
+              }}
+              disabled={isPending}
+              className="w-32 rounded-xl border px-3 py-2 text-sm outline-none focus:border-gray-400"
+            />
+            <span className="text-sm text-gray-500">
+              0 = sem limite
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="mt-6 flex items-center justify-end gap-3">

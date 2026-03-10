@@ -6,6 +6,7 @@ export type SystemSettings = {
   free_agent_negotiations_enabled: boolean;
   trades_enabled: boolean;
   loans_enabled: boolean;
+  max_players_per_team: number;
 };
 
 export const getSystemSettings = cache(async (): Promise<SystemSettings> => {
@@ -13,7 +14,9 @@ export const getSystemSettings = cache(async (): Promise<SystemSettings> => {
 
   const { data } = await supabase
     .from('system_settings')
-    .select('negotiations_enabled, free_agent_negotiations_enabled, trades_enabled, loans_enabled')
+    .select(
+      'negotiations_enabled, free_agent_negotiations_enabled, trades_enabled, loans_enabled, max_players_per_team',
+    )
     .eq('tenant_id', tenantId)
     .maybeSingle<SystemSettings>();
 
@@ -23,6 +26,7 @@ export const getSystemSettings = cache(async (): Promise<SystemSettings> => {
       free_agent_negotiations_enabled: true,
       trades_enabled: true,
       loans_enabled: true,
+      max_players_per_team: 0,
     }
   );
 });

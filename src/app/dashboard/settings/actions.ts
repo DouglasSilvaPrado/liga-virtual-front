@@ -8,11 +8,16 @@ type Payload = {
   free_agent_negotiations_enabled: boolean;
   trades_enabled: boolean;
   loans_enabled: boolean;
+  max_players_per_team: number;
 };
 
 export async function saveNegotiationSettings(payload: Payload) {
   try {
     const { supabase, tenantId } = await createServerSupabase();
+
+    const normalizedMaxPlayers = Number.isFinite(payload.max_players_per_team)
+      ? Math.max(0, Math.floor(payload.max_players_per_team))
+      : 0;
 
     const normalized = {
       negotiations_enabled: payload.negotiations_enabled,
@@ -21,6 +26,7 @@ export async function saveNegotiationSettings(payload: Payload) {
         : false,
       trades_enabled: payload.negotiations_enabled ? payload.trades_enabled : false,
       loans_enabled: payload.negotiations_enabled ? payload.loans_enabled : false,
+      max_players_per_team: normalizedMaxPlayers,
       updated_at: new Date().toISOString(),
     };
 
@@ -51,6 +57,7 @@ export async function saveNegotiationSettings(payload: Payload) {
       }
     } else {
       const { error: insertError } = await supabase.from('system_settings').insert({
+        tenant_id: tenantId,
         ...normalized,
       });
 
