@@ -32,16 +32,31 @@ export default function SidebarClient({
     { href: '/dashboard/negotiations/proposals', label: 'Propostas' },
   ];
 
-  const autoOpen = pathname.startsWith('/dashboard/management');
-  const autoOpenCup = pathname.startsWith('/dashboard/cup');
-  const [isOpen, setIsOpen] = useState(autoOpen);
+  const autoOpenManagement = pathname.startsWith('/dashboard/management');
+  const autoOpenCup = pathname.startsWith('/dashboard/cups');
+  const autoOpenLeague = pathname.startsWith('/dashboard/leagues');
+  const autoOpenNegotiations = pathname.startsWith('/dashboard/negotiations');
+
+  const [isOpenManagement, setIsOpenManagement] = useState(autoOpenManagement);
   const [isOpenCup, setIsOpenCup] = useState(autoOpenCup);
-  const [isLeagueOpen, setIsLeagueOpen] = useState(false);
-  const [isNegotiationsOpen, setIsNegotiationsOpen] = useState(false);
+  const [isLeagueOpen, setIsLeagueOpen] = useState(autoOpenLeague);
+  const [isNegotiationsOpen, setIsNegotiationsOpen] = useState(autoOpenNegotiations);
 
   useEffect(() => {
-    setIsOpen(autoOpen);
-  }, [autoOpen]);
+    setIsOpenManagement(autoOpenManagement);
+  }, [autoOpenManagement]);
+
+  useEffect(() => {
+    setIsOpenCup(autoOpenCup);
+  }, [autoOpenCup]);
+
+  useEffect(() => {
+    setIsLeagueOpen(autoOpenLeague);
+  }, [autoOpenLeague]);
+
+  useEffect(() => {
+    setIsNegotiationsOpen(autoOpenNegotiations);
+  }, [autoOpenNegotiations]);
 
   function handleNavigate() {
     onNavigate?.();
@@ -54,7 +69,7 @@ export default function SidebarClient({
           href="/dashboard"
           onClick={handleNavigate}
           className={cn(
-            'block rounded px-3 py-2 hover:bg-gray-100',
+            'block rounded-lg px-3 py-2 transition hover:bg-gray-100',
             pathname === '/dashboard' && 'bg-gray-200 font-medium',
           )}
         >
@@ -63,14 +78,14 @@ export default function SidebarClient({
 
         <div>
           <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
+            onClick={() => setIsOpenManagement(!isOpenManagement)}
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2 transition hover:bg-gray-100"
           >
             <span>Gerenciamento</span>
-            <span className="text-sm">{isOpen ? '▲' : '▼'}</span>
+            <span className="text-sm">{isOpenManagement ? '▲' : '▼'}</span>
           </button>
 
-          {isOpen && (
+          {isOpenManagement && (
             <div className="mt-2 ml-4 space-y-1">
               {managementMenu.map((item) => (
                 <Link
@@ -78,7 +93,7 @@ export default function SidebarClient({
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    'block rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100',
                     pathname === item.href && 'bg-gray-200 font-medium',
                   )}
                 >
@@ -92,7 +107,7 @@ export default function SidebarClient({
         <div>
           <button
             onClick={() => setIsOpenCup(!isOpenCup)}
-            className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2 transition hover:bg-gray-100"
           >
             <span>Copas</span>
             <span className="text-sm">{isOpenCup ? '▲' : '▼'}</span>
@@ -106,7 +121,7 @@ export default function SidebarClient({
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    'block rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100',
                     pathname === item.href && 'bg-gray-200 font-medium',
                   )}
                 >
@@ -120,7 +135,7 @@ export default function SidebarClient({
         <div>
           <button
             onClick={() => setIsLeagueOpen(!isLeagueOpen)}
-            className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2 transition hover:bg-gray-100"
           >
             <span>Ligas</span>
             <span className="text-sm">{isLeagueOpen ? '▲' : '▼'}</span>
@@ -134,7 +149,7 @@ export default function SidebarClient({
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    'block rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100',
                     pathname === item.href && 'bg-gray-200 font-medium',
                   )}
                 >
@@ -148,7 +163,7 @@ export default function SidebarClient({
         <div>
           <button
             onClick={() => setIsNegotiationsOpen(!isNegotiationsOpen)}
-            className="flex w-full justify-between rounded px-3 py-2 hover:bg-gray-100"
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2 transition hover:bg-gray-100"
           >
             <span>Negociações</span>
             <span className="text-sm">{isNegotiationsOpen ? '▲' : '▼'}</span>
@@ -162,7 +177,7 @@ export default function SidebarClient({
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    'block rounded px-3 py-2 text-sm hover:bg-gray-100',
+                    'block rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100',
                     pathname === item.href && 'bg-gray-200 font-medium',
                   )}
                 >
@@ -171,6 +186,19 @@ export default function SidebarClient({
               ))}
             </div>
           )}
+        </div>
+
+        <div className="pt-2">
+          <Link
+            href="/dashboard/settings"
+            onClick={handleNavigate}
+            className={cn(
+              'block rounded-lg px-3 py-2 transition hover:bg-gray-100',
+              pathname.startsWith('/dashboard/settings') && 'bg-gray-200 font-medium',
+            )}
+          >
+            Configurações
+          </Link>
         </div>
       </nav>
     </aside>

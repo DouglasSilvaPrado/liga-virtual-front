@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 import HirePlayerFilters from './components/HirePlayerFilters';
 import PlayersTable from './components/PlayersTable';
+import { getSystemSettings } from '@/lib/systemSettings';
 
 export type HireSearchParams = {
   q?: string;
@@ -190,6 +191,9 @@ export default async function HirePlayerPage({
 }: {
   searchParams: Promise<HireSearchParams>;
 }) {
+
+  const settings = await getSystemSettings();
+
   const sp = await searchParams;
 
   const q = (sp.q ?? '').trim();
@@ -478,6 +482,19 @@ export default async function HirePlayerPage({
     }));
   }
 
+  if (!settings.negotiations_enabled) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border bg-white p-6 text-center">
+          <h2 className="text-lg font-semibold">Negociações desativadas</h2>
+          <p className="text-sm text-gray-500">
+            As negociações estão temporariamente desativadas pelo administrador.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -529,6 +546,7 @@ export default async function HirePlayerPage({
         myPlayers={myPlayers}
         myTeamId={myTeamId}
         activeChampionshipId={activeChampionshipId}
+        settings={settings}
       />
     </div>
   );

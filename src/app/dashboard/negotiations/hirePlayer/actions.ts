@@ -1,14 +1,14 @@
-// src/app/dashboard/negotiations/hirePlayer/actions.ts
 'use server';
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabase } from '@/lib/supabaseServer';
+import { getSystemSettings } from '@/lib/systemSettings';
 
 type PlayerForHire = {
   id: number;
-  bp: string | null; // posição base
-  vl: string | null; // valor (texto)
+  bp: string | null;
+  vl: string | null;
 };
 
 type WalletRow = {
@@ -31,10 +31,10 @@ type ContractCheckRow = {
 
 const BUYOUT_MULTIPLIER = 3;
 
-// salário por rodada: 1% do valor (ajuste depois)
 function calcSalaryPerRound(price: number) {
   return Math.max(0, Math.round(price * 0.01));
 }
+
 function calcBuyout(price: number) {
   return Math.max(0, Math.round(price * BUYOUT_MULTIPLIER));
 }
@@ -52,7 +52,6 @@ function parsePriceToNumber(priceText: string | null | undefined): number {
 
   const raw = priceText.toString().trim().toUpperCase();
 
-  // aceita R$, €, £, $
   const cleaned = raw
     .replace(/\s/g, '')
     .replace(/^R\$/i, '')
@@ -93,9 +92,14 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'player_invalid'));
   }
 
+  const settings = await getSystemSettings();
+
+  if (!settings.negotiations_enabled) {
+    redirect(withParam(returnTo, 'err', 'negotiations_disabled'));
+  }
+
   const { supabase, tenantId } = await createServerSupabase();
 
-  // -------------------- Auth / tenant_member --------------------
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
   const userId = userRes?.user?.id;
   if (userErr || !userId) {
@@ -113,7 +117,6 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'no_tenant_member'));
   }
 
-  // -------------------- Meu time / campeonato --------------------
   const { data: team, error: teamErr } = await supabase
     .from('teams')
     .select('id, championship_id')
@@ -132,7 +135,6 @@ export async function hirePlayerAction(formData: FormData) {
 
   const championshipId = team.championship_id;
 
-  // -------------------- Jogador --------------------
   const { data: player, error: playerErr } = await supabase
     .from('players')
     .select('id, bp, vl')
@@ -143,7 +145,6 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'player_not_found'));
   }
 
-  // ✅ impede contratar jogador que já está sob contrato ativo/emprestado
   const { data: cCheck } = await supabase
     .from('player_contracts')
     .select('player_id, status, team_id')
@@ -157,13 +158,15 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'already_hired'));
   }
 
-  // -------------------- Preço --------------------
+  if (!settings.free_agent_negotiations_enabled) {
+    redirect(withParam(returnTo, 'err', 'free_agent_negotiations_disabled'));
+  }
+
   const price = parsePriceToNumber(player.vl);
   if (!Number.isFinite(price) || price < 0) {
     redirect(withParam(returnTo, 'err', 'invalid_price'));
   }
 
-  // -------------------- Wallet (cria se não existir) --------------------
   const { data: walletFound, error: walletErr } = await supabase
     .from('championship_wallet')
     .select('id, balance')
@@ -197,12 +200,10 @@ export async function hirePlayerAction(formData: FormData) {
     walletBalance = normalizeBalance(createdWallet.balance);
   }
 
-  // ✅ saldo
   if (walletBalance < price) {
     redirect(withParam(returnTo, 'err', 'insufficient_funds'));
   }
 
-  // -------------------- Rodada atual (cria ciclo se não existir) --------------------
   let currentRound = 1;
 
   const { data: cycle } = await supabase
@@ -214,7 +215,6 @@ export async function hirePlayerAction(formData: FormData) {
   if (cycle?.current_round && Number.isFinite(cycle.current_round)) {
     currentRound = Math.max(1, Math.trunc(cycle.current_round));
   } else {
-    // MVP: tenta criar (pode falhar se já existir por race, mas ok)
     await supabase.from('championship_cycles').insert({
       championship_id: championshipId,
       current_round: 1,
@@ -223,26 +223,21 @@ export async function hirePlayerAction(formData: FormData) {
   }
 
   const startRound = currentRound;
-  const endRound: number | null = null;
-
   const salaryPerRound = calcSalaryPerRound(price);
   const buyoutAmount = calcBuyout(price);
 
-  // -------------------- Elenco (team_players) --------------------
   const { error: tpErr } = await supabase.from('team_players').insert({
     team_id: team.id,
     player_id: player.id,
-    position: player.bp, // posição base
+    position: player.bp,
     championship_id: championshipId,
     tenant_id: tenantId,
   });
 
   if (tpErr) {
-    // normalmente unique(player_id, championship_id, tenant_id) ou afins
     redirect(withParam(returnTo, 'err', 'already_hired'));
   }
 
-  // -------------------- Contrato (player_contracts) --------------------
   const { error: cInsErr } = await supabase.from('player_contracts').insert({
     tenant_id: tenantId,
     championship_id: championshipId,
@@ -256,7 +251,6 @@ export async function hirePlayerAction(formData: FormData) {
   });
 
   if (cInsErr) {
-    // rollback simples: remove do elenco pra não ficar inconsistente
     await supabase
       .from('team_players')
       .delete()
@@ -268,7 +262,6 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'contract_create_failed'));
   }
 
-  // -------------------- Debita carteira (com guard gte) --------------------
   const { data: updatedWallet, error: updErr } = await supabase
     .from('championship_wallet')
     .update({ balance: walletBalance - price })
@@ -278,7 +271,6 @@ export async function hirePlayerAction(formData: FormData) {
     .maybeSingle<WalletRow>();
 
   if (updErr || !updatedWallet) {
-    // rollback contrato + elenco
     await supabase
       .from('player_contracts')
       .delete()
@@ -297,7 +289,6 @@ export async function hirePlayerAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'wallet_debit'));
   }
 
-  // -------------------- Logs / eventos (best-effort) --------------------
   {
     const { error: evErr } = await supabase.from('contract_events').insert({
       tenant_id: tenantId,
@@ -344,6 +335,12 @@ export async function buyMarketListingAction(formData: FormData) {
 
   if (!listingId) {
     redirect(withParam(returnTo, 'err', 'listing_invalid'));
+  }
+
+  const settings = await getSystemSettings();
+
+  if (!settings.negotiations_enabled) {
+    redirect(withParam(returnTo, 'err', 'negotiations_disabled'));
   }
 
   const { supabase } = await createServerSupabase();

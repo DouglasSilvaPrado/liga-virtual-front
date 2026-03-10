@@ -1,9 +1,9 @@
-// src/app/dashboard/negotiations/proposals/serverActions.ts
 'use server';
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabase } from '@/lib/supabaseServer';
+import { getSystemSettings } from '@/lib/systemSettings';
 import type { MoneyDirection, ProposalStatus } from './types';
 
 type TeamRow = { id: string; championship_id: string | null };
@@ -22,11 +22,27 @@ function withParam(url: string, key: string, value: string) {
   return u.pathname + u.search;
 }
 
-/** ✅ ACCEPT (via RPC) */
+async function ensureTradesEnabled(returnTo: string) {
+  const settings = await getSystemSettings();
+
+  if (!settings.negotiations_enabled) {
+    redirect(withParam(returnTo, 'err', 'negotiations_disabled'));
+  }
+
+  if (!settings.trades_enabled) {
+    redirect(withParam(returnTo, 'err', 'trades_disabled'));
+  }
+}
+
 export async function acceptProposalAction(formData: FormData) {
   const proposalId = String(formData.get('proposal_id') ?? '');
   const returnTo = '/dashboard/negotiations/proposals';
-  if (!proposalId) redirect(withParam(returnTo, 'err', 'proposal_invalid'));
+
+  if (!proposalId) {
+    redirect(withParam(returnTo, 'err', 'proposal_invalid'));
+  }
+
+  await ensureTradesEnabled(returnTo);
 
   const { supabase } = await createServerSupabase();
 
@@ -65,17 +81,23 @@ export async function acceptProposalAction(formData: FormData) {
   redirect(withParam(returnTo, 'ok', 'accepted'));
 }
 
-/** ✅ REJECT */
 export async function rejectProposalAction(formData: FormData) {
   const proposalId = String(formData.get('proposal_id') ?? '');
   const returnTo = '/dashboard/negotiations/proposals';
-  if (!proposalId) redirect(withParam(returnTo, 'err', 'proposal_invalid'));
+
+  if (!proposalId) {
+    redirect(withParam(returnTo, 'err', 'proposal_invalid'));
+  }
+
+  await ensureTradesEnabled(returnTo);
 
   const { supabase, tenantId } = await createServerSupabase();
 
   const { data: userRes } = await supabase.auth.getUser();
   const userId = userRes?.user?.id ?? null;
-  if (!userId) redirect(withParam(returnTo, 'err', 'not_logged'));
+  if (!userId) {
+    redirect(withParam(returnTo, 'err', 'not_logged'));
+  }
 
   const { data: tm } = await supabase
     .from('tenant_members')
@@ -83,7 +105,10 @@ export async function rejectProposalAction(formData: FormData) {
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
     .maybeSingle<{ id: string }>();
-  if (!tm?.id) redirect(withParam(returnTo, 'err', 'no_tenant_member'));
+
+  if (!tm?.id) {
+    redirect(withParam(returnTo, 'err', 'no_tenant_member'));
+  }
 
   const { data: team } = await supabase
     .from('teams')
@@ -95,7 +120,9 @@ export async function rejectProposalAction(formData: FormData) {
     .maybeSingle<TeamRow>();
 
   const myTeamId = team?.id ?? null;
-  if (!myTeamId) redirect(withParam(returnTo, 'err', 'no_team'));
+  if (!myTeamId) {
+    redirect(withParam(returnTo, 'err', 'no_team'));
+  }
 
   const { error } = await supabase
     .from('trade_proposals')
@@ -105,13 +132,14 @@ export async function rejectProposalAction(formData: FormData) {
     .eq('status', 'pending' satisfies ProposalStatus)
     .eq('to_team_id', myTeamId);
 
-  if (error) redirect(withParam(returnTo, 'err', 'reject_failed'));
+  if (error) {
+    redirect(withParam(returnTo, 'err', 'reject_failed'));
+  }
 
   revalidatePath(returnTo);
   redirect(withParam(returnTo, 'ok', 'rejected'));
 }
 
-/** ✅ COUNTER (agora valida offered_player_id via player_contracts) */
 export async function counterProposalAction(formData: FormData) {
   const baseProposalId = String(formData.get('base_proposal_id') ?? '');
   const offeredPlayerId = Number(formData.get('offered_player_id'));
@@ -124,11 +152,15 @@ export async function counterProposalAction(formData: FormData) {
     redirect(withParam(returnTo, 'err', 'proposal_invalid'));
   }
 
+  await ensureTradesEnabled(returnTo);
+
   const { supabase, tenantId } = await createServerSupabase();
 
   const { data: userRes } = await supabase.auth.getUser();
   const userId = userRes?.user?.id ?? null;
-  if (!userId) redirect(withParam(returnTo, 'err', 'not_logged'));
+  if (!userId) {
+    redirect(withParam(returnTo, 'err', 'not_logged'));
+  }
 
   const { data: tm } = await supabase
     .from('tenant_members')
@@ -136,7 +168,10 @@ export async function counterProposalAction(formData: FormData) {
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
     .maybeSingle<{ id: string }>();
-  if (!tm?.id) redirect(withParam(returnTo, 'err', 'no_tenant_member'));
+
+  if (!tm?.id) {
+    redirect(withParam(returnTo, 'err', 'no_tenant_member'));
+  }
 
   const { data: myTeam } = await supabase
     .from('teams')
@@ -149,8 +184,13 @@ export async function counterProposalAction(formData: FormData) {
 
   const myTeamId = myTeam?.id ?? null;
   const championshipId = myTeam?.championship_id ?? null;
-  if (!myTeamId) redirect(withParam(returnTo, 'err', 'no_team'));
-  if (!championshipId) redirect(withParam(returnTo, 'err', 'no_championship'));
+
+  if (!myTeamId) {
+    redirect(withParam(returnTo, 'err', 'no_team'));
+  }
+  if (!championshipId) {
+    redirect(withParam(returnTo, 'err', 'no_championship'));
+  }
 
   const { data: base, error: bErr } = await supabase
     .from('trade_proposals')
@@ -169,11 +209,16 @@ export async function counterProposalAction(formData: FormData) {
       status: ProposalStatus;
     }>();
 
-  if (bErr || !base) redirect(withParam(returnTo, 'err', 'proposal_invalid'));
-  if (base.to_team_id !== myTeamId) redirect(withParam(returnTo, 'err', 'not_allowed'));
-  if (base.status !== 'pending') redirect(withParam(returnTo, 'err', 'not_pending'));
+  if (bErr || !base) {
+    redirect(withParam(returnTo, 'err', 'proposal_invalid'));
+  }
+  if (base.to_team_id !== myTeamId) {
+    redirect(withParam(returnTo, 'err', 'not_allowed'));
+  }
+  if (base.status !== 'pending') {
+    redirect(withParam(returnTo, 'err', 'not_pending'));
+  }
 
-  // ✅ offered_player_id precisa ser MEU e ativo (não loaned_out)
   const { data: offeredContract } = await supabase
     .from('player_contracts')
     .select('player_id, team_id, status')
@@ -182,14 +227,16 @@ export async function counterProposalAction(formData: FormData) {
     .eq('player_id', offeredPlayerId)
     .maybeSingle<PlayerContractRow>();
 
-  if (!offeredContract?.player_id) redirect(withParam(returnTo, 'err', 'trade_invalid_offered'));
-  if (offeredContract.team_id !== myTeamId)
+  if (!offeredContract?.player_id) {
+    redirect(withParam(returnTo, 'err', 'trade_invalid_offered'));
+  }
+  if (offeredContract.team_id !== myTeamId) {
     redirect(withParam(returnTo, 'err', 'trade_offered_not_mine'));
-  if (offeredContract.status !== 'active')
+  }
+  if (offeredContract.status !== 'active') {
     redirect(withParam(returnTo, 'err', 'player_not_available'));
+  }
 
-  // ✅ requested (o que eu quero receber) deve estar com o outro time e ativo/loaned_out (depende sua regra)
-  // aqui vou exigir active ou loaned_out, mas você pode travar só active.
   const { data: requestedContract } = await supabase
     .from('player_contracts')
     .select('player_id, team_id, status')
@@ -198,11 +245,12 @@ export async function counterProposalAction(formData: FormData) {
     .eq('player_id', base.offered_player_id)
     .maybeSingle<PlayerContractRow>();
 
-  // se o jogador alvo "sumiu" ou mudou de time, bloqueia contra
-  if (!requestedContract?.player_id)
+  if (!requestedContract?.player_id) {
     redirect(withParam(returnTo, 'err', 'trade_requested_not_found'));
-  if (requestedContract.team_id !== base.from_team_id)
+  }
+  if (requestedContract.team_id !== base.from_team_id) {
     redirect(withParam(returnTo, 'err', 'trade_requested_not_found'));
+  }
   if (!['active', 'loaned_out'].includes(requestedContract.status ?? '')) {
     redirect(withParam(returnTo, 'err', 'player_not_available'));
   }
@@ -223,7 +271,9 @@ export async function counterProposalAction(formData: FormData) {
     created_by_user_id: userId,
   });
 
-  if (insErr) redirect(withParam(returnTo, 'err', 'counter_failed'));
+  if (insErr) {
+    redirect(withParam(returnTo, 'err', 'counter_failed'));
+  }
 
   await supabase
     .from('trade_proposals')

@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabase } from '@/lib/supabaseServer';
+import { getSystemSettings } from '@/lib/systemSettings';
 
 function withParam(url: string, key: string, value: string) {
   const u = new URL(url, 'http://local');
@@ -10,6 +11,11 @@ function withParam(url: string, key: string, value: string) {
   if (key === 'ok') u.searchParams.delete('err');
   if (key === 'err') u.searchParams.delete('ok');
   return u.pathname + u.search;
+}
+
+function normalizeBalance(v: number | string | null | undefined): number {
+  const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : 0;
+  return Number.isFinite(n) ? n : 0;
 }
 
 export async function createTradeProposalAction(formData: FormData) {
@@ -35,18 +41,30 @@ export async function createTradeProposalAction(formData: FormData) {
   if (!['none', 'pay', 'ask'].includes(moneyDirection)) {
     redirect(withParam(returnTo, 'err', 'trade_invalid_money_mode'));
   }
+
   const amount = Number.isFinite(moneyAmount) ? Math.max(0, Math.trunc(moneyAmount)) : 0;
   if (moneyDirection !== 'none' && amount <= 0) {
     redirect(withParam(returnTo, 'err', 'trade_invalid_money_amount'));
+  }
+
+  const settings = await getSystemSettings();
+
+  if (!settings.negotiations_enabled) {
+    redirect(withParam(returnTo, 'err', 'negotiations_disabled'));
+  }
+
+  if (!settings.trades_enabled) {
+    redirect(withParam(returnTo, 'err', 'trades_disabled'));
   }
 
   const { supabase, tenantId } = await createServerSupabase();
 
   const { data: userRes } = await supabase.auth.getUser();
   const userId = userRes?.user?.id ?? null;
-  if (!userId) redirect(withParam(returnTo, 'err', 'not_logged'));
+  if (!userId) {
+    redirect(withParam(returnTo, 'err', 'not_logged'));
+  }
 
-  // acha tenant_member
   const { data: tm } = await supabase
     .from('tenant_members')
     .select('id')
@@ -54,9 +72,10 @@ export async function createTradeProposalAction(formData: FormData) {
     .eq('user_id', userId)
     .maybeSingle<{ id: string }>();
 
-  if (!tm?.id) redirect(withParam(returnTo, 'err', 'no_tenant_member'));
+  if (!tm?.id) {
+    redirect(withParam(returnTo, 'err', 'no_tenant_member'));
+  }
 
-  // meu time/championship
   const { data: myTeam } = await supabase
     .from('teams')
     .select('id, championship_id')
@@ -66,37 +85,59 @@ export async function createTradeProposalAction(formData: FormData) {
     .limit(1)
     .maybeSingle<{ id: string; championship_id: string | null }>();
 
-  if (!myTeam?.id) redirect(withParam(returnTo, 'err', 'no_team'));
-  if (!myTeam.championship_id) redirect(withParam(returnTo, 'err', 'no_championship'));
+  if (!myTeam?.id) {
+    redirect(withParam(returnTo, 'err', 'no_team'));
+  }
+  if (!myTeam.championship_id) {
+    redirect(withParam(returnTo, 'err', 'no_championship'));
+  }
 
   const championshipId = myTeam.championship_id;
 
-  // offeredPlayer precisa ser do meu time
-  const { data: offeredLink } = await supabase
-    .from('team_players')
-    .select('team_id, player_id')
+  const { data: offeredContract } = await supabase
+    .from('player_contracts')
+    .select('player_id, team_id, status')
     .eq('tenant_id', tenantId)
     .eq('championship_id', championshipId)
-    .eq('team_id', myTeam.id)
     .eq('player_id', offeredPlayerId)
-    .maybeSingle<{ team_id: string; player_id: number }>();
+    .maybeSingle<{
+      player_id: number | null;
+      team_id: string | null;
+      status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+    }>();
 
-  if (!offeredLink) redirect(withParam(returnTo, 'err', 'trade_offered_not_mine'));
+  if (!offeredContract?.player_id) {
+    redirect(withParam(returnTo, 'err', 'trade_invalid_offered'));
+  }
+  if (offeredContract.team_id !== myTeam.id) {
+    redirect(withParam(returnTo, 'err', 'trade_offered_not_mine'));
+  }
+  if (offeredContract.status !== 'active') {
+    redirect(withParam(returnTo, 'err', 'player_not_available'));
+  }
 
-  // requestedPlayer precisa estar em outro time
-  const { data: requestedLink } = await supabase
-    .from('team_players')
-    .select('team_id, player_id')
+  const { data: requestedContract } = await supabase
+    .from('player_contracts')
+    .select('player_id, team_id, status')
     .eq('tenant_id', tenantId)
     .eq('championship_id', championshipId)
     .eq('player_id', requestedPlayerId)
-    .maybeSingle<{ team_id: string; player_id: number }>();
+    .maybeSingle<{
+      player_id: number | null;
+      team_id: string | null;
+      status: 'active' | 'loaned_out' | 'expired' | 'terminated' | null;
+    }>();
 
-  if (!requestedLink) redirect(withParam(returnTo, 'err', 'trade_requested_not_found'));
-  if (requestedLink.team_id === myTeam.id)
+  if (!requestedContract?.player_id) {
+    redirect(withParam(returnTo, 'err', 'trade_requested_not_found'));
+  }
+  if (requestedContract.team_id === myTeam.id) {
     redirect(withParam(returnTo, 'err', 'trade_requested_is_mine'));
+  }
+  if (!['active', 'loaned_out'].includes(requestedContract.status ?? '')) {
+    redirect(withParam(returnTo, 'err', 'player_not_available'));
+  }
 
-  // se for "pay", valida saldo (NÃO debita agora — só garante que hoje você tem)
   if (moneyDirection === 'pay') {
     const { data: wallet } = await supabase
       .from('championship_wallet')
@@ -105,23 +146,17 @@ export async function createTradeProposalAction(formData: FormData) {
       .eq('championship_id', championshipId)
       .maybeSingle<{ balance: number | string | null }>();
 
-    const bal =
-      typeof wallet?.balance === 'string'
-        ? Number(wallet.balance)
-        : typeof wallet?.balance === 'number'
-          ? wallet.balance
-          : 0;
-    if (!Number.isFinite(bal) || bal < amount) {
+    const balance = normalizeBalance(wallet?.balance);
+    if (balance < amount) {
       redirect(withParam(returnTo, 'err', 'insufficient_funds'));
     }
   }
 
-  // cria proposta pendente
   const { error: insErr } = await supabase.from('trade_proposals').insert({
     tenant_id: tenantId,
     championship_id: championshipId,
     from_team_id: myTeam.id,
-    to_team_id: requestedLink.team_id,
+    to_team_id: requestedContract.team_id,
     offered_player_id: offeredPlayerId,
     requested_player_id: requestedPlayerId,
     money_direction: moneyDirection,

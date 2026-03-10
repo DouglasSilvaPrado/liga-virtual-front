@@ -16,6 +16,13 @@ type Props = {
   myPlayers: MyTeamPlayerRow[];
   myTeamId: string | null;
   activeChampionshipId: string | null;
+
+  settings: {
+    negotiations_enabled: boolean;
+    free_agent_negotiations_enabled: boolean;
+    trades_enabled: boolean;
+    loans_enabled: boolean;
+  };
 };
 
 function parsePriceToNumber(priceText: string | null | undefined): number {
@@ -23,13 +30,11 @@ function parsePriceToNumber(priceText: string | null | undefined): number {
 
   const raw = priceText.toString().trim().toUpperCase();
 
-  // aceita símbolos: R$, €, £, $
   const cleaned = raw
     .replace(/\s/g, '')
     .replace(/^R\$/i, '')
     .replace(/^[€£$]/, '');
 
-  // "91.5M" | "76K" | "1.234,56" | "91500000"
   const m = cleaned.match(/^([\d.,]+)([KM])?$/i);
   if (!m) return 0;
 
@@ -60,6 +65,7 @@ export default function PlayersTable({
   myPlayers,
   myTeamId,
   activeChampionshipId,
+  settings,
 }: Props) {
   const [openHire, setOpenHire] = useState(false);
   const [selectedHire, setSelectedHire] = useState<PlayerRow | null>(null);
@@ -80,6 +86,7 @@ export default function PlayersTable({
     setSelectedMarketBuy(p);
     setOpenMarketBuy(true);
   }
+
   function closeMarketBuyModal() {
     setOpenMarketBuy(false);
     setSelectedMarketBuy(null);
@@ -170,12 +177,75 @@ export default function PlayersTable({
             {players.map((p) => {
               const isUnderContract =
                 p.contract_status === 'active' || p.contract_status === 'loaned_out';
+
               const isFreeAgent = !isUnderContract || !p.current_team_id;
               const isMine = myTeamId != null && p.current_team_id === myTeamId;
-              const canTrade = !!p.current_team_id && !isMine;
 
-              const canLoan =
+              const baseCanTrade = !!p.current_team_id && !isMine;
+              const baseCanLoan =
                 !!activeChampionshipId && !!myTeamId && !!p.current_team_id && !isMine;
+
+              const buyDisabled =
+                !settings.negotiations_enabled ||
+                !p.market_listing_id ||
+                !p.market_price ||
+                walletBalance == null ||
+                (myTeamId != null && p.current_team_id === myTeamId) ||
+                (walletBalance ?? 0) < (p.market_price ?? 0);
+
+              const hireDisabled =
+                !settings.negotiations_enabled ||
+                !settings.free_agent_negotiations_enabled ||
+                !isFreeAgent ||
+                !!p.market_listing_id;
+
+              const tradeDisabled =
+                !settings.negotiations_enabled || !settings.trades_enabled || !baseCanTrade;
+
+              const loanDisabled =
+                !settings.negotiations_enabled || !settings.loans_enabled || !baseCanLoan;
+
+              const buyTitle = !settings.negotiations_enabled
+                ? 'Negociações desativadas'
+                : !p.market_listing_id
+                  ? 'Não está à venda'
+                  : walletBalance == null
+                    ? 'Você não possui carteira neste campeonato'
+                    : myTeamId != null && p.current_team_id === myTeamId
+                      ? 'Jogador já é do seu time'
+                      : (walletBalance ?? 0) < (p.market_price ?? 0)
+                        ? 'Saldo insuficiente'
+                        : 'Comprar jogador';
+
+              const hireTitle = !settings.negotiations_enabled
+                ? 'Negociações desativadas'
+                : !settings.free_agent_negotiations_enabled
+                  ? 'Contratação de jogador sem contrato desativada'
+                  : !!p.market_listing_id
+                    ? 'Este jogador está no mercado (use Comprar)'
+                    : !isFreeAgent
+                      ? 'Só é possível contratar jogador sem contrato'
+                      : 'Contratar';
+
+              const tradeTitle = !settings.negotiations_enabled
+                ? 'Negociações desativadas'
+                : !settings.trades_enabled
+                  ? 'Trocas desativadas'
+                  : !baseCanTrade
+                    ? isMine
+                      ? 'Jogador já é do seu time'
+                      : 'Jogador sem time'
+                    : 'Propor troca';
+
+              const loanTitle = !settings.negotiations_enabled
+                ? 'Negociações desativadas'
+                : !settings.loans_enabled
+                  ? 'Empréstimos desativados'
+                  : !baseCanLoan
+                    ? isMine
+                      ? 'Jogador já é do seu time'
+                      : 'Jogador sem time'
+                    : 'Propor empréstimo';
 
               return (
                 <tr
@@ -285,24 +355,8 @@ export default function PlayersTable({
                           openMarketBuyModal(p);
                         }}
                         className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={
-                          !p.market_listing_id ||
-                          !p.market_price ||
-                          walletBalance == null ||
-                          (myTeamId != null && p.current_team_id === myTeamId) ||
-                          (walletBalance ?? 0) < (p.market_price ?? 0)
-                        }
-                        title={
-                          !p.market_listing_id
-                            ? 'Não está à venda'
-                            : walletBalance == null
-                              ? 'Você não possui carteira neste campeonato'
-                              : myTeamId != null && p.current_team_id === myTeamId
-                                ? 'Jogador já é do seu time'
-                                : (walletBalance ?? 0) < (p.market_price ?? 0)
-                                  ? 'Saldo insuficiente'
-                                  : 'Comprar jogador'
-                        }
+                        disabled={buyDisabled}
+                        title={buyTitle}
                       >
                         Comprar
                       </button>
@@ -314,14 +368,8 @@ export default function PlayersTable({
                           openHireModal(p);
                         }}
                         className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={!isFreeAgent || !!p.market_listing_id}
-                        title={
-                          !!p.market_listing_id
-                            ? 'Este jogador está no mercado (use Comprar)'
-                            : !isFreeAgent
-                              ? 'Só é possível contratar jogador sem contrato'
-                              : 'Contratar'
-                        }
+                        disabled={hireDisabled}
+                        title={hireTitle}
                       >
                         Contratar
                       </button>
@@ -333,30 +381,24 @@ export default function PlayersTable({
                           openTradeModal(p);
                         }}
                         className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={!canTrade}
-                        title={
-                          !canTrade
-                            ? isMine
-                              ? 'Jogador já é do seu time'
-                              : 'Jogador sem time'
-                            : 'Propor troca'
-                        }
+                        disabled={tradeDisabled}
+                        title={tradeTitle}
                       >
                         Trocar
                       </button>
 
-                      {canLoan ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openLoanModal(p);
-                          }}
-                          className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
-                        >
-                          Emprestar
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openLoanModal(p);
+                        }}
+                        className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={loanDisabled}
+                        title={loanTitle}
+                      >
+                        Emprestar
+                      </button>
                     </div>
                   </td>
                 </tr>
